@@ -56,6 +56,7 @@ function ModalInformeProveedor({ onClose, proveedores, facturas, pagos, notasCre
     if (!proveedorId) return;
     setGenerando(true);
 
+    try {
     const doc = new jsPDF();
     const prov = proveedores.find(p => p.id === parseInt(proveedorId));
 
@@ -266,6 +267,11 @@ function ModalInformeProveedor({ onClose, proveedores, facturas, pagos, notasCre
     doc.save(fileName);
     setGenerando(false);
     onClose();
+    } catch (error) {
+      console.error('Error generando PDF:', error);
+      alert('Error al generar el PDF. Por favor, intenta de nuevo.');
+      setGenerando(false);
+    }
   };
 
   return (
@@ -776,7 +782,8 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
   };
 
   const handleFacturaSelect = (facturaId) => {
-    const factura = facturas.find(f => f.id === parseInt(facturaId));
+    // Buscar en facturasDelProveedor que ya tiene el saldo calculado
+    const factura = facturasDelProveedor.find(f => f.id === parseInt(facturaId));
     setFacturaSeleccionada(factura);
     setTipoPago(null); // Reset tipo de pago cuando cambia la factura
     setForm({
@@ -1033,8 +1040,67 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
   );
 }
 
+// Modal Editar Pago (ver detalles y eliminar)
+function ModalEditPago({ pago, onClose, onDelete }) {
+  const handleDelete = () => {
+    if (confirm('¿Estás seguro de eliminar este pago?')) {
+      onDelete(pago.id);
+      onClose();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="glass rounded-2xl p-6 w-full max-w-md">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold">Detalle del Pago</h2>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
+        </div>
+
+        <div className="space-y-4">
+          <div className="p-4 bg-slate-50 rounded-xl space-y-3">
+            <div className="flex justify-between">
+              <span className="text-slate-500 text-sm">Fecha:</span>
+              <span className="font-medium">{formatDate(pago.fecha)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500 text-sm">Descripción:</span>
+              <span className="font-medium text-right flex-1 ml-4">{pago.descripcion}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500 text-sm">Método:</span>
+              <span className="font-medium">{pago.metodo}</span>
+            </div>
+            <div className="flex justify-between border-t border-slate-200 pt-3 mt-3">
+              <span className="text-slate-500 text-sm">Monto:</span>
+              <span className="font-bold text-emerald-500 mono text-lg">{formatCurrency(pago.monto)}</span>
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors"
+            >
+              Cerrar
+            </button>
+            <button
+              onClick={handleDelete}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-500 text-white font-medium hover:bg-red-600 transition-all"
+            >
+              <Trash2 className="w-4 h-4" />
+              Eliminar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Modal Nota de Crédito
-function ModalNotaCredito({ nota, proveedores, facturas, onClose, onSave }) {
+function ModalNotaCredito({ nota, proveedores, facturas, onClose, onSave, onDelete }) {
   const [form, setForm] = useState({
     proveedor_id: nota?.proveedor_id || '',
     factura_id: nota?.factura_id || '',
@@ -1045,6 +1111,12 @@ function ModalNotaCredito({ nota, proveedores, facturas, onClose, onSave }) {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+
+  const handleDelete = () => {
+    if (nota && onDelete) {
+      onDelete(nota.id);
+    }
+  };
 
   // Facturas pendientes del proveedor seleccionado
   const facturasProveedor = form.proveedor_id
@@ -1117,6 +1189,12 @@ function ModalNotaCredito({ nota, proveedores, facturas, onClose, onSave }) {
             </div>
           )}
           <div className="flex gap-3 pt-2">
+            {nota && onDelete && (
+              <button type="button" onClick={handleDelete} className="px-4 py-2 rounded-xl bg-red-500 text-white hover:bg-red-600 transition-all text-sm flex items-center gap-2">
+                <Trash2 className="w-4 h-4" />
+                Eliminar
+              </button>
+            )}
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all text-sm">Cancelar</button>
             <button type="submit" disabled={saving} className="flex-1 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm">
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -2189,8 +2267,8 @@ function App() {
                           <td className="px-3 py-2.5 text-xs text-slate-500">{p.metodo}</td>
                           <td className="px-3 py-2.5 text-right font-semibold mono text-emerald-500 text-xs">{formatCurrency(p.monto)}</td>
                           <td className="px-3 py-2.5 text-right">
-                            <button onClick={() => deletePago(p.id)} className="p-1.5 hover:bg-red-500/20 rounded-lg transition-colors text-red-400" title="Eliminar">
-                              <Trash2 className="w-3.5 h-3.5" />
+                            <button onClick={() => { setSelectedItem(p); setShowModal('edit-pago'); }} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Ver detalle">
+                              <Edit3 className="w-3.5 h-3.5" />
                             </button>
                           </td>
                         </tr>
@@ -2256,14 +2334,9 @@ function App() {
                           <td className="px-3 py-2.5 text-xs text-slate-500">{nc.concepto || '-'}</td>
                           <td className="px-3 py-2.5 text-right font-semibold mono text-purple-500 text-xs">{formatCurrency(nc.monto)}</td>
                           <td className="px-3 py-2.5 text-right">
-                            <div className="flex justify-end gap-1">
-                              <button onClick={() => { setSelectedItem(nc); setShowModal('nota-credito'); }} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Editar">
-                                <Edit3 className="w-3.5 h-3.5" />
-                              </button>
-                              <button onClick={() => deleteNotaCredito(nc.id)} className="p-1.5 hover:bg-red-500/20 rounded-lg transition-colors text-red-400" title="Eliminar">
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
+                            <button onClick={() => { setSelectedItem(nc); setShowModal('nota-credito'); }} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Editar">
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
                           </td>
                         </tr>
                       ))
@@ -2542,6 +2615,16 @@ function App() {
           facturas={facturas}
           onClose={() => { setShowModal(null); setSelectedItem(null); }}
           onSave={selectedItem ? (data) => updateNotaCredito(selectedItem.id, data) : createNotaCredito}
+          onDelete={deleteNotaCredito}
+        />
+      )}
+
+      {/* Modal Editar Pago */}
+      {showModal === 'edit-pago' && selectedItem && (
+        <ModalEditPago
+          pago={selectedItem}
+          onClose={() => { setShowModal(null); setSelectedItem(null); }}
+          onDelete={deletePago}
         />
       )}
 
