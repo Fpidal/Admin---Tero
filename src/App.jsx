@@ -1099,7 +1099,7 @@ function App() {
     return Object.values(pagosPorEmpleado).reduce((sum, monto) => sum + monto, 0);
   }, [pagosPorEmpleado]);
 
-  // Calcular pagos por factura (para saldo)
+  // Calcular pagos por factura (pagos normales)
   const pagosPorFactura = useMemo(() => {
     const pagosMap = {};
     pagos.filter(p => p.tipo === 'factura').forEach(p => {
@@ -1113,21 +1113,36 @@ function App() {
     return pagosMap;
   }, [pagos, facturas]);
 
-  // Facturas filtradas con saldo calculado
+  // Calcular NC por factura
+  const ncPorFactura = useMemo(() => {
+    const ncMap = {};
+    notasCredito.filter(nc => nc.factura_id).forEach(nc => {
+      ncMap[nc.factura_id] = (ncMap[nc.factura_id] || 0) + nc.monto;
+    });
+    return ncMap;
+  }, [notasCredito]);
+
+  // Facturas filtradas con saldo calculado (incluye pagos + NC)
   const facturasFiltradas = useMemo(() => {
     return facturas
-      .map(f => ({
-        ...f,
-        pagado: pagosPorFactura[f.id] || 0,
-        saldo: f.monto - (pagosPorFactura[f.id] || 0)
-      }))
+      .map(f => {
+        const pagado = pagosPorFactura[f.id] || 0;
+        const nc = ncPorFactura[f.id] || 0;
+        return {
+          ...f,
+          pagado,
+          nc,
+          totalPagado: pagado + nc,
+          saldo: f.monto - pagado - nc
+        };
+      })
       .filter(f => {
         const matchSearch = f.proveedor.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            f.numero.toLowerCase().includes(searchTerm.toLowerCase());
         const matchEstado = filtroEstado === 'todos' || f.estado === filtroEstado;
         return matchSearch && matchEstado;
       });
-  }, [facturas, searchTerm, filtroEstado, pagosPorFactura]);
+  }, [facturas, searchTerm, filtroEstado, pagosPorFactura, ncPorFactura]);
 
   const getDiasVencimiento = (vencimiento) => {
     const hoy = new Date();
@@ -1400,6 +1415,7 @@ function App() {
                     {facturasFiltradas.map(f => {
                       const dias = getDiasVencimiento(f.vencimiento);
                       const tienePagos = f.pagado > 0;
+                      const tieneNC = f.nc > 0;
                       return (
                         <tr key={f.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                           <td className="px-5 py-4 font-medium">{f.proveedor}</td>
@@ -1426,6 +1442,9 @@ function App() {
                               </p>
                               {tienePagos && (
                                 <p className="text-xs text-slate-400">Pagado: {formatCurrency(f.pagado)}</p>
+                              )}
+                              {tieneNC && (
+                                <p className="text-xs text-purple-500">NC: {formatCurrency(f.nc)}</p>
                               )}
                             </div>
                           </td>
