@@ -233,15 +233,21 @@ function ModalEmpleado({ empleado, onClose, onSave }) {
 }
 
 // Modal Pago
-function ModalPago({ onClose, onSave }) {
+function ModalPago({ onClose, onSave, tipoDefault }) {
   const [form, setForm] = useState({
-    tipo: 'otro',
+    tipo: tipoDefault || 'otro',
     descripcion: '',
     monto: '',
     fecha: new Date().toISOString().split('T')[0],
     metodo: 'Transferencia'
   });
   const [saving, setSaving] = useState(false);
+
+  const getTitulo = () => {
+    if (tipoDefault === 'factura') return 'Registrar Pago a Proveedor';
+    if (tipoDefault === 'sueldo') return 'Registrar Pago a Empleado';
+    return 'Registrar Pago';
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -254,18 +260,20 @@ function ModalPago({ onClose, onSave }) {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="glass rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold">Registrar Pago</h2>
+          <h2 className="text-xl font-bold">{getTitulo()}</h2>
           <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">Tipo</label>
-            <select value={form.tipo} onChange={e => setForm({...form, tipo: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50">
-              <option value="otro">Otro</option>
-              <option value="factura">Factura</option>
-              <option value="sueldo">Sueldo</option>
-            </select>
-          </div>
+          {!tipoDefault && (
+            <div>
+              <label className="block text-sm text-slate-400 mb-1">Tipo</label>
+              <select value={form.tipo} onChange={e => setForm({...form, tipo: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50">
+                <option value="otro">Otro</option>
+                <option value="factura">Proveedor</option>
+                <option value="sueldo">Empleado</option>
+              </select>
+            </div>
+          )}
           <div>
             <label className="block text-sm text-slate-400 mb-1">Descripción *</label>
             <input type="text" required value={form.descripcion} onChange={e => setForm({...form, descripcion: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
@@ -978,10 +986,17 @@ function App() {
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold">Pago a Proveedores</h2>
               <div className="flex items-center gap-4">
-                <div className="text-right">
+                <div className="text-right hidden sm:block">
                   <p className="text-sm text-slate-500">Total pagado</p>
                   <p className="text-xl font-bold text-emerald-500 mono">{formatCurrency(pagos.filter(p => p.tipo === 'factura').reduce((sum, p) => sum + p.monto, 0))}</p>
                 </div>
+                <button
+                  onClick={() => { setSelectedItem({ tipo: 'factura' }); setShowModal('pago'); }}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all"
+                >
+                  <Plus className="w-5 h-5" />
+                  Registrar Pago
+                </button>
               </div>
             </div>
 
@@ -1028,10 +1043,17 @@ function App() {
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold">Pago a Empleados</h2>
               <div className="flex items-center gap-4">
-                <div className="text-right">
+                <div className="text-right hidden sm:block">
                   <p className="text-sm text-slate-500">Total pagado</p>
                   <p className="text-xl font-bold text-emerald-500 mono">{formatCurrency(pagos.filter(p => p.tipo === 'sueldo').reduce((sum, p) => sum + p.monto, 0))}</p>
                 </div>
+                <button
+                  onClick={() => { setSelectedItem({ tipo: 'sueldo' }); setShowModal('pago'); }}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all"
+                >
+                  <Plus className="w-5 h-5" />
+                  Registrar Pago
+                </button>
               </div>
             </div>
 
@@ -1106,6 +1128,7 @@ function App() {
         <ModalPago
           onClose={() => { setShowModal(null); setSelectedItem(null); }}
           onSave={createPago}
+          tipoDefault={selectedItem?.tipo}
         />
       )}
 
