@@ -985,46 +985,126 @@ function App() {
               </button>
             </div>
 
+            {/* Pago Proveedores */}
             <div className="glass rounded-2xl glow overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-200 flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-blue-500" />
+                <h3 className="font-semibold">Pago Proveedores</h3>
+                <span className="ml-auto text-sm text-slate-500">{pagos.filter(p => p.tipo === 'factura').length} pagos</span>
+              </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="text-left text-slate-400 text-sm border-b border-slate-200">
-                      <th className="px-5 py-4 font-medium">Fecha</th>
-                      <th className="px-5 py-4 font-medium">Tipo</th>
-                      <th className="px-5 py-4 font-medium">Descripción</th>
-                      <th className="px-5 py-4 font-medium">Método</th>
-                      <th className="px-5 py-4 font-medium text-right">Monto</th>
-                      <th className="px-5 py-4 font-medium text-right">Acciones</th>
+                      <th className="px-5 py-3 font-medium">Fecha</th>
+                      <th className="px-5 py-3 font-medium">Descripción</th>
+                      <th className="px-5 py-3 font-medium">Método</th>
+                      <th className="px-5 py-3 font-medium text-right">Monto</th>
+                      <th className="px-5 py-3 font-medium text-right">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {pagos.map(p => (
-                      <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                        <td className="px-5 py-4 text-sm">{formatDate(p.fecha)}</td>
-                        <td className="px-5 py-4">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            p.tipo === 'factura' ? 'bg-blue-500/15 text-blue-700' : p.tipo === 'sueldo' ? 'bg-cyan-500/15 text-cyan-700' : 'bg-slate-500/15 text-slate-600'
-                          }`}>
-                            {p.tipo === 'factura' ? 'Factura' : p.tipo === 'sueldo' ? 'Sueldo' : 'Otro'}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4 text-sm">{p.descripcion}</td>
-                        <td className="px-5 py-4 text-sm text-slate-400">{p.metodo}</td>
-                        <td className="px-5 py-4 text-right font-semibold mono text-emerald-400">
-                          {formatCurrency(p.monto)}
-                        </td>
-                        <td className="px-5 py-4 text-right">
-                          <button onClick={() => deletePago(p.id)} className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-red-400" title="Eliminar">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {pagos.filter(p => p.tipo === 'factura').length === 0 ? (
+                      <tr><td colSpan="5" className="px-5 py-8 text-center text-slate-400">No hay pagos a proveedores</td></tr>
+                    ) : (
+                      pagos.filter(p => p.tipo === 'factura').map(p => (
+                        <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                          <td className="px-5 py-3 text-sm">{formatDate(p.fecha)}</td>
+                          <td className="px-5 py-3 text-sm">{p.descripcion}</td>
+                          <td className="px-5 py-3 text-sm text-slate-400">{p.metodo}</td>
+                          <td className="px-5 py-3 text-right font-semibold mono text-emerald-500">{formatCurrency(p.monto)}</td>
+                          <td className="px-5 py-3 text-right">
+                            <button onClick={() => deletePago(p.id)} className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-red-400" title="Eliminar">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
             </div>
+
+            {/* Pago Empleados */}
+            <div className="glass rounded-2xl glow overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-200 flex items-center gap-2">
+                <Users className="w-5 h-5 text-cyan-500" />
+                <h3 className="font-semibold">Pago Empleados</h3>
+                <span className="ml-auto text-sm text-slate-500">{pagos.filter(p => p.tipo === 'sueldo').length} pagos</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-left text-slate-400 text-sm border-b border-slate-200">
+                      <th className="px-5 py-3 font-medium">Fecha</th>
+                      <th className="px-5 py-3 font-medium">Descripción</th>
+                      <th className="px-5 py-3 font-medium">Método</th>
+                      <th className="px-5 py-3 font-medium text-right">Monto</th>
+                      <th className="px-5 py-3 font-medium text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pagos.filter(p => p.tipo === 'sueldo').length === 0 ? (
+                      <tr><td colSpan="5" className="px-5 py-8 text-center text-slate-400">No hay pagos a empleados</td></tr>
+                    ) : (
+                      pagos.filter(p => p.tipo === 'sueldo').map(p => (
+                        <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                          <td className="px-5 py-3 text-sm">{formatDate(p.fecha)}</td>
+                          <td className="px-5 py-3 text-sm">{p.descripcion}</td>
+                          <td className="px-5 py-3 text-sm text-slate-400">{p.metodo}</td>
+                          <td className="px-5 py-3 text-right font-semibold mono text-emerald-500">{formatCurrency(p.monto)}</td>
+                          <td className="px-5 py-3 text-right">
+                            <button onClick={() => deletePago(p.id)} className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-red-400" title="Eliminar">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Otros Pagos */}
+            {pagos.filter(p => p.tipo === 'otro').length > 0 && (
+              <div className="glass rounded-2xl glow overflow-hidden">
+                <div className="px-5 py-4 border-b border-slate-200 flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-slate-500" />
+                  <h3 className="font-semibold">Otros Pagos</h3>
+                  <span className="ml-auto text-sm text-slate-500">{pagos.filter(p => p.tipo === 'otro').length} pagos</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="text-left text-slate-400 text-sm border-b border-slate-200">
+                        <th className="px-5 py-3 font-medium">Fecha</th>
+                        <th className="px-5 py-3 font-medium">Descripción</th>
+                        <th className="px-5 py-3 font-medium">Método</th>
+                        <th className="px-5 py-3 font-medium text-right">Monto</th>
+                        <th className="px-5 py-3 font-medium text-right">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pagos.filter(p => p.tipo === 'otro').map(p => (
+                        <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                          <td className="px-5 py-3 text-sm">{formatDate(p.fecha)}</td>
+                          <td className="px-5 py-3 text-sm">{p.descripcion}</td>
+                          <td className="px-5 py-3 text-sm text-slate-400">{p.metodo}</td>
+                          <td className="px-5 py-3 text-right font-semibold mono text-emerald-500">{formatCurrency(p.monto)}</td>
+                          <td className="px-5 py-3 text-right">
+                            <button onClick={() => deletePago(p.id)} className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-red-400" title="Eliminar">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>
