@@ -491,7 +491,12 @@ function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, on
 
   const handleDelete = () => {
     if (onDelete && factura) {
-      onDelete(factura.id);
+      const motivo = prompt('Ingresá el motivo de la anulación:');
+      if (motivo && motivo.trim()) {
+        onDelete(factura.id, motivo.trim());
+      } else if (motivo !== null) {
+        alert('Debés ingresar un motivo para anular la factura');
+      }
     }
   };
 
@@ -1079,8 +1084,11 @@ function ModalEditPago({ pago, onClose, onSave, onDelete }) {
   };
 
   const handleDelete = () => {
-    if (confirm('¿Estás seguro de eliminar este pago?')) {
-      onDelete(pago.id);
+    const motivo = prompt('Ingresá el motivo de la anulación:');
+    if (motivo && motivo.trim()) {
+      onDelete(pago.id, motivo.trim());
+    } else if (motivo !== null) {
+      alert('Debés ingresar un motivo para anular el pago');
     }
   };
 
@@ -1288,6 +1296,7 @@ function App() {
   const [empleados, setEmpleados] = useState([]);
   const [pagos, setPagos] = useState([]);
   const [notasCredito, setNotasCredito] = useState([]);
+  const [anulaciones, setAnulaciones] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Modales
@@ -1368,9 +1377,25 @@ function App() {
     }
   };
 
+  const fetchAnulaciones = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('anulaciones')
+        .select('*')
+        .order('fecha_anulacion', { ascending: false });
+      if (!error && data) {
+        setAnulaciones(data);
+      } else {
+        setAnulaciones([]);
+      }
+    } catch (e) {
+      setAnulaciones([]);
+    }
+  };
+
   const fetchAllData = async () => {
     setLoading(true);
-    await Promise.all([fetchProveedores(), fetchFacturas(), fetchEmpleados(), fetchPagos(), fetchNotasCredito()]);
+    await Promise.all([fetchProveedores(), fetchFacturas(), fetchEmpleados(), fetchPagos(), fetchNotasCredito(), fetchAnulaciones()]);
     setLoading(false);
   };
 
@@ -1448,10 +1473,31 @@ function App() {
     return { error };
   };
 
-  const deleteFactura = async (id) => {
-    if (!confirm('¿Estás seguro de eliminar esta factura?')) return;
+  const deleteFactura = async (id, motivo) => {
+    // Buscar la factura para guardar sus datos
+    const factura = facturas.find(f => f.id === id);
+    if (!factura) return;
+
+    // Guardar en anulaciones
+    const { error: errorAnulacion } = await supabase.from('anulaciones').insert([{
+      tipo: 'factura',
+      datos_originales: factura,
+      motivo: motivo
+    }]);
+
+    if (errorAnulacion) {
+      alert('Error al registrar la anulación');
+      return;
+    }
+
+    // Eliminar la factura
     const { error } = await supabase.from('facturas').delete().eq('id', id);
-    if (!error) await fetchFacturas();
+    if (!error) {
+      await fetchFacturas();
+      await fetchAnulaciones();
+      setShowModal(null);
+      setSelectedItem(null);
+    }
   };
 
   const marcarFacturaPagada = async (factura) => {
@@ -1537,10 +1583,28 @@ function App() {
     return { error };
   };
 
-  const deletePago = async (id) => {
+  const deletePago = async (id, motivo) => {
+    // Buscar el pago para guardar sus datos
+    const pago = pagos.find(p => p.id === id);
+    if (!pago) return;
+
+    // Guardar en anulaciones
+    const { error: errorAnulacion } = await supabase.from('anulaciones').insert([{
+      tipo: 'pago',
+      datos_originales: pago,
+      motivo: motivo
+    }]);
+
+    if (errorAnulacion) {
+      alert('Error al registrar la anulación');
+      return;
+    }
+
+    // Eliminar el pago
     const { error } = await supabase.from('pagos').delete().eq('id', id);
     if (!error) {
       await fetchPagos();
+      await fetchAnulaciones();
       setShowModal(null);
       setSelectedItem(null);
     }
@@ -1821,6 +1885,7 @@ function App() {
             { id: 'empleados', label: 'Empleados', short: 'Empl', icon: Users },
             { id: 'pago-empleados', label: 'Pago Empl.', short: 'PagEmpl', icon: DollarSign },
             { id: 'pagos', label: 'Pagos', short: 'Pagos', icon: CreditCard },
+            { id: 'informes', label: 'Informes', short: 'Inf', icon: AlertCircle },
           ].map(tab => (
             <button
               key={tab.id}
@@ -2620,6 +2685,106 @@ function App() {
                             <td className={`px-3 py-2.5 text-right font-semibold mono text-xs ${p.tipo === 'nc' ? 'text-purple-500' : 'text-emerald-500'}`}>{formatCurrency(p.monto)}</td>
                           </tr>
                         ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* INFORMES - Auditoría de Anulaciones */}
+        {activeTab === 'informes' && (
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-red-500" />
+                Registro de Anulaciones
+              </h2>
+              <p className="text-xs text-slate-500">Este registro es de solo lectura</p>
+            </div>
+
+            {/* Resumen */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="glass rounded-xl p-4 border-l-4 border-red-400">
+                <p className="text-xs text-slate-500">Facturas Anuladas</p>
+                <p className="text-2xl font-bold text-red-500">
+                  {anulaciones.filter(a => a.tipo === 'factura').length}
+                </p>
+                <p className="text-xs text-slate-400 mt-1">
+                  Total: {formatCurrency(anulaciones.filter(a => a.tipo === 'factura').reduce((sum, a) => sum + (parseFloat(a.datos_originales?.monto) || 0), 0))}
+                </p>
+              </div>
+              <div className="glass rounded-xl p-4 border-l-4 border-orange-400">
+                <p className="text-xs text-slate-500">Pagos Anulados</p>
+                <p className="text-2xl font-bold text-orange-500">
+                  {anulaciones.filter(a => a.tipo === 'pago').length}
+                </p>
+                <p className="text-xs text-slate-400 mt-1">
+                  Total: {formatCurrency(anulaciones.filter(a => a.tipo === 'pago').reduce((sum, a) => sum + (parseFloat(a.datos_originales?.monto) || 0), 0))}
+                </p>
+              </div>
+            </div>
+
+            {/* Tabla de Anulaciones */}
+            <div className="glass rounded-2xl glow overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-slate-400 text-xs border-b border-slate-200 bg-slate-50">
+                      <th className="px-4 py-3 font-medium">Fecha Anulación</th>
+                      <th className="px-4 py-3 font-medium">Tipo</th>
+                      <th className="px-4 py-3 font-medium">Detalle Original</th>
+                      <th className="px-4 py-3 font-medium text-right">Monto</th>
+                      <th className="px-4 py-3 font-medium">Motivo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {anulaciones.length === 0 ? (
+                      <tr>
+                        <td colSpan="5" className="px-4 py-8 text-center text-slate-400 text-sm">
+                          No hay anulaciones registradas
+                        </td>
+                      </tr>
+                    ) : (
+                      anulaciones.map(a => (
+                        <tr key={a.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                          <td className="px-4 py-3 text-xs">
+                            {new Date(a.fecha_anulacion).toLocaleString('es-AR', {
+                              day: '2-digit', month: '2-digit', year: 'numeric',
+                              hour: '2-digit', minute: '2-digit'
+                            })}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              a.tipo === 'factura' ? 'bg-red-500/15 text-red-700' : 'bg-orange-500/15 text-orange-700'
+                            }`}>
+                              {a.tipo === 'factura' ? 'Factura' : 'Pago'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-xs">
+                            {a.tipo === 'factura' ? (
+                              <div>
+                                <p className="font-medium">{a.datos_originales?.proveedor || 'Sin proveedor'}</p>
+                                <p className="text-slate-500">Fact. {a.datos_originales?.numero} - {formatDate(a.datos_originales?.fecha)}</p>
+                              </div>
+                            ) : (
+                              <div>
+                                <p className="font-medium">{a.datos_originales?.descripcion || 'Sin descripción'}</p>
+                                <p className="text-slate-500">{formatDate(a.datos_originales?.fecha)} - {a.datos_originales?.metodo}</p>
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <span className="font-semibold mono text-red-500">
+                              {formatCurrency(a.datos_originales?.monto || 0)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <p className="text-xs text-slate-600 max-w-xs">{a.motivo}</p>
+                          </td>
+                        </tr>
+                      ))
                     )}
                   </tbody>
                 </table>
