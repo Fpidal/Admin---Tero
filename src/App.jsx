@@ -42,7 +42,7 @@ const CONDICIONES_PAGO = [
 ];
 
 // Modal Proveedor
-function ModalProveedor({ proveedor, onClose, onSave }) {
+function ModalProveedor({ proveedor, onClose, onSave, onDelete }) {
   const [form, setForm] = useState({
     nombre: proveedor?.nombre || '',
     categoria: proveedor?.categoria || '',
@@ -60,10 +60,20 @@ function ModalProveedor({ proveedor, onClose, onSave }) {
     e.preventDefault();
     setError(null);
     setSaving(true);
-    const result = await onSave(form);
+    // Solo enviar categoria y condicion_pago si tienen valor
+    const dataToSave = { ...form };
+    if (!dataToSave.categoria) delete dataToSave.categoria;
+    if (dataToSave.condicion_pago === 0) delete dataToSave.condicion_pago;
+    const result = await onSave(dataToSave);
     setSaving(false);
     if (result?.error) {
       setError(result.error.message || 'Error al guardar. Verificá los permisos de la base de datos.');
+    }
+  };
+
+  const handleDelete = () => {
+    if (onDelete && proveedor) {
+      onDelete(proveedor.id);
     }
   };
 
@@ -81,9 +91,9 @@ function ModalProveedor({ proveedor, onClose, onSave }) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm text-slate-400 mb-1">Categoría *</label>
-              <select required value={form.categoria} onChange={e => setForm({...form, categoria: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
-                <option value="">Seleccionar</option>
+              <label className="block text-sm text-slate-400 mb-1">Categoría</label>
+              <select value={form.categoria} onChange={e => setForm({...form, categoria: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
+                <option value="">Sin categoría</option>
                 {CATEGORIAS_PROVEEDOR.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </div>
@@ -124,6 +134,11 @@ function ModalProveedor({ proveedor, onClose, onSave }) {
             </div>
           )}
           <div className="flex gap-3 pt-2">
+            {proveedor && onDelete && (
+              <button type="button" onClick={handleDelete} className="px-4 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 transition-all text-sm">
+                Eliminar
+              </button>
+            )}
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all text-sm">Cancelar</button>
             <button type="submit" disabled={saving} className="flex-1 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm">
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -1463,21 +1478,16 @@ function App() {
                   const categoriaLabel = CATEGORIAS_PROVEEDOR.find(c => c.value === p.categoria)?.label || 'Sin categoría';
                   const condicionLabel = CONDICIONES_PAGO.find(c => c.value === p.condicion_pago)?.label || 'Contado';
                   return (
-                    <div key={p.id} className="glass rounded-xl p-3 glow hover:border-blue-500/30 border border-transparent transition-all">
+                    <div key={p.id} className="glass rounded-xl p-3 glow hover:border-blue-500/30 border border-transparent transition-all cursor-pointer" onClick={() => { setSelectedItem(p); setShowModal('proveedor'); }}>
                       <div className="flex items-start justify-between mb-2">
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">{categoriaLabel}</span>
-                        <div className="flex gap-0.5">
-                          <button onClick={() => { setSelectedItem(p); setShowModal('proveedor'); }} className="p-1 hover:bg-slate-100 rounded transition-colors">
-                            <Edit3 className="w-3 h-3" />
-                          </button>
-                          <button onClick={() => deleteProveedor(p.id)} className="p-1 hover:bg-red-500/20 rounded transition-colors text-red-400">
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
+                        {categoriaLabel !== 'Sin categoría' && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">{categoriaLabel}</span>
+                        )}
+                        <Edit3 className="w-3 h-3 text-slate-400 ml-auto" />
                       </div>
                       <h3 className="font-semibold text-sm mb-1 truncate">{p.nombre}</h3>
                       <p className="text-xs text-slate-400 truncate">{p.cuit || 'Sin CUIT'}</p>
-                      <p className="text-xs text-slate-500 mt-1">{condicionLabel}</p>
+                      {condicionLabel !== 'Contado' && <p className="text-xs text-slate-500 mt-1">{condicionLabel}</p>}
                       {p.telefono && <p className="text-xs text-slate-400 truncate mt-1">{p.telefono}</p>}
                     </div>
                   );
@@ -1904,6 +1914,7 @@ function App() {
           proveedor={selectedItem}
           onClose={() => { setShowModal(null); setSelectedItem(null); }}
           onSave={selectedItem ? (data) => updateProveedor(selectedItem.id, data) : createProveedor}
+          onDelete={deleteProveedor}
         />
       )}
 
