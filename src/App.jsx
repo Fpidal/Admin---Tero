@@ -1056,12 +1056,31 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
   );
 }
 
-// Modal Editar Pago (ver detalles y eliminar)
-function ModalEditPago({ pago, onClose, onDelete }) {
+// Modal Editar Pago
+function ModalEditPago({ pago, onClose, onSave, onDelete }) {
+  const [form, setForm] = useState({
+    fecha: pago?.fecha || '',
+    descripcion: pago?.descripcion || '',
+    metodo: pago?.metodo || 'Efectivo',
+    monto: pago?.monto || ''
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setSaving(true);
+    const result = await onSave(pago.id, { ...form, monto: parseFloat(form.monto) });
+    setSaving(false);
+    if (result?.error) {
+      setError(result.error.message || 'Error al guardar');
+    }
+  };
+
   const handleDelete = () => {
     if (confirm('¿Estás seguro de eliminar este pago?')) {
       onDelete(pago.id);
-      onClose();
     }
   };
 
@@ -1069,29 +1088,59 @@ function ModalEditPago({ pago, onClose, onDelete }) {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="glass rounded-2xl p-6 w-full max-w-md">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold">Detalle del Pago</h2>
+          <h2 className="text-xl font-bold">Editar Pago</h2>
           <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
         </div>
 
-        <div className="space-y-4">
-          <div className="p-4 bg-slate-50 rounded-xl space-y-3">
-            <div className="flex justify-between">
-              <span className="text-slate-500 text-sm">Fecha:</span>
-              <span className="font-medium">{formatDate(pago.fecha)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500 text-sm">Descripción:</span>
-              <span className="font-medium text-right flex-1 ml-4">{pago.descripcion}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500 text-sm">Método:</span>
-              <span className="font-medium">{pago.metodo}</span>
-            </div>
-            <div className="flex justify-between border-t border-slate-200 pt-3 mt-3">
-              <span className="text-slate-500 text-sm">Monto:</span>
-              <span className="font-bold text-emerald-500 mono text-lg">{formatCurrency(pago.monto)}</span>
-            </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm text-slate-500 mb-1">Fecha</label>
+            <input
+              type="date"
+              value={form.fecha}
+              onChange={e => setForm({...form, fecha: e.target.value})}
+              className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50"
+            />
           </div>
+          <div>
+            <label className="block text-sm text-slate-500 mb-1">Descripción</label>
+            <input
+              type="text"
+              value={form.descripcion}
+              onChange={e => setForm({...form, descripcion: e.target.value})}
+              className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-slate-500 mb-1">Método de pago</label>
+            <select
+              value={form.metodo}
+              onChange={e => setForm({...form, metodo: e.target.value})}
+              className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50"
+            >
+              <option value="Efectivo">Efectivo</option>
+              <option value="Transferencia">Transferencia</option>
+              <option value="Cheque">Cheque</option>
+              <option value="Tarjeta">Tarjeta</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm text-slate-500 mb-1">Monto</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.monto}
+              onChange={e => setForm({...form, monto: e.target.value})}
+              className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50"
+            />
+          </div>
+
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+              {error}
+            </div>
+          )}
 
           <div className="flex gap-3 pt-4">
             <button
@@ -1099,17 +1148,26 @@ function ModalEditPago({ pago, onClose, onDelete }) {
               onClick={onClose}
               className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors"
             >
-              Cerrar
+              Cancelar
             </button>
             <button
-              onClick={handleDelete}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-500 text-white font-medium hover:bg-red-600 transition-all"
+              type="submit"
+              disabled={saving}
+              className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              <Trash2 className="w-4 h-4" />
-              Eliminar
+              {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+              Guardar
             </button>
           </div>
-        </div>
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="w-full px-4 py-2.5 rounded-xl border border-red-200 text-red-500 hover:bg-red-50 transition-all flex items-center justify-center gap-2"
+          >
+            <Trash2 className="w-4 h-4" />
+            Eliminar pago
+          </button>
+        </form>
       </div>
     </div>
   );
@@ -1469,10 +1527,23 @@ function App() {
     return { error };
   };
 
+  const updatePago = async (id, pago) => {
+    const { error } = await supabase.from('pagos').update(pago).eq('id', id);
+    if (!error) {
+      await fetchPagos();
+      setShowModal(null);
+      setSelectedItem(null);
+    }
+    return { error };
+  };
+
   const deletePago = async (id) => {
-    if (!confirm('¿Estás seguro de eliminar este pago?')) return;
     const { error } = await supabase.from('pagos').delete().eq('id', id);
-    if (!error) await fetchPagos();
+    if (!error) {
+      await fetchPagos();
+      setShowModal(null);
+      setSelectedItem(null);
+    }
   };
 
   // CRUD Notas de Crédito
@@ -2636,6 +2707,7 @@ function App() {
         <ModalEditPago
           pago={selectedItem}
           onClose={() => { setShowModal(null); setSelectedItem(null); }}
+          onSave={updatePago}
           onDelete={deletePago}
         />
       )}
