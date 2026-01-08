@@ -1125,14 +1125,29 @@ function App() {
   // Facturas próximas a vencer (7 días)
   const facturasProximas = useMemo(() => {
     const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
     const en7dias = new Date();
     en7dias.setDate(hoy.getDate() + 7);
-    
+
     return facturas
-      .filter(f => f.estado === 'pendiente')
+      .filter(f => f.estado === 'pendiente' || f.estado === 'vencida')
       .filter(f => {
         const venc = new Date(f.vencimiento + 'T12:00:00');
         return venc >= hoy && venc <= en7dias;
+      })
+      .sort((a, b) => new Date(a.vencimiento) - new Date(b.vencimiento));
+  }, [facturas]);
+
+  // Facturas vencidas para el dashboard
+  const facturasVencidasDash = useMemo(() => {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    return facturas
+      .filter(f => f.estado === 'pendiente' || f.estado === 'vencida')
+      .filter(f => {
+        const venc = new Date(f.vencimiento + 'T12:00:00');
+        return venc < hoy;
       })
       .sort((a, b) => new Date(a.vencimiento) - new Date(b.vencimiento));
   }, [facturas]);
@@ -1374,22 +1389,61 @@ function App() {
               </div>
             </div>
 
-            {/* Alertas y Gráficos */}
+            {/* Alertas de Vencimientos */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Próximos vencimientos */}
-              <div className="glass rounded-2xl p-5 glow">
+              {/* Facturas Vencidas */}
+              <div className="glass rounded-2xl p-5 glow border-l-4 border-red-400">
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-amber-400" />
-                  Próximos Vencimientos
+                  <AlertCircle className="w-5 h-5 text-red-400" />
+                  Facturas Vencidas
+                  {facturasVencidasDash.length > 0 && (
+                    <span className="ml-auto px-2 py-0.5 bg-red-100 text-red-600 rounded-full text-xs font-medium">
+                      {facturasVencidasDash.length}
+                    </span>
+                  )}
+                </h3>
+                {facturasVencidasDash.length === 0 ? (
+                  <p className="text-slate-400 text-sm">No hay facturas vencidas</p>
+                ) : (
+                  <div className="space-y-3 max-h-48 overflow-y-auto">
+                    {facturasVencidasDash.map(f => {
+                      const dias = getDiasVencimiento(f.vencimiento);
+                      return (
+                        <div key={f.id} className="flex items-center justify-between p-3 bg-red-50 rounded-xl">
+                          <div>
+                            <p className="font-medium text-sm">{f.proveedor}</p>
+                            <p className="text-xs text-slate-400">{f.numero}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold mono text-sm text-red-600">{formatCurrency(f.monto)}</p>
+                            <p className={`text-xs ${dias.clase}`}>{dias.texto}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Próximos vencimientos (7 días) */}
+              <div className="glass rounded-2xl p-5 glow border-l-4 border-amber-400">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-amber-400" />
+                  Vencen en 7 días
+                  {facturasProximas.length > 0 && (
+                    <span className="ml-auto px-2 py-0.5 bg-amber-100 text-amber-600 rounded-full text-xs font-medium">
+                      {facturasProximas.length}
+                    </span>
+                  )}
                 </h3>
                 {facturasProximas.length === 0 ? (
                   <p className="text-slate-400 text-sm">No hay facturas por vencer en los próximos 7 días</p>
                 ) : (
-                  <div className="space-y-3">
-                    {facturasProximas.slice(0, 5).map(f => {
+                  <div className="space-y-3 max-h-48 overflow-y-auto">
+                    {facturasProximas.map(f => {
                       const dias = getDiasVencimiento(f.vencimiento);
                       return (
-                        <div key={f.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                        <div key={f.id} className="flex items-center justify-between p-3 bg-amber-50 rounded-xl">
                           <div>
                             <p className="font-medium text-sm">{f.proveedor}</p>
                             <p className="text-xs text-slate-400">{f.numero}</p>
@@ -1404,32 +1458,32 @@ function App() {
                   </div>
                 )}
               </div>
+            </div>
 
-              {/* Gráfico por proveedor */}
-              <div className="glass rounded-2xl p-5 glow">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-blue-500" />
-                  Gastos por Proveedor
-                </h3>
-                <ResponsiveContainer width="100%" height={200}>
-                  <PieChart>
-                    <Pie
-                      data={datosPorCategoria}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      dataKey="value"
-                      label={({ name, percent }) => `${name.split(' ')[0]} ${(percent * 100).toFixed(0)}%`}
-                      labelLine={false}
-                    >
-                      {datosPorCategoria.map((entry, index) => (
-                        <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => formatCurrency(value)} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
+            {/* Gráfico por proveedor */}
+            <div className="glass rounded-2xl p-5 glow">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-blue-500" />
+                Gastos por Proveedor
+              </h3>
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie
+                    data={datosPorCategoria}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    dataKey="value"
+                    label={({ name, percent }) => `${name.split(' ')[0]} ${(percent * 100).toFixed(0)}%`}
+                    labelLine={false}
+                  >
+                    {datosPorCategoria.map((entry, index) => (
+                      <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => formatCurrency(value)} />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
 
             {/* Últimos pagos */}
