@@ -640,7 +640,7 @@ function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, on
 }
 
 // Modal Empleado
-function ModalEmpleado({ empleado, onClose, onSave }) {
+function ModalEmpleado({ empleado, onClose, onSave, onDelete }) {
   const [form, setForm] = useState({
     nombre: empleado?.nombre || '',
     documento: empleado?.documento || '',
@@ -712,6 +712,21 @@ function ModalEmpleado({ empleado, onClose, onSave }) {
               {empleado ? 'Guardar' : 'Crear'}
             </button>
           </div>
+          {empleado && onDelete && (
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm('¿Estás seguro de eliminar este empleado?')) {
+                  onDelete(empleado.id);
+                  onClose();
+                }
+              }}
+              className="w-full mt-3 px-4 py-2.5 rounded-xl border border-red-200 text-red-500 hover:bg-red-50 transition-all flex items-center justify-center gap-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              Eliminar empleado
+            </button>
+          )}
         </form>
       </div>
     </div>
@@ -2184,14 +2199,9 @@ function App() {
                             </span>
                           </td>
                           <td className="px-5 py-4 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <button onClick={() => { setSelectedItem(e); setShowModal('empleado'); }} className="p-2 hover:bg-slate-100 rounded-lg transition-colors" title="Editar">
-                                <Edit3 className="w-4 h-4" />
-                              </button>
-                              <button onClick={() => deleteEmpleado(e.id)} className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-red-400" title="Eliminar">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
+                            <button onClick={() => { setSelectedItem(e); setShowModal('empleado'); }} className="p-2 hover:bg-slate-100 rounded-lg transition-colors" title="Editar">
+                              <Edit3 className="w-4 h-4" />
+                            </button>
                           </td>
                         </tr>
                       );
@@ -2411,8 +2421,8 @@ function App() {
                             <td className="px-3 py-2.5 text-xs text-slate-500">{p.metodo}</td>
                             <td className="px-3 py-2.5 text-right font-semibold mono text-emerald-500 text-xs">{formatCurrency(p.monto)}</td>
                             <td className="px-3 py-2.5 text-right">
-                              <button onClick={() => deletePago(p.id)} className="p-1.5 hover:bg-red-500/20 rounded-lg transition-colors text-red-400" title="Eliminar">
-                                <Trash2 className="w-3.5 h-3.5" />
+                              <button onClick={() => { setSelectedItem(p); setShowModal('edit-pago'); }} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Ver/Editar">
+                                <Eye className="w-3.5 h-3.5" />
                               </button>
                             </td>
                           </tr>
@@ -2587,6 +2597,7 @@ function App() {
           empleado={selectedItem}
           onClose={() => { setShowModal(null); setSelectedItem(null); }}
           onSave={selectedItem ? (data) => updateEmpleado(selectedItem.id, data) : createEmpleado}
+          onDelete={deleteEmpleado}
         />
       )}
 
