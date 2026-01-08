@@ -580,6 +580,7 @@ function App() {
   const [filtroEstado, setFiltroEstado] = useState('todos');
   const [filtroMesPago, setFiltroMesPago] = useState('todos');
   const [filtroTipoPago, setFiltroTipoPago] = useState('todos');
+  const [filtroMesEmpleado, setFiltroMesEmpleado] = useState(new Date().getMonth().toString()); // Mes actual por defecto
 
   // Cargar datos desde Supabase
   const fetchProveedores = async () => {
@@ -810,6 +811,32 @@ function App() {
   }, [facturas]);
 
   const COLORS = ['#8b5cf6', '#06b6d4', '#f59e0b', '#ef4444', '#22c55e', '#ec4899'];
+
+  // Calcular pagos por empleado (filtrado por mes)
+  const pagosPorEmpleado = useMemo(() => {
+    const pagosMap = {};
+    pagos
+      .filter(p => p.tipo === 'sueldo')
+      .filter(p => {
+        if (filtroMesEmpleado === 'todos') return true;
+        const fechaPago = new Date(p.fecha);
+        return fechaPago.getMonth() === parseInt(filtroMesEmpleado);
+      })
+      .forEach(p => {
+        // Buscar empleado por nombre en la descripción
+        empleados.forEach(e => {
+          if (p.descripcion && p.descripcion.includes(e.nombre)) {
+            pagosMap[e.id] = (pagosMap[e.id] || 0) + p.monto;
+          }
+        });
+      });
+    return pagosMap;
+  }, [pagos, empleados, filtroMesEmpleado]);
+
+  // Total pagado a empleados en el mes seleccionado
+  const totalPagadoEmpleadosMes = useMemo(() => {
+    return Object.values(pagosPorEmpleado).reduce((sum, monto) => sum + monto, 0);
+  }, [pagosPorEmpleado]);
 
   // Calcular pagos por factura (para saldo)
   const pagosPorFactura = useMemo(() => {
@@ -1212,15 +1239,27 @@ function App() {
         {/* Empleados */}
         {activeTab === 'empleados' && (
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
               <h2 className="text-xl font-bold">Empleados</h2>
-              <button
-                onClick={() => { setSelectedItem(null); setShowModal('empleado'); }}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all"
-              >
-                <Plus className="w-5 h-5" />
-                Nuevo Empleado
-              </button>
+              <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+                <select
+                  value={filtroMesEmpleado}
+                  onChange={(e) => setFiltroMesEmpleado(e.target.value)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50"
+                >
+                  <option value="todos">Todos los meses</option>
+                  {MESES.map((mes, index) => (
+                    <option key={index} value={index}>{mes}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => { setSelectedItem(null); setShowModal('empleado'); }}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all"
+                >
+                  <Plus className="w-5 h-5" />
+                  Nuevo Empleado
+                </button>
+              </div>
             </div>
 
             <div className="glass rounded-2xl glow overflow-hidden">
@@ -1234,53 +1273,70 @@ function App() {
                       <th className="px-5 py-4 font-medium">Ingreso</th>
                       <th className="px-5 py-4 font-medium">Banco</th>
                       <th className="px-5 py-4 font-medium text-right">Sueldo</th>
+                      <th className="px-5 py-4 font-medium text-right">Pagado {filtroMesEmpleado !== 'todos' ? MESES[parseInt(filtroMesEmpleado)] : ''}</th>
                       <th className="px-5 py-4 font-medium text-right">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {empleados.map(e => (
-                      <tr key={e.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                        <td className="px-5 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
-                              <span className="text-sm font-medium">{e.nombre.split(' ').map(n => n[0]).join('')}</span>
+                    {empleados.map(e => {
+                      const pagadoMes = pagosPorEmpleado[e.id] || 0;
+                      return (
+                        <tr key={e.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
+                                <span className="text-sm font-medium text-white">{e.nombre.split(' ').map(n => n[0]).join('')}</span>
+                              </div>
+                              <span className="font-medium">{e.nombre}</span>
                             </div>
-                            <span className="font-medium">{e.nombre}</span>
-                          </div>
-                        </td>
-                        <td className="px-5 py-4 text-sm text-slate-400">{e.documento || '-'}</td>
-                        <td className="px-5 py-4 text-sm">{e.puesto || '-'}</td>
-                        <td className="px-5 py-4 text-sm text-slate-400">{formatDate(e.fecha_ingreso)}</td>
-                        <td className="px-5 py-4 text-sm text-slate-400">{e.banco || '-'}</td>
-                        <td className="px-5 py-4 text-right font-semibold mono">{formatCurrency(e.sueldo)}</td>
-                        <td className="px-5 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button onClick={() => pagarSueldo(e)} className="p-2 hover:bg-emerald-500/20 rounded-lg transition-colors text-emerald-400" title="Pagar sueldo">
-                              <DollarSign className="w-4 h-4" />
-                            </button>
-                            <button onClick={() => { setSelectedItem(e); setShowModal('empleado'); }} className="p-2 hover:bg-slate-100 rounded-lg transition-colors" title="Editar">
-                              <Edit3 className="w-4 h-4" />
-                            </button>
-                            <button onClick={() => deleteEmpleado(e.id)} className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-red-400" title="Eliminar">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td className="px-5 py-4 text-sm text-slate-400">{e.documento || '-'}</td>
+                          <td className="px-5 py-4 text-sm">{e.puesto || '-'}</td>
+                          <td className="px-5 py-4 text-sm text-slate-400">{formatDate(e.fecha_ingreso)}</td>
+                          <td className="px-5 py-4 text-sm text-slate-400">{e.banco || '-'}</td>
+                          <td className="px-5 py-4 text-right font-semibold mono">{formatCurrency(e.sueldo)}</td>
+                          <td className="px-5 py-4 text-right">
+                            <span className={`font-semibold mono ${pagadoMes > 0 ? 'text-emerald-500' : 'text-slate-300'}`}>
+                              {formatCurrency(pagadoMes)}
+                            </span>
+                          </td>
+                          <td className="px-5 py-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button onClick={() => { setSelectedItem(e); setShowModal('empleado'); }} className="p-2 hover:bg-slate-100 rounded-lg transition-colors" title="Editar">
+                                <Edit3 className="w-4 h-4" />
+                              </button>
+                              <button onClick={() => deleteEmpleado(e.id)} className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-red-400" title="Eliminar">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
             </div>
 
             {/* Resumen de sueldos */}
-            <div className="glass rounded-2xl p-5 glow">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="text-lg font-semibold">Total Sueldos Mensuales</h3>
-                  <p className="text-slate-400 text-sm">{empleados.length} empleados</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="glass rounded-2xl p-5 glow">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-lg font-semibold">Sueldos Mensuales</h3>
+                    <p className="text-slate-400 text-sm">{empleados.length} empleados</p>
+                  </div>
+                  <p className="text-2xl font-bold mono text-slate-600">{formatCurrency(stats.totalSueldos)}</p>
                 </div>
-                <p className="text-3xl font-bold mono text-emerald-400">{formatCurrency(stats.totalSueldos)}</p>
+              </div>
+              <div className="glass rounded-2xl p-5 glow">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-lg font-semibold">Pagado {filtroMesEmpleado !== 'todos' ? MESES[parseInt(filtroMesEmpleado)] : 'Total'}</h3>
+                    <p className="text-slate-400 text-sm">{Object.keys(pagosPorEmpleado).length} empleados con pagos</p>
+                  </div>
+                  <p className="text-2xl font-bold mono text-emerald-500">{formatCurrency(totalPagadoEmpleadosMes)}</p>
+                </div>
               </div>
             </div>
           </div>
