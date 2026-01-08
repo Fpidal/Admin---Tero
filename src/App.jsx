@@ -1,13 +1,15 @@
 import { useState, useEffect, useMemo } from 'react';
-import { 
-  BarChart3, DollarSign, Users, FileText, AlertTriangle, 
+import {
+  BarChart3, DollarSign, Users, FileText, AlertTriangle,
   Calendar, Plus, X, Search, ChevronDown, ChevronUp,
   Building2, CreditCard, Clock, CheckCircle, AlertCircle,
   Truck, User, Edit3, Trash2, Filter, Download,
-  TrendingUp, TrendingDown, Loader2, LogOut, Eye
+  TrendingUp, TrendingDown, Loader2, LogOut, Eye, Printer
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { supabase } from './supabase';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const formatCurrency = (value) => {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(value);
@@ -40,6 +42,310 @@ const CONDICIONES_PAGO = [
   { value: 45, label: '45 días' },
   { value: 60, label: '60 días' }
 ];
+
+// Modal Informe Proveedor
+function ModalInformeProveedor({ onClose, proveedores, facturas, pagos, notasCredito }) {
+  const [proveedorId, setProveedorId] = useState('');
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState(new Date().toISOString().split('T')[0]);
+  const [generando, setGenerando] = useState(false);
+
+  const proveedor = proveedores.find(p => p.id === parseInt(proveedorId));
+
+  const generarPDF = () => {
+    if (!proveedorId) return;
+    setGenerando(true);
+
+    const doc = new jsPDF();
+    const prov = proveedores.find(p => p.id === parseInt(proveedorId));
+
+    // Filtrar datos por proveedor y fechas
+    const facturasProveedor = facturas
+      .filter(f => f.proveedor_id === parseInt(proveedorId))
+      .filter(f => {
+        if (!fechaDesde) return true;
+        return f.fecha >= fechaDesde && f.fecha <= fechaHasta;
+      })
+      .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+    const pagosProveedor = pagos
+      .filter(p => p.tipo === 'factura' && p.descripcion?.includes(prov?.nombre))
+      .filter(p => {
+        if (!fechaDesde) return true;
+        return p.fecha >= fechaDesde && p.fecha <= fechaHasta;
+      })
+      .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+    const ncProveedor = notasCredito
+      .filter(nc => nc.proveedor_id === parseInt(proveedorId))
+      .filter(nc => {
+        if (!fechaDesde) return true;
+        return nc.fecha >= fechaDesde && nc.fecha <= fechaHasta;
+      })
+      .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+    // Encabezado
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('INFORME DE PROVEEDOR', 105, 20, { align: 'center' });
+
+    doc.setFontSize(14);
+    doc.text(prov?.nombre || 'Proveedor', 105, 30, { align: 'center' });
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const periodoTexto = fechaDesde
+      ? `Período: ${formatDate(fechaDesde)} - ${formatDate(fechaHasta)}`
+      : `Hasta: ${formatDate(fechaHasta)}`;
+    doc.text(periodoTexto, 105, 38, { align: 'center' });
+
+    let yPos = 50;
+
+    // Datos del proveedor
+    doc.setFontSize(10);
+    if (prov?.cuit) doc.text(`CUIT: ${prov.cuit}`, 14, yPos);
+    if (prov?.telefono) doc.text(`Tel: ${prov.telefono}`, 100, yPos);
+    if (prov?.cuit || prov?.telefono) yPos += 10;
+
+    // FACTURAS
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('FACTURAS', 14, yPos);
+    yPos += 5;
+
+    if (facturasProveedor.length > 0) {
+      const facturasData = facturasProveedor.map(f => [
+        formatDate(f.fecha),
+        f.numero,
+        f.concepto || '-',
+        formatDate(f.vencimiento),
+        f.estado.charAt(0).toUpperCase() + f.estado.slice(1),
+        formatCurrencyPDF(f.monto)
+      ]);
+
+      const totalFacturas = facturasProveedor.reduce((sum, f) => sum + f.monto, 0);
+
+      doc.autoTable({
+        startY: yPos,
+        head: [['Fecha', 'Número', 'Concepto', 'Vencimiento', 'Estado', 'Monto']],
+        body: facturasData,
+        foot: [['', '', '', '', 'TOTAL:', formatCurrencyPDF(totalFacturas)]],
+        theme: 'striped',
+        headStyles: { fillColor: [59, 130, 246], fontSize: 8 },
+        bodyStyles: { fontSize: 8 },
+        footStyles: { fillColor: [241, 245, 249], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8 },
+        columnStyles: { 5: { halign: 'right' } }
+      });
+      yPos = doc.lastAutoTable.finalY + 10;
+    } else {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text('No hay facturas en el período seleccionado', 14, yPos + 5);
+      yPos += 15;
+    }
+
+    // PAGOS
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PAGOS REALIZADOS', 14, yPos);
+    yPos += 5;
+
+    if (pagosProveedor.length > 0) {
+      const pagosData = pagosProveedor.map(p => {
+        // Extraer número de factura de la descripción
+        const facturaMatch = p.descripcion?.match(/Fact[ura]*\.?\s*([A-Za-z0-9-]+)/i);
+        const facturaNum = facturaMatch ? facturaMatch[1] : '-';
+        return [
+          formatDate(p.fecha),
+          p.descripcion || '-',
+          facturaNum,
+          p.metodo || '-',
+          formatCurrencyPDF(p.monto)
+        ];
+      });
+
+      const totalPagos = pagosProveedor.reduce((sum, p) => sum + p.monto, 0);
+
+      doc.autoTable({
+        startY: yPos,
+        head: [['Fecha', 'Descripción', 'Factura', 'Método', 'Monto']],
+        body: pagosData,
+        foot: [['', '', '', 'TOTAL:', formatCurrencyPDF(totalPagos)]],
+        theme: 'striped',
+        headStyles: { fillColor: [34, 197, 94], fontSize: 8 },
+        bodyStyles: { fontSize: 8 },
+        footStyles: { fillColor: [241, 245, 249], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8 },
+        columnStyles: { 4: { halign: 'right' } }
+      });
+      yPos = doc.lastAutoTable.finalY + 10;
+    } else {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text('No hay pagos en el período seleccionado', 14, yPos + 5);
+      yPos += 15;
+    }
+
+    // NOTAS DE CRÉDITO
+    if (ncProveedor.length > 0) {
+      // Nueva página si no hay espacio
+      if (yPos > 240) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('NOTAS DE CRÉDITO', 14, yPos);
+      yPos += 5;
+
+      const ncData = ncProveedor.map(nc => {
+        const factura = facturas.find(f => f.id === nc.factura_id);
+        return [
+          formatDate(nc.fecha),
+          nc.numero,
+          nc.motivo || '-',
+          factura?.numero || '-',
+          formatCurrencyPDF(nc.monto)
+        ];
+      });
+
+      const totalNC = ncProveedor.reduce((sum, nc) => sum + nc.monto, 0);
+
+      doc.autoTable({
+        startY: yPos,
+        head: [['Fecha', 'Número NC', 'Motivo', 'Factura Aplicada', 'Monto']],
+        body: ncData,
+        foot: [['', '', '', 'TOTAL:', formatCurrencyPDF(totalNC)]],
+        theme: 'striped',
+        headStyles: { fillColor: [168, 85, 247], fontSize: 8 },
+        bodyStyles: { fontSize: 8 },
+        footStyles: { fillColor: [241, 245, 249], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8 },
+        columnStyles: { 4: { halign: 'right' } }
+      });
+      yPos = doc.lastAutoTable.finalY + 10;
+    }
+
+    // RESUMEN
+    if (yPos > 250) {
+      doc.addPage();
+      yPos = 20;
+    }
+
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('RESUMEN', 14, yPos);
+    yPos += 8;
+
+    const totalFacturasSum = facturasProveedor.reduce((sum, f) => sum + f.monto, 0);
+    const totalPagosSum = pagosProveedor.reduce((sum, p) => sum + p.monto, 0);
+    const totalNCSum = ncProveedor.reduce((sum, nc) => sum + nc.monto, 0);
+    const saldoPendiente = totalFacturasSum - totalPagosSum - totalNCSum;
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Total Facturas: ${formatCurrencyPDF(totalFacturasSum)}`, 14, yPos);
+    yPos += 6;
+    doc.text(`Total Pagos: ${formatCurrencyPDF(totalPagosSum)}`, 14, yPos);
+    yPos += 6;
+    doc.text(`Total NC: ${formatCurrencyPDF(totalNCSum)}`, 14, yPos);
+    yPos += 8;
+    doc.setFont('helvetica', 'bold');
+    doc.text(`SALDO PENDIENTE: ${formatCurrencyPDF(saldoPendiente)}`, 14, yPos);
+
+    // Pie de página
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Generado el ${new Date().toLocaleDateString('es-AR')} - Página ${i} de ${pageCount}`, 105, 290, { align: 'center' });
+    }
+
+    // Guardar PDF
+    const fileName = `Informe_${prov?.nombre?.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
+    setGenerando(false);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="glass rounded-2xl p-6 w-full max-w-md">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold">Informe de Proveedor</h2>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm text-slate-500 mb-1">Proveedor *</label>
+            <select
+              required
+              value={proveedorId}
+              onChange={e => setProveedorId(e.target.value)}
+              className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50"
+            >
+              <option value="">Seleccionar proveedor</option>
+              {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm text-slate-500 mb-1">Desde (opcional)</label>
+              <input
+                type="date"
+                value={fechaDesde}
+                onChange={e => setFechaDesde(e.target.value)}
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-500 mb-1">Hasta</label>
+              <input
+                type="date"
+                value={fechaHasta}
+                onChange={e => setFechaHasta(e.target.value)}
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50"
+              />
+            </div>
+          </div>
+
+          {proveedor && (
+            <div className="p-3 bg-slate-50 rounded-xl text-sm">
+              <p className="font-medium">{proveedor.nombre}</p>
+              {proveedor.cuit && <p className="text-slate-500">CUIT: {proveedor.cuit}</p>}
+              {proveedor.categoria && <p className="text-slate-500">Categoría: {CATEGORIAS_PROVEEDOR.find(c => c.value === proveedor.categoria)?.label || proveedor.categoria}</p>}
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={generarPDF}
+              disabled={!proveedorId || generando}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50"
+            >
+              {generando ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
+              {generando ? 'Generando...' : 'Generar PDF'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Función auxiliar para formato de moneda en PDF (sin símbolo raro)
+const formatCurrencyPDF = (value) => {
+  return '$ ' + new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(value);
+};
 
 // Modal Proveedor
 function ModalProveedor({ proveedor, onClose, onSave, onDelete }) {
@@ -1685,7 +1991,7 @@ function App() {
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
               <h2 className="text-xl font-bold">Proveedores</h2>
-              <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+              <div className="flex flex-wrap gap-2 items-center">
                 <select
                   value={filtroCategoriaProveedor}
                   onChange={(e) => setFiltroCategoriaProveedor(e.target.value)}
@@ -1694,6 +2000,13 @@ function App() {
                   <option value="todos">Todas las categorías</option>
                   {CATEGORIAS_PROVEEDOR.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                 </select>
+                <button
+                  onClick={() => setShowModal('informe-proveedor')}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 transition-all text-sm"
+                >
+                  <Printer className="w-4 h-4" />
+                  Informe
+                </button>
                 <button
                   onClick={() => { setSelectedItem(null); setShowModal('proveedor'); }}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all text-sm"
@@ -2168,6 +2481,17 @@ function App() {
           onClose={() => { setShowModal(null); setSelectedItem(null); }}
           onSave={selectedItem ? (data) => updateProveedor(selectedItem.id, data) : createProveedor}
           onDelete={deleteProveedor}
+        />
+      )}
+
+      {/* Modal Informe Proveedor */}
+      {showModal === 'informe-proveedor' && (
+        <ModalInformeProveedor
+          onClose={() => setShowModal(null)}
+          proveedores={proveedores}
+          facturas={facturas}
+          pagos={pagos}
+          notasCredito={notasCredito}
         />
       )}
 
