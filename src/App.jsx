@@ -395,7 +395,7 @@ const CONCEPTOS_EMPLEADO = [
   { value: 'evento_parcial', label: 'Evento Parcial' }
 ];
 
-function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados = [], facturas = [], onMarcarFacturaPagada }) {
+function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados = [], facturas = [], pagos = [], notasCredito = [], onMarcarFacturaPagada }) {
   const [form, setForm] = useState({
     tipo: tipoDefault || 'otro',
     referencia_id: '',
@@ -418,8 +418,23 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
     return 'Registrar Pago';
   };
 
+  // Calcular saldo de cada factura (monto - pagos - NC)
   const facturasDelProveedor = proveedorSeleccionado
-    ? facturas.filter(f => f.proveedor_id === proveedorSeleccionado && f.estado !== 'pagada')
+    ? facturas
+        .filter(f => f.proveedor_id === proveedorSeleccionado && f.estado !== 'pagada')
+        .map(f => {
+          // Calcular pagos de esta factura
+          const pagosFactura = pagos
+            .filter(p => p.tipo === 'factura' && p.descripcion && p.descripcion.includes(f.numero))
+            .reduce((sum, p) => sum + p.monto, 0);
+          // Calcular NC de esta factura
+          const ncFactura = notasCredito
+            .filter(nc => nc.factura_id === f.id)
+            .reduce((sum, nc) => sum + nc.monto, 0);
+          const saldo = f.monto - pagosFactura - ncFactura;
+          return { ...f, pagado: pagosFactura, nc: ncFactura, saldo };
+        })
+        .filter(f => f.saldo > 0) // Solo mostrar facturas con saldo pendiente
     : [];
 
   const handleProveedorChange = (proveedorId) => {
@@ -452,8 +467,8 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
     if (tipo === 'total' && facturaSeleccionada) {
       setForm({
         ...form,
-        descripcion: `Pago Total ${proveedor?.nombre} - Factura ${facturaSeleccionada.numero}`,
-        monto: facturaSeleccionada.monto
+        descripcion: `Pago Saldo ${proveedor?.nombre} - Factura ${facturaSeleccionada.numero}`,
+        monto: facturaSeleccionada.saldo || facturaSeleccionada.monto
       });
     } else if (tipo === 'parcial') {
       setForm({
@@ -548,8 +563,14 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="font-semibold text-sm mono">{formatCurrency(f.monto)}</p>
-                          <p className="text-xs text-slate-500">Vence: {formatDate(f.vencimiento)}</p>
+                          <p className="font-semibold text-sm mono text-amber-600">Saldo: {formatCurrency(f.saldo)}</p>
+                          {(f.pagado > 0 || f.nc > 0) && (
+                            <p className="text-xs text-slate-400">
+                              Total: {formatCurrency(f.monto)}
+                              {f.pagado > 0 && ` | Pagado: ${formatCurrency(f.pagado)}`}
+                              {f.nc > 0 && ` | NC: ${formatCurrency(f.nc)}`}
+                            </p>
+                          )}
                         </div>
                       </label>
                     ))}
@@ -571,8 +592,8 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
                           : 'border-slate-200 hover:border-slate-300'
                       }`}
                     >
-                      <p className="font-semibold">Pago Total</p>
-                      <p className="text-sm mono mt-1">{formatCurrency(facturaSeleccionada.monto)}</p>
+                      <p className="font-semibold">Pagar Saldo</p>
+                      <p className="text-sm mono mt-1">{formatCurrency(facturaSeleccionada.saldo || facturaSeleccionada.monto)}</p>
                     </button>
                     <button
                       type="button"
@@ -637,12 +658,12 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
                 <input type="text" required value={form.descripcion} onChange={e => setForm({...form, descripcion: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
               </div>
               <div>
-                <label className="block text-sm text-slate-400 mb-1">Monto * {tipoPago === 'parcial' && facturaSeleccionada && <span className="text-amber-600">(Máx: {formatCurrency(facturaSeleccionada.monto)})</span>}</label>
+                <label className="block text-sm text-slate-400 mb-1">Monto * {tipoPago === 'parcial' && facturaSeleccionada && <span className="text-amber-600">(Máx: {formatCurrency(facturaSeleccionada.saldo || facturaSeleccionada.monto)})</span>}</label>
                 <input
                   type="number"
                   required
                   min="0"
-                  max={tipoPago === 'parcial' && facturaSeleccionada ? facturaSeleccionada.monto : undefined}
+                  max={tipoPago === 'parcial' && facturaSeleccionada ? (facturaSeleccionada.saldo || facturaSeleccionada.monto) : undefined}
                   step="0.01"
                   value={form.monto}
                   onChange={e => setForm({...form, monto: e.target.value})}
@@ -808,7 +829,16 @@ function App() {
   // Cargar datos desde Supabase
   const fetchProveedores = async () => {
     const { data, error } = await supabase.from('proveedores').select('*').order('nombre');
-    if (!error) setProveedores(data || []);
+    if (!error) {
+      // Cargar extras desde localStorage (categoria, condicion_pago)
+      const extras = JSON.parse(localStorage.getItem('proveedores_extras') || '{}');
+      const proveedoresConExtras = (data || []).map(p => ({
+        ...p,
+        categoria: extras[p.id]?.categoria || '',
+        condicion_pago: extras[p.id]?.condicion_pago || ''
+      }));
+      setProveedores(proveedoresConExtras);
+    }
   };
 
   const fetchFacturas = async () => {
@@ -871,14 +901,20 @@ function App() {
 
   // CRUD Proveedores
   const createProveedor = async (proveedor) => {
-    // Quitar campos que pueden no existir en la tabla
-    const { categoria, condicion_pago, ...proveedorData } = proveedor;
-    console.log('Creando proveedor:', proveedorData);
-    const { data, error } = await supabase.from('proveedores').insert([proveedorData]).select();
+    console.log('Creando proveedor:', proveedor);
+    // Excluir campos que no existen en Supabase (categoria, condicion_pago se guardan en localStorage)
+    const { categoria, condicion_pago, ...proveedorDB } = proveedor;
+    const { data, error } = await supabase.from('proveedores').insert([proveedorDB]).select();
     console.log('Respuesta Supabase:', { data, error });
     if (error) {
       console.error('Error completo:', JSON.stringify(error, null, 2));
     } else {
+      // Guardar categoria y condicion_pago en localStorage
+      if (data && data[0]) {
+        const extras = JSON.parse(localStorage.getItem('proveedores_extras') || '{}');
+        extras[data[0].id] = { categoria, condicion_pago };
+        localStorage.setItem('proveedores_extras', JSON.stringify(extras));
+      }
       await fetchProveedores();
       setShowModal(null);
       setSelectedItem(null);
@@ -887,14 +923,18 @@ function App() {
   };
 
   const updateProveedor = async (id, proveedor) => {
-    // Quitar campos que pueden no existir en la tabla
-    const { categoria, condicion_pago, ...proveedorData } = proveedor;
-    console.log('Actualizando proveedor:', id, proveedorData);
-    const { data, error } = await supabase.from('proveedores').update(proveedorData).eq('id', id).select();
+    console.log('Actualizando proveedor:', id, proveedor);
+    // Excluir campos que no existen en Supabase
+    const { categoria, condicion_pago, ...proveedorDB } = proveedor;
+    const { data, error } = await supabase.from('proveedores').update(proveedorDB).eq('id', id).select();
     console.log('Respuesta Supabase:', { data, error });
     if (error) {
       console.error('Error completo:', JSON.stringify(error, null, 2));
     } else {
+      // Guardar categoria y condicion_pago en localStorage
+      const extras = JSON.parse(localStorage.getItem('proveedores_extras') || '{}');
+      extras[id] = { categoria, condicion_pago };
+      localStorage.setItem('proveedores_extras', JSON.stringify(extras));
       await fetchProveedores();
       setShowModal(null);
       setSelectedItem(null);
@@ -1986,6 +2026,8 @@ function App() {
           proveedores={proveedores}
           empleados={empleados}
           facturas={facturas}
+          pagos={pagos}
+          notasCredito={notasCredito}
           onMarcarFacturaPagada={async (facturaId) => {
             await supabase.from('facturas').update({ estado: 'pagada' }).eq('id', facturaId);
             await fetchFacturas();
