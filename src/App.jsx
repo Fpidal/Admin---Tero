@@ -152,7 +152,7 @@ function ModalProveedor({ proveedor, onClose, onSave, onDelete }) {
 }
 
 // Modal Factura
-function ModalFactura({ factura, proveedores, onClose, onSave, onDelete }) {
+function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, onDelete }) {
   const [form, setForm] = useState({
     proveedor_id: factura?.proveedor_id || '',
     numero: factura?.numero || '',
@@ -165,6 +165,16 @@ function ModalFactura({ factura, proveedores, onClose, onSave, onDelete }) {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+
+  // Validar si ya existe una factura con el mismo número para el mismo proveedor
+  const facturaExistente = () => {
+    if (!form.proveedor_id || !form.numero) return false;
+    return facturas.some(f =>
+      f.proveedor_id === parseInt(form.proveedor_id) &&
+      f.numero.toLowerCase() === form.numero.toLowerCase() &&
+      (!factura || f.id !== factura.id) // Excluir la factura actual si estamos editando
+    );
+  };
 
   const handleDelete = () => {
     if (onDelete && factura) {
@@ -213,6 +223,13 @@ function ModalFactura({ factura, proveedores, onClose, onSave, onDelete }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+
+    // Validar factura duplicada
+    if (facturaExistente()) {
+      setError('Ya existe una factura con este número para este proveedor');
+      return;
+    }
+
     setSaving(true);
     // Quitar dias_vencimiento del form antes de guardar
     const { dias_vencimiento, ...dataToSave } = form;
@@ -245,7 +262,10 @@ function ModalFactura({ factura, proveedores, onClose, onSave, onDelete }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm text-slate-400 mb-1">Número Factura *</label>
-              <input type="text" required value={form.numero} onChange={e => setForm({...form, numero: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" placeholder="A-0001-00000001" />
+              <input type="text" required value={form.numero} onChange={e => setForm({...form, numero: e.target.value})} className={`w-full px-3 py-2 rounded-xl border bg-white focus:outline-none text-sm ${facturaExistente() ? 'border-red-400 focus:border-red-500' : 'border-slate-200 focus:border-blue-500/50'}`} placeholder="A-0001-00000001" />
+              {facturaExistente() && (
+                <p className="text-xs text-red-500 mt-1">Ya existe esta factura para este proveedor</p>
+              )}
             </div>
             <div>
               <label className="block text-sm text-slate-400 mb-1">Monto *</label>
@@ -1178,24 +1198,52 @@ function App() {
     return ncMap;
   }, [notasCredito]);
 
+  // Combinar pagos y NC aplicadas para mostrar en sección Pagos
+  const pagosYNC = useMemo(() => {
+    const ncAplicadas = notasCredito
+      .filter(nc => nc.factura_id) // Solo NC aplicadas a facturas
+      .map(nc => {
+        const factura = facturas.find(f => f.id === nc.factura_id);
+        const proveedor = proveedores.find(p => p.id === nc.proveedor_id);
+        return {
+          id: `nc-${nc.id}`,
+          tipo: 'nc',
+          fecha: nc.fecha,
+          descripcion: `NC ${nc.numero} - ${proveedor?.nombre || 'Proveedor'} - Fact. ${factura?.numero || ''}`,
+          metodo: 'Nota de Crédito',
+          monto: nc.monto
+        };
+      });
+    return [...pagos, ...ncAplicadas].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+  }, [pagos, notasCredito, facturas, proveedores]);
+
   // Facturas filtradas con saldo calculado (incluye pagos + NC)
   const facturasFiltradas = useMemo(() => {
     return facturas
       .map(f => {
         const pagado = pagosPorFactura[f.id] || 0;
         const nc = ncPorFactura[f.id] || 0;
+        const saldo = f.monto - pagado - nc;
+        // Determinar estado visual: si hay pagos parciales y no está pagada, mostrar "parcial"
+        let estadoDisplay = f.estado;
+        if (f.estado === 'pendiente' && (pagado > 0 || nc > 0) && saldo > 0) {
+          estadoDisplay = 'parcial';
+        }
         return {
           ...f,
           pagado,
           nc,
           totalPagado: pagado + nc,
-          saldo: f.monto - pagado - nc
+          saldo,
+          estadoDisplay
         };
       })
       .filter(f => {
         const matchSearch = f.proveedor.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            f.numero.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchEstado = filtroEstado === 'todos' || f.estado === filtroEstado;
+        // Para filtro, "parcial" se considera como "pendiente"
+        const estadoParaFiltro = f.estadoDisplay === 'parcial' ? 'pendiente' : f.estado;
+        const matchEstado = filtroEstado === 'todos' || estadoParaFiltro === filtroEstado || (filtroEstado === 'parcial' && f.estadoDisplay === 'parcial');
         const matchProveedor = filtroProveedorFactura === 'todos' || f.proveedor_id === parseInt(filtroProveedorFactura);
         return matchSearch && matchEstado && matchProveedor;
       });
@@ -1495,8 +1543,8 @@ function App() {
                             </div>
                           </td>
                           <td className="px-5 py-4">
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium badge-${f.estado}`}>
-                              {f.estado.charAt(0).toUpperCase() + f.estado.slice(1)}
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium badge-${f.estadoDisplay}`}>
+                              {f.estadoDisplay.charAt(0).toUpperCase() + f.estadoDisplay.slice(1)}
                             </span>
                           </td>
                           <td className="px-5 py-4 text-right font-semibold mono">{formatCurrency(f.monto)}</td>
@@ -1891,6 +1939,7 @@ function App() {
                   <option value="todos">Todos los tipos</option>
                   <option value="factura">Proveedores</option>
                   <option value="sueldo">Empleados</option>
+                  <option value="nc">Notas de Crédito</option>
                 </select>
                 <select
                   value={filtroMetodoPago}
@@ -1952,14 +2001,14 @@ function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {pagos
+                    {pagosYNC
                       .filter(p => filtroTipoPago === 'todos' || p.tipo === filtroTipoPago)
                       .filter(p => filtroMesPago === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesPago))
                       .filter(p => filtroMetodoPago === 'todos' || p.metodo === filtroMetodoPago)
                       .length === 0 ? (
                       <tr><td colSpan="5" className="px-3 py-8 text-center text-slate-400 text-xs">No hay pagos con los filtros seleccionados</td></tr>
                     ) : (
-                      pagos
+                      pagosYNC
                         .filter(p => filtroTipoPago === 'todos' || p.tipo === filtroTipoPago)
                         .filter(p => filtroMesPago === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesPago))
                         .filter(p => filtroMetodoPago === 'todos' || p.metodo === filtroMetodoPago)
@@ -1968,14 +2017,16 @@ function App() {
                             <td className="px-3 py-2.5 text-xs">{formatDate(p.fecha)}</td>
                             <td className="px-3 py-2.5">
                               <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                p.tipo === 'factura' ? 'bg-blue-500/15 text-blue-700' : 'bg-cyan-500/15 text-cyan-700'
+                                p.tipo === 'factura' ? 'bg-blue-500/15 text-blue-700' :
+                                p.tipo === 'nc' ? 'bg-purple-500/15 text-purple-700' :
+                                'bg-cyan-500/15 text-cyan-700'
                               }`}>
-                                {p.tipo === 'factura' ? 'Proveedor' : 'Empleado'}
+                                {p.tipo === 'factura' ? 'Proveedor' : p.tipo === 'nc' ? 'NC' : 'Empleado'}
                               </span>
                             </td>
                             <td className="px-3 py-2.5 text-xs">{p.descripcion}</td>
                             <td className="px-3 py-2.5 text-xs text-slate-500">{p.metodo}</td>
-                            <td className="px-3 py-2.5 text-right font-semibold mono text-emerald-500 text-xs">{formatCurrency(p.monto)}</td>
+                            <td className={`px-3 py-2.5 text-right font-semibold mono text-xs ${p.tipo === 'nc' ? 'text-purple-500' : 'text-emerald-500'}`}>{formatCurrency(p.monto)}</td>
                           </tr>
                         ))
                     )}
@@ -2002,6 +2053,7 @@ function App() {
         <ModalFactura
           factura={selectedItem}
           proveedores={proveedores}
+          facturas={facturas}
           onClose={() => { setShowModal(null); setSelectedItem(null); }}
           onSave={selectedItem ? (data) => updateFactura(selectedItem.id, data) : createFactura}
           onDelete={deleteFactura}
