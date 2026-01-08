@@ -32,12 +32,17 @@ function ModalProveedor({ proveedor, onClose, onSave }) {
     cbu: proveedor?.cbu || ''
   });
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(null);
     setSaving(true);
-    await onSave(form);
+    const result = await onSave(form);
     setSaving(false);
+    if (result?.error) {
+      setError(result.error.message || 'Error al guardar. Verificá los permisos de la base de datos.');
+    }
   };
 
   return (
@@ -72,6 +77,11 @@ function ModalProveedor({ proveedor, onClose, onSave }) {
             <label className="block text-sm text-slate-400 mb-1">CBU</label>
             <input type="text" value={form.cbu} onChange={e => setForm({...form, cbu: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
           </div>
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+              {error}
+            </div>
+          )}
           <div className="flex gap-3 pt-4">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all">Cancelar</button>
             <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
@@ -97,12 +107,17 @@ function ModalFactura({ factura, proveedores, onClose, onSave }) {
     concepto: factura?.concepto || ''
   });
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(null);
     setSaving(true);
-    await onSave({ ...form, monto: parseFloat(form.monto) });
+    const result = await onSave({ ...form, monto: parseFloat(form.monto) });
     setSaving(false);
+    if (result?.error) {
+      setError(result.error.message || 'Error al guardar. Verificá los permisos de la base de datos.');
+    }
   };
 
   return (
@@ -150,6 +165,11 @@ function ModalFactura({ factura, proveedores, onClose, onSave }) {
             <label className="block text-sm text-slate-400 mb-1">Concepto</label>
             <input type="text" value={form.concepto} onChange={e => setForm({...form, concepto: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
           </div>
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+              {error}
+            </div>
+          )}
           <div className="flex gap-3 pt-4">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all">Cancelar</button>
             <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
@@ -175,12 +195,17 @@ function ModalEmpleado({ empleado, onClose, onSave }) {
     cbu: empleado?.cbu || ''
   });
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(null);
     setSaving(true);
-    await onSave({ ...form, sueldo: parseFloat(form.sueldo) });
+    const result = await onSave({ ...form, sueldo: parseFloat(form.sueldo) });
     setSaving(false);
+    if (result?.error) {
+      setError(result.error.message || 'Error al guardar. Verificá los permisos de la base de datos.');
+    }
   };
 
   return (
@@ -219,6 +244,11 @@ function ModalEmpleado({ empleado, onClose, onSave }) {
             <label className="block text-sm text-slate-400 mb-1">CBU</label>
             <input type="text" value={form.cbu} onChange={e => setForm({...form, cbu: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
           </div>
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+              {error}
+            </div>
+          )}
           <div className="flex gap-3 pt-4">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all">Cancelar</button>
             <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
@@ -244,7 +274,10 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
     metodo: 'Transferencia'
   });
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
   const [proveedorSeleccionado, setProveedorSeleccionado] = useState(null);
+  const [tipoPago, setTipoPago] = useState(null); // 'total' o 'parcial'
+  const [facturaSeleccionada, setFacturaSeleccionada] = useState(null);
 
   const getTitulo = () => {
     if (tipoDefault === 'factura') return 'Registrar Pago a Proveedor';
@@ -270,13 +303,32 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
 
   const handleFacturaSelect = (facturaId) => {
     const factura = facturas.find(f => f.id === parseInt(facturaId));
-    const proveedor = proveedores.find(p => p.id === proveedorSeleccionado);
+    setFacturaSeleccionada(factura);
+    setTipoPago(null); // Reset tipo de pago cuando cambia la factura
     setForm({
       ...form,
       factura_id: facturaId,
-      descripcion: factura ? `Pago ${proveedor?.nombre} - Factura ${factura.numero}` : form.descripcion,
-      monto: factura ? factura.monto : ''
+      descripcion: '',
+      monto: ''
     });
+  };
+
+  const handleTipoPagoChange = (tipo) => {
+    setTipoPago(tipo);
+    const proveedor = proveedores.find(p => p.id === proveedorSeleccionado);
+    if (tipo === 'total' && facturaSeleccionada) {
+      setForm({
+        ...form,
+        descripcion: `Pago Total ${proveedor?.nombre} - Factura ${facturaSeleccionada.numero}`,
+        monto: facturaSeleccionada.monto
+      });
+    } else if (tipo === 'parcial') {
+      setForm({
+        ...form,
+        descripcion: `Pago Parcial ${proveedor?.nombre} - Factura ${facturaSeleccionada?.numero || ''}`,
+        monto: ''
+      });
+    }
   };
 
   const handleEmpleadoChange = (empleadoId) => {
@@ -291,18 +343,19 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(null);
     setSaving(true);
 
-    // Si se seleccionó una factura y el monto es igual al de la factura, marcarla como pagada
-    if (form.factura_id && tipoDefault === 'factura') {
-      const factura = facturas.find(f => f.id === parseInt(form.factura_id));
-      if (factura && parseFloat(form.monto) >= factura.monto && onMarcarFacturaPagada) {
-        await onMarcarFacturaPagada(parseInt(form.factura_id));
-      }
+    // Si es pago total, marcar la factura como pagada
+    if (tipoPago === 'total' && facturaSeleccionada && onMarcarFacturaPagada) {
+      await onMarcarFacturaPagada(facturaSeleccionada.id);
     }
 
-    await onSave({ ...form, monto: parseFloat(form.monto) });
+    const result = await onSave({ ...form, monto: parseFloat(form.monto) });
     setSaving(false);
+    if (result?.error) {
+      setError(result.error.message || 'Error al guardar el pago. Verificá los permisos de la tabla "pagos" en Supabase.');
+    }
   };
 
   return (
@@ -353,6 +406,39 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
                 </div>
               )}
 
+              {/* Selección de tipo de pago: Total o Parcial */}
+              {facturaSeleccionada && (
+                <div>
+                  <label className="block text-sm text-slate-500 mb-2">Tipo de Pago</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => handleTipoPagoChange('total')}
+                      className={`p-3 rounded-xl border-2 transition-all text-center ${
+                        tipoPago === 'total'
+                          ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                          : 'border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <p className="font-semibold">Pago Total</p>
+                      <p className="text-sm mono mt-1">{formatCurrency(facturaSeleccionada.monto)}</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleTipoPagoChange('parcial')}
+                      className={`p-3 rounded-xl border-2 transition-all text-center ${
+                        tipoPago === 'parcial'
+                          ? 'border-amber-500 bg-amber-50 text-amber-700'
+                          : 'border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <p className="font-semibold">Pago Parcial</p>
+                      <p className="text-sm text-slate-500 mt-1">Ingresar monto</p>
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {proveedorSeleccionado && facturasDelProveedor.length === 0 && (
                 <p className="text-sm text-slate-500 italic">No hay facturas pendientes para este proveedor</p>
               )}
@@ -367,32 +453,57 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
               </select>
             </div>
           )}
-          <div>
-            <label className="block text-sm text-slate-500 mb-1">Descripción *</label>
-            <input type="text" required value={form.descripcion} onChange={e => setForm({...form, descripcion: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
-          </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">Monto *</label>
-            <input type="number" required min="0" step="0.01" value={form.monto} onChange={e => setForm({...form, monto: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
-          </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">Fecha *</label>
-            <input type="date" required value={form.fecha} onChange={e => setForm({...form, fecha: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
-          </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">Método</label>
-            <select value={form.metodo} onChange={e => setForm({...form, metodo: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50">
-              <option value="Transferencia">Transferencia</option>
-              <option value="Efectivo">Efectivo</option>
-              <option value="Cheque">Cheque</option>
-              <option value="Tarjeta">Tarjeta</option>
-            </select>
-          </div>
+
+          {/* Mostrar campos solo si: es pago a empleado con empleado seleccionado, O es pago a proveedor con tipo de pago seleccionado */}
+          {((tipoDefault === 'sueldo' && form.referencia_id) || (tipoDefault === 'factura' && tipoPago)) && (
+            <>
+              <div>
+                <label className="block text-sm text-slate-500 mb-1">Descripción *</label>
+                <input type="text" required value={form.descripcion} onChange={e => setForm({...form, descripcion: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
+              </div>
+              <div>
+                <label className="block text-sm text-slate-400 mb-1">Monto * {tipoPago === 'parcial' && facturaSeleccionada && <span className="text-amber-600">(Máx: {formatCurrency(facturaSeleccionada.monto)})</span>}</label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  max={tipoPago === 'parcial' && facturaSeleccionada ? facturaSeleccionada.monto : undefined}
+                  step="0.01"
+                  value={form.monto}
+                  onChange={e => setForm({...form, monto: e.target.value})}
+                  readOnly={tipoPago === 'total'}
+                  className={`w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 ${tipoPago === 'total' ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-slate-400 mb-1">Fecha *</label>
+                <input type="date" required value={form.fecha} onChange={e => setForm({...form, fecha: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
+              </div>
+              <div>
+                <label className="block text-sm text-slate-400 mb-1">Método</label>
+                <select value={form.metodo} onChange={e => setForm({...form, metodo: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50">
+                  <option value="Transferencia">Transferencia</option>
+                  <option value="Efectivo">Efectivo</option>
+                  <option value="Cheque">Cheque</option>
+                  <option value="Tarjeta">Tarjeta</option>
+                </select>
+              </div>
+            </>
+          )}
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+              {error}
+            </div>
+          )}
           <div className="flex gap-3 pt-4">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all">Cancelar</button>
-            <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+            <button
+              type="submit"
+              disabled={saving || (tipoDefault === 'factura' && !tipoPago) || !form.monto}
+              className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            >
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-              Registrar
+              {tipoPago === 'total' ? 'Pagar Total' : tipoPago === 'parcial' ? 'Pagar Parcial' : 'Registrar'}
             </button>
           </div>
         </form>
@@ -446,6 +557,7 @@ function App() {
 
   const fetchPagos = async () => {
     const { data, error } = await supabase.from('pagos').select('*').order('fecha', { ascending: false });
+    console.log('Pagos cargados:', data, 'Error:', error);
     if (!error) setPagos(data || []);
   };
 
@@ -461,8 +573,12 @@ function App() {
 
   // CRUD Proveedores
   const createProveedor = async (proveedor) => {
-    const { error } = await supabase.from('proveedores').insert([proveedor]);
-    if (!error) {
+    console.log('Creando proveedor:', proveedor);
+    const { data, error } = await supabase.from('proveedores').insert([proveedor]).select();
+    console.log('Respuesta Supabase:', { data, error });
+    if (error) {
+      console.error('Error completo:', JSON.stringify(error, null, 2));
+    } else {
       await fetchProveedores();
       setShowModal(null);
       setSelectedItem(null);
@@ -471,8 +587,12 @@ function App() {
   };
 
   const updateProveedor = async (id, proveedor) => {
-    const { error } = await supabase.from('proveedores').update(proveedor).eq('id', id);
-    if (!error) {
+    console.log('Actualizando proveedor:', id, proveedor);
+    const { data, error } = await supabase.from('proveedores').update(proveedor).eq('id', id).select();
+    console.log('Respuesta Supabase:', { data, error });
+    if (error) {
+      console.error('Error completo:', JSON.stringify(error, null, 2));
+    } else {
       await fetchProveedores();
       setShowModal(null);
       setSelectedItem(null);
@@ -571,8 +691,14 @@ function App() {
 
   // CRUD Pagos
   const createPago = async (pago) => {
-    const { error } = await supabase.from('pagos').insert([pago]);
-    if (!error) {
+    // Quitar factura_id ya que no existe en la tabla
+    const { factura_id, ...pagoData } = pago;
+    console.log('Creando pago:', pagoData);
+    const { data, error } = await supabase.from('pagos').insert([pagoData]).select();
+    console.log('Respuesta Supabase pagos:', { data, error });
+    if (error) {
+      console.error('Error al crear pago:', JSON.stringify(error, null, 2));
+    } else {
       await fetchPagos();
       setShowModal(null);
       setSelectedItem(null);
