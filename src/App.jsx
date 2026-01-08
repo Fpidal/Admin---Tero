@@ -1392,31 +1392,31 @@ function App() {
             {/* Alertas de Vencimientos */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Facturas Vencidas */}
-              <div className="glass rounded-2xl p-5 glow border-l-4 border-red-400">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-red-400" />
+              <div className="glass rounded-2xl p-4 glow border-l-4 border-red-400">
+                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-400" />
                   Facturas Vencidas
                   {facturasVencidasDash.length > 0 && (
-                    <span className="ml-auto px-2 py-0.5 bg-red-100 text-red-600 rounded-full text-xs font-medium">
+                    <span className="ml-auto px-1.5 py-0.5 bg-red-100 text-red-600 rounded-full text-[10px] font-medium">
                       {facturasVencidasDash.length}
                     </span>
                   )}
                 </h3>
                 {facturasVencidasDash.length === 0 ? (
-                  <p className="text-slate-400 text-sm">No hay facturas vencidas</p>
+                  <p className="text-slate-400 text-xs">No hay facturas vencidas</p>
                 ) : (
-                  <div className="space-y-3 max-h-48 overflow-y-auto">
+                  <div className="space-y-1.5 max-h-52 overflow-y-auto">
                     {facturasVencidasDash.map(f => {
                       const dias = getDiasVencimiento(f.vencimiento);
                       return (
-                        <div key={f.id} className="flex items-center justify-between p-3 bg-red-50 rounded-xl">
+                        <div key={f.id} className="flex items-center justify-between p-2 bg-red-50 rounded-lg">
                           <div>
-                            <p className="font-medium text-sm">{f.proveedor}</p>
-                            <p className="text-xs text-slate-400">{f.numero}</p>
+                            <p className="font-medium text-xs">{f.proveedor}</p>
+                            <p className="text-[10px] text-slate-400">{f.numero}</p>
                           </div>
                           <div className="text-right">
-                            <p className="font-semibold mono text-sm text-red-600">{formatCurrency(f.monto)}</p>
-                            <p className={`text-xs ${dias.clase}`}>{dias.texto}</p>
+                            <p className="font-semibold mono text-xs text-red-600">{formatCurrency(f.monto)}</p>
+                            <p className={`text-[10px] ${dias.clase}`}>{dias.texto}</p>
                           </div>
                         </div>
                       );
@@ -1426,31 +1426,31 @@ function App() {
               </div>
 
               {/* Próximos vencimientos (7 días) */}
-              <div className="glass rounded-2xl p-5 glow border-l-4 border-amber-400">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-amber-400" />
+              <div className="glass rounded-2xl p-4 glow border-l-4 border-amber-400">
+                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-amber-400" />
                   Vencen en 7 días
                   {facturasProximas.length > 0 && (
-                    <span className="ml-auto px-2 py-0.5 bg-amber-100 text-amber-600 rounded-full text-xs font-medium">
+                    <span className="ml-auto px-1.5 py-0.5 bg-amber-100 text-amber-600 rounded-full text-[10px] font-medium">
                       {facturasProximas.length}
                     </span>
                   )}
                 </h3>
                 {facturasProximas.length === 0 ? (
-                  <p className="text-slate-400 text-sm">No hay facturas por vencer en los próximos 7 días</p>
+                  <p className="text-slate-400 text-xs">No hay facturas por vencer en los próximos 7 días</p>
                 ) : (
-                  <div className="space-y-3 max-h-48 overflow-y-auto">
+                  <div className="space-y-1.5 max-h-52 overflow-y-auto">
                     {facturasProximas.map(f => {
                       const dias = getDiasVencimiento(f.vencimiento);
                       return (
-                        <div key={f.id} className="flex items-center justify-between p-3 bg-amber-50 rounded-xl">
+                        <div key={f.id} className="flex items-center justify-between p-2 bg-amber-50 rounded-lg">
                           <div>
-                            <p className="font-medium text-sm">{f.proveedor}</p>
-                            <p className="text-xs text-slate-400">{f.numero}</p>
+                            <p className="font-medium text-xs">{f.proveedor}</p>
+                            <p className="text-[10px] text-slate-400">{f.numero}</p>
                           </div>
                           <div className="text-right">
-                            <p className="font-semibold mono text-sm">{formatCurrency(f.monto)}</p>
-                            <p className={`text-xs ${dias.clase}`}>{dias.texto}</p>
+                            <p className="font-semibold mono text-xs">{formatCurrency(f.monto)}</p>
+                            <p className={`text-[10px] ${dias.clase}`}>{dias.texto}</p>
                           </div>
                         </div>
                       );
