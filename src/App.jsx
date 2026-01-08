@@ -263,15 +263,25 @@ function ModalEmpleado({ empleado, onClose, onSave }) {
 }
 
 // Modal Pago
+const CONCEPTOS_EMPLEADO = [
+  { value: 'sueldo', label: 'Sueldo' },
+  { value: 'anticipo', label: 'Anticipo' },
+  { value: 'aguinaldo', label: 'Aguinaldo' },
+  { value: 'vacaciones', label: 'Vacaciones' },
+  { value: 'evento_completo', label: 'Evento Completo' },
+  { value: 'evento_parcial', label: 'Evento Parcial' }
+];
+
 function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados = [], facturas = [], onMarcarFacturaPagada }) {
   const [form, setForm] = useState({
     tipo: tipoDefault || 'otro',
     referencia_id: '',
     factura_id: '',
+    concepto_empleado: '',
     descripcion: '',
     monto: '',
     fecha: new Date().toISOString().split('T')[0],
-    metodo: 'Transferencia'
+    metodo: 'Efectivo'
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -332,12 +342,30 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
   };
 
   const handleEmpleadoChange = (empleadoId) => {
-    const empleado = empleados.find(e => e.id === parseInt(empleadoId));
     setForm({
       ...form,
       referencia_id: empleadoId,
-      descripcion: empleado ? `Sueldo - ${empleado.nombre}` : '',
-      monto: empleado ? empleado.sueldo : ''
+      concepto_empleado: '',
+      descripcion: '',
+      monto: ''
+    });
+  };
+
+  const handleConceptoEmpleadoChange = (concepto) => {
+    const empleado = empleados.find(e => e.id === parseInt(form.referencia_id));
+    const conceptoLabel = CONCEPTOS_EMPLEADO.find(c => c.value === concepto)?.label || '';
+
+    let monto = '';
+    // Si es sueldo, autocompletar con el sueldo del empleado
+    if (concepto === 'sueldo' && empleado) {
+      monto = empleado.sueldo;
+    }
+
+    setForm({
+      ...form,
+      concepto_empleado: concepto,
+      descripcion: empleado ? `${conceptoLabel} - ${empleado.nombre}` : '',
+      monto: monto
     });
   };
 
@@ -445,17 +473,41 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
             </>
           )}
           {tipoDefault === 'sueldo' && (
-            <div>
-              <label className="block text-sm text-slate-500 mb-1">Empleado *</label>
-              <select required value={form.referencia_id} onChange={e => handleEmpleadoChange(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50">
-                <option value="">Seleccionar empleado</option>
-                {empleados.map(e => <option key={e.id} value={e.id}>{e.nombre} - {e.puesto || 'Sin puesto'}</option>)}
-              </select>
-            </div>
+            <>
+              <div>
+                <label className="block text-sm text-slate-500 mb-1">Empleado *</label>
+                <select required value={form.referencia_id} onChange={e => handleEmpleadoChange(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50">
+                  <option value="">Seleccionar empleado</option>
+                  {empleados.map(e => <option key={e.id} value={e.id}>{e.nombre} - {e.puesto || 'Sin puesto'}</option>)}
+                </select>
+              </div>
+
+              {form.referencia_id && (
+                <div>
+                  <label className="block text-sm text-slate-500 mb-2">Concepto *</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {CONCEPTOS_EMPLEADO.map(c => (
+                      <button
+                        key={c.value}
+                        type="button"
+                        onClick={() => handleConceptoEmpleadoChange(c.value)}
+                        className={`p-2.5 rounded-xl border-2 transition-all text-sm font-medium ${
+                          form.concepto_empleado === c.value
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            : 'border-slate-200 hover:border-slate-300 text-slate-600'
+                        }`}
+                      >
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
-          {/* Mostrar campos solo si: es pago a empleado con empleado seleccionado, O es pago a proveedor con tipo de pago seleccionado */}
-          {((tipoDefault === 'sueldo' && form.referencia_id) || (tipoDefault === 'factura' && tipoPago)) && (
+          {/* Mostrar campos solo si: es pago a empleado con concepto seleccionado, O es pago a proveedor con tipo de pago seleccionado */}
+          {((tipoDefault === 'sueldo' && form.concepto_empleado) || (tipoDefault === 'factura' && tipoPago)) && (
             <>
               <div>
                 <label className="block text-sm text-slate-500 mb-1">Descripción *</label>
@@ -482,10 +534,9 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
               <div>
                 <label className="block text-sm text-slate-400 mb-1">Método</label>
                 <select value={form.metodo} onChange={e => setForm({...form, metodo: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50">
-                  <option value="Transferencia">Transferencia</option>
                   <option value="Efectivo">Efectivo</option>
-                  <option value="Cheque">Cheque</option>
-                  <option value="Tarjeta">Tarjeta</option>
+                  <option value="Transferencia">Transferencia</option>
+                  <option value="Mercado Pago">Mercado Pago</option>
                 </select>
               </div>
             </>
@@ -499,11 +550,11 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all">Cancelar</button>
             <button
               type="submit"
-              disabled={saving || (tipoDefault === 'factura' && !tipoPago) || !form.monto}
+              disabled={saving || (tipoDefault === 'factura' && !tipoPago) || (tipoDefault === 'sueldo' && !form.concepto_empleado) || !form.monto}
               className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-              {tipoPago === 'total' ? 'Pagar Total' : tipoPago === 'parcial' ? 'Pagar Parcial' : 'Registrar'}
+              {tipoPago === 'total' ? 'Pagar Total' : tipoPago === 'parcial' ? 'Pagar Parcial' : form.concepto_empleado ? 'Registrar Pago' : 'Registrar'}
             </button>
           </div>
         </form>
@@ -760,15 +811,35 @@ function App() {
 
   const COLORS = ['#8b5cf6', '#06b6d4', '#f59e0b', '#ef4444', '#22c55e', '#ec4899'];
 
-  // Facturas filtradas
-  const facturasFiltradas = useMemo(() => {
-    return facturas.filter(f => {
-      const matchSearch = f.proveedor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         f.numero.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchEstado = filtroEstado === 'todos' || f.estado === filtroEstado;
-      return matchSearch && matchEstado;
+  // Calcular pagos por factura (para saldo)
+  const pagosPorFactura = useMemo(() => {
+    const pagosMap = {};
+    pagos.filter(p => p.tipo === 'factura').forEach(p => {
+      // Buscar en la descripción el número de factura para asociar el pago
+      facturas.forEach(f => {
+        if (p.descripcion && p.descripcion.includes(f.numero)) {
+          pagosMap[f.id] = (pagosMap[f.id] || 0) + p.monto;
+        }
+      });
     });
-  }, [facturas, searchTerm, filtroEstado]);
+    return pagosMap;
+  }, [pagos, facturas]);
+
+  // Facturas filtradas con saldo calculado
+  const facturasFiltradas = useMemo(() => {
+    return facturas
+      .map(f => ({
+        ...f,
+        pagado: pagosPorFactura[f.id] || 0,
+        saldo: f.monto - (pagosPorFactura[f.id] || 0)
+      }))
+      .filter(f => {
+        const matchSearch = f.proveedor.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           f.numero.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchEstado = filtroEstado === 'todos' || f.estado === filtroEstado;
+        return matchSearch && matchEstado;
+      });
+  }, [facturas, searchTerm, filtroEstado, pagosPorFactura]);
 
   const getDiasVencimiento = (vencimiento) => {
     const hoy = new Date();
@@ -1032,12 +1103,14 @@ function App() {
                       <th className="px-5 py-4 font-medium">Vencimiento</th>
                       <th className="px-5 py-4 font-medium">Estado</th>
                       <th className="px-5 py-4 font-medium text-right">Monto</th>
+                      <th className="px-5 py-4 font-medium text-right">Saldo</th>
                       <th className="px-5 py-4 font-medium text-right">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
                     {facturasFiltradas.map(f => {
                       const dias = getDiasVencimiento(f.vencimiento);
+                      const tienePagos = f.pagado > 0;
                       return (
                         <tr key={f.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                           <td className="px-5 py-4 font-medium">{f.proveedor}</td>
@@ -1058,18 +1131,29 @@ function App() {
                           </td>
                           <td className="px-5 py-4 text-right font-semibold mono">{formatCurrency(f.monto)}</td>
                           <td className="px-5 py-4 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              {f.estado !== 'pagada' && (
-                                <button onClick={() => marcarFacturaPagada(f)} className="p-2 hover:bg-emerald-500/20 rounded-lg transition-colors text-emerald-400" title="Marcar como pagada">
-                                  <CheckCircle className="w-4 h-4" />
-                                </button>
+                            <div>
+                              <p className={`font-semibold mono ${f.saldo > 0 ? 'text-amber-500' : 'text-emerald-500'}`}>
+                                {formatCurrency(f.saldo)}
+                              </p>
+                              {tienePagos && (
+                                <p className="text-xs text-slate-400">Pagado: {formatCurrency(f.pagado)}</p>
                               )}
+                            </div>
+                          </td>
+                          <td className="px-5 py-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
                               <button onClick={() => { setSelectedItem(f); setShowModal('factura'); }} className="p-2 hover:bg-slate-100 rounded-lg transition-colors" title="Editar">
                                 <Edit3 className="w-4 h-4" />
                               </button>
-                              <button onClick={() => deleteFactura(f.id)} className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-red-400" title="Eliminar">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                              {tienePagos ? (
+                                <button disabled className="p-2 rounded-lg text-slate-300 cursor-not-allowed" title="No se puede eliminar, tiene pagos asociados">
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              ) : (
+                                <button onClick={() => deleteFactura(f.id)} className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-red-400" title="Eliminar">
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
