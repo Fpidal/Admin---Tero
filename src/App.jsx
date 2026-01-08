@@ -2360,7 +2360,7 @@ function App() {
                   className="px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
                 >
                   <option value="todos">Todos los conceptos</option>
-                  {CONCEPTOS_EMPLEADO.map(c => <option key={c} value={c}>{c}</option>)}
+                  {CONCEPTOS_EMPLEADO.map(c => <option key={c.value} value={c.label}>{c.label}</option>)}
                 </select>
                 <div className="text-right hidden sm:block">
                   <p className="text-xs text-slate-500">Total filtrado</p>
