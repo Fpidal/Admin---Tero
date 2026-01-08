@@ -742,8 +742,8 @@ function App() {
 
   // CRUD Pagos
   const createPago = async (pago) => {
-    // Quitar factura_id ya que no existe en la tabla
-    const { factura_id, ...pagoData } = pago;
+    // Quitar campos que no existen en la tabla
+    const { factura_id, concepto_empleado, ...pagoData } = pago;
     console.log('Creando pago:', pagoData);
     const { data, error } = await supabase.from('pagos').insert([pagoData]).select();
     console.log('Respuesta Supabase pagos:', { data, error });
