@@ -351,6 +351,8 @@ function App() {
   // Filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('todos');
+  const [filtroMesPago, setFiltroMesPago] = useState('todos');
+  const [filtroTipoPago, setFiltroTipoPago] = useState('todos');
 
   // Cargar datos desde Supabase
   const fetchProveedores = async () => {
@@ -626,6 +628,7 @@ function App() {
             { id: 'pago-proveedores', label: 'Pago Proveedores', icon: DollarSign },
             { id: 'empleados', label: 'Empleados', icon: Users },
             { id: 'pago-empleados', label: 'Pago Empleados', icon: DollarSign },
+            { id: 'pagos', label: 'Pagos', icon: CreditCard },
           ].map(tab => (
             <button
               key={tab.id}
@@ -1114,6 +1117,110 @@ function App() {
                           </td>
                         </tr>
                       ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Pagos - Consulta General */}
+        {activeTab === 'pagos' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+              <h2 className="text-xl font-bold">Consulta de Pagos</h2>
+              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                <select
+                  value={filtroMesPago}
+                  onChange={(e) => setFiltroMesPago(e.target.value)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50"
+                >
+                  <option value="todos">Todos los meses</option>
+                  {MESES.map((mes, index) => (
+                    <option key={index} value={index}>{mes}</option>
+                  ))}
+                </select>
+                <select
+                  value={filtroTipoPago}
+                  onChange={(e) => setFiltroTipoPago(e.target.value)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50"
+                >
+                  <option value="todos">Todos los tipos</option>
+                  <option value="factura">Proveedores</option>
+                  <option value="sueldo">Empleados</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Resumen */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="glass rounded-xl p-4">
+                <p className="text-sm text-slate-500">Total Proveedores</p>
+                <p className="text-2xl font-bold text-blue-500 mono">
+                  {formatCurrency(pagos
+                    .filter(p => p.tipo === 'factura')
+                    .filter(p => filtroMesPago === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesPago))
+                    .reduce((sum, p) => sum + p.monto, 0))}
+                </p>
+              </div>
+              <div className="glass rounded-xl p-4">
+                <p className="text-sm text-slate-500">Total Empleados</p>
+                <p className="text-2xl font-bold text-cyan-500 mono">
+                  {formatCurrency(pagos
+                    .filter(p => p.tipo === 'sueldo')
+                    .filter(p => filtroMesPago === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesPago))
+                    .reduce((sum, p) => sum + p.monto, 0))}
+                </p>
+              </div>
+              <div className="glass rounded-xl p-4">
+                <p className="text-sm text-slate-500">Total General</p>
+                <p className="text-2xl font-bold text-emerald-500 mono">
+                  {formatCurrency(pagos
+                    .filter(p => filtroTipoPago === 'todos' || p.tipo === filtroTipoPago)
+                    .filter(p => filtroMesPago === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesPago))
+                    .reduce((sum, p) => sum + p.monto, 0))}
+                </p>
+              </div>
+            </div>
+
+            <div className="glass rounded-2xl glow overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-left text-slate-400 text-sm border-b border-slate-200">
+                      <th className="px-5 py-4 font-medium">Fecha</th>
+                      <th className="px-5 py-4 font-medium">Tipo</th>
+                      <th className="px-5 py-4 font-medium">Descripción</th>
+                      <th className="px-5 py-4 font-medium">Método</th>
+                      <th className="px-5 py-4 font-medium text-right">Monto</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pagos
+                      .filter(p => filtroTipoPago === 'todos' || p.tipo === filtroTipoPago)
+                      .filter(p => filtroMesPago === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesPago))
+                      .length === 0 ? (
+                      <tr><td colSpan="5" className="px-5 py-12 text-center text-slate-400">No hay pagos con los filtros seleccionados</td></tr>
+                    ) : (
+                      pagos
+                        .filter(p => filtroTipoPago === 'todos' || p.tipo === filtroTipoPago)
+                        .filter(p => filtroMesPago === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesPago))
+                        .map(p => (
+                          <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                            <td className="px-5 py-4 text-sm">{formatDate(p.fecha)}</td>
+                            <td className="px-5 py-4">
+                              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                p.tipo === 'factura' ? 'bg-blue-500/15 text-blue-700' : 'bg-cyan-500/15 text-cyan-700'
+                              }`}>
+                                {p.tipo === 'factura' ? 'Proveedor' : 'Empleado'}
+                              </span>
+                            </td>
+                            <td className="px-5 py-4 text-sm">{p.descripcion}</td>
+                            <td className="px-5 py-4 text-sm text-slate-500">{p.metodo}</td>
+                            <td className="px-5 py-4 text-right font-semibold mono text-emerald-500">{formatCurrency(p.monto)}</td>
+                          </tr>
+                        ))
                     )}
                   </tbody>
                 </table>
