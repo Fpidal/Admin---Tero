@@ -825,17 +825,25 @@ function App() {
   };
 
   const fetchNotasCredito = async () => {
-    const { data, error } = await supabase
-      .from('notas_credito')
-      .select('*, proveedores(nombre), facturas(numero)')
-      .order('fecha', { ascending: false });
-    if (!error) {
-      const notasConRelaciones = (data || []).map(nc => ({
-        ...nc,
-        proveedor: nc.proveedores?.nombre || 'Sin proveedor',
-        factura_numero: nc.facturas?.numero || null
-      }));
-      setNotasCredito(notasConRelaciones);
+    try {
+      const { data, error } = await supabase
+        .from('notas_credito')
+        .select('*, proveedores(nombre), facturas(numero)')
+        .order('fecha', { ascending: false });
+      if (!error && data) {
+        const notasConRelaciones = data.map(nc => ({
+          ...nc,
+          proveedor: nc.proveedores?.nombre || 'Sin proveedor',
+          factura_numero: nc.facturas?.numero || null
+        }));
+        setNotasCredito(notasConRelaciones);
+      } else {
+        // Si la tabla no existe, simplemente dejamos el array vacío
+        setNotasCredito([]);
+      }
+    } catch (e) {
+      // Si hay error (tabla no existe), dejamos vacío
+      setNotasCredito([]);
     }
   };
 
