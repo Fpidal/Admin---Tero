@@ -792,6 +792,7 @@ function App() {
   const [filtroMesEmpleado, setFiltroMesEmpleado] = useState(new Date().getMonth().toString()); // Mes actual por defecto
   const [filtroCategoriaProveedor, setFiltroCategoriaProveedor] = useState('todos');
   const [filtroMetodoPago, setFiltroMetodoPago] = useState('todos');
+  const [filtroProveedorFactura, setFiltroProveedorFactura] = useState('todos');
 
   // Cargar datos desde Supabase
   const fetchProveedores = async () => {
@@ -859,8 +860,10 @@ function App() {
 
   // CRUD Proveedores
   const createProveedor = async (proveedor) => {
-    console.log('Creando proveedor:', proveedor);
-    const { data, error } = await supabase.from('proveedores').insert([proveedor]).select();
+    // Quitar campos que pueden no existir en la tabla
+    const { categoria, condicion_pago, ...proveedorData } = proveedor;
+    console.log('Creando proveedor:', proveedorData);
+    const { data, error } = await supabase.from('proveedores').insert([proveedorData]).select();
     console.log('Respuesta Supabase:', { data, error });
     if (error) {
       console.error('Error completo:', JSON.stringify(error, null, 2));
@@ -873,8 +876,10 @@ function App() {
   };
 
   const updateProveedor = async (id, proveedor) => {
-    console.log('Actualizando proveedor:', id, proveedor);
-    const { data, error } = await supabase.from('proveedores').update(proveedor).eq('id', id).select();
+    // Quitar campos que pueden no existir en la tabla
+    const { categoria, condicion_pago, ...proveedorData } = proveedor;
+    console.log('Actualizando proveedor:', id, proveedorData);
+    const { data, error } = await supabase.from('proveedores').update(proveedorData).eq('id', id).select();
     console.log('Respuesta Supabase:', { data, error });
     if (error) {
       console.error('Error completo:', JSON.stringify(error, null, 2));
@@ -1140,9 +1145,10 @@ function App() {
         const matchSearch = f.proveedor.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            f.numero.toLowerCase().includes(searchTerm.toLowerCase());
         const matchEstado = filtroEstado === 'todos' || f.estado === filtroEstado;
-        return matchSearch && matchEstado;
+        const matchProveedor = filtroProveedorFactura === 'todos' || f.proveedor_id === parseInt(filtroProveedorFactura);
+        return matchSearch && matchEstado && matchProveedor;
       });
-  }, [facturas, searchTerm, filtroEstado, pagosPorFactura, ncPorFactura]);
+  }, [facturas, searchTerm, filtroEstado, filtroProveedorFactura, pagosPorFactura, ncPorFactura]);
 
   const getDiasVencimiento = (vencimiento) => {
     const hoy = new Date();
@@ -1365,21 +1371,29 @@ function App() {
         {activeTab === 'facturas' && (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
                     type="text"
-                    placeholder="Buscar factura..."
+                    placeholder="Buscar..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 pr-4 py-2 rounded-xl border border-slate-200 bg-slate-50 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/50 w-full sm:w-64"
+                    className="pl-10 pr-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 w-full sm:w-48 text-sm"
                   />
                 </div>
                 <select
+                  value={filtroProveedorFactura}
+                  onChange={(e) => setFiltroProveedorFactura(e.target.value)}
+                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                >
+                  <option value="todos">Todos los proveedores</option>
+                  {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                </select>
+                <select
                   value={filtroEstado}
                   onChange={(e) => setFiltroEstado(e.target.value)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50"
+                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
                 >
                   <option value="todos">Todos los estados</option>
                   <option value="pendiente">Pendientes</option>
@@ -1389,9 +1403,9 @@ function App() {
               </div>
               <button
                 onClick={() => { setSelectedItem(null); setShowModal('factura'); }}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all w-full sm:w-auto justify-center"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all text-sm"
               >
-                <Plus className="w-5 h-5" />
+                <Plus className="w-4 h-4" />
                 Nueva Factura
               </button>
             </div>
