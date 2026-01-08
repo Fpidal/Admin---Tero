@@ -1304,27 +1304,28 @@ function App() {
       </header>
 
       {/* Navigation */}
-      <nav className="max-w-7xl mx-auto px-4 sm:px-6 py-4 overflow-x-auto">
-        <div className="flex gap-2 p-1 glass rounded-2xl w-fit min-w-full sm:min-w-0">
+      <nav className="max-w-7xl mx-auto px-2 sm:px-6 py-3">
+        <div className="flex flex-wrap gap-1 p-1 glass rounded-xl">
           {[
-            { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-            { id: 'facturas', label: 'Facturas', icon: FileText },
-            { id: 'proveedores', label: 'Proveedores', icon: Building2 },
-            { id: 'pago-proveedores', label: 'Pago Proveedores', icon: DollarSign },
-            { id: 'notas-credito', label: 'Notas Crédito', icon: FileText },
-            { id: 'empleados', label: 'Empleados', icon: Users },
-            { id: 'pago-empleados', label: 'Pago Empleados', icon: DollarSign },
-            { id: 'pagos', label: 'Pagos', icon: CreditCard },
+            { id: 'dashboard', label: 'Dashboard', short: 'Dash', icon: BarChart3 },
+            { id: 'facturas', label: 'Facturas', short: 'Fact', icon: FileText },
+            { id: 'proveedores', label: 'Proveedores', short: 'Prov', icon: Building2 },
+            { id: 'pago-proveedores', label: 'Pago Prov.', short: 'PagProv', icon: DollarSign },
+            { id: 'notas-credito', label: 'NC', short: 'NC', icon: FileText },
+            { id: 'empleados', label: 'Empleados', short: 'Empl', icon: Users },
+            { id: 'pago-empleados', label: 'Pago Empl.', short: 'PagEmpl', icon: DollarSign },
+            { id: 'pagos', label: 'Pagos', short: 'Pagos', icon: CreditCard },
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-3 sm:px-5 py-2.5 rounded-xl transition-all text-sm font-medium whitespace-nowrap ${
+              className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-medium ${
                 activeTab === tab.id ? 'tab-active text-white' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
               }`}
             >
-              <tab.icon className="w-4 h-4" />
+              <tab.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span className="hidden sm:inline">{tab.label}</span>
+              <span className="sm:hidden">{tab.short}</span>
             </button>
           ))}
         </div>
@@ -1393,15 +1394,22 @@ function App() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Facturas Vencidas */}
               <div className="glass rounded-2xl p-4 glow border-l-4 border-red-400">
-                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-red-400" />
-                  Facturas Vencidas
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-400" />
+                    Facturas Vencidas
+                    {facturasVencidasDash.length > 0 && (
+                      <span className="px-1.5 py-0.5 bg-red-100 text-red-600 rounded-full text-[10px] font-medium">
+                        {facturasVencidasDash.length}
+                      </span>
+                    )}
+                  </h3>
                   {facturasVencidasDash.length > 0 && (
-                    <span className="ml-auto px-1.5 py-0.5 bg-red-100 text-red-600 rounded-full text-[10px] font-medium">
-                      {facturasVencidasDash.length}
-                    </span>
+                    <p className="text-sm font-bold text-red-600 mono">
+                      {formatCurrency(facturasVencidasDash.reduce((sum, f) => sum + f.monto, 0))}
+                    </p>
                   )}
-                </h3>
+                </div>
                 {facturasVencidasDash.length === 0 ? (
                   <p className="text-slate-400 text-xs">No hay facturas vencidas</p>
                 ) : (
@@ -1427,15 +1435,22 @@ function App() {
 
               {/* Próximos vencimientos (7 días) */}
               <div className="glass rounded-2xl p-4 glow border-l-4 border-amber-400">
-                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-amber-400" />
-                  Vencen en 7 días
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-amber-400" />
+                    Vencen en 7 días
+                    {facturasProximas.length > 0 && (
+                      <span className="px-1.5 py-0.5 bg-amber-100 text-amber-600 rounded-full text-[10px] font-medium">
+                        {facturasProximas.length}
+                      </span>
+                    )}
+                  </h3>
                   {facturasProximas.length > 0 && (
-                    <span className="ml-auto px-1.5 py-0.5 bg-amber-100 text-amber-600 rounded-full text-[10px] font-medium">
-                      {facturasProximas.length}
-                    </span>
+                    <p className="text-sm font-bold text-amber-600 mono">
+                      {formatCurrency(facturasProximas.reduce((sum, f) => sum + f.monto, 0))}
+                    </p>
                   )}
-                </h3>
+                </div>
                 {facturasProximas.length === 0 ? (
                   <p className="text-slate-400 text-xs">No hay facturas por vencer en los próximos 7 días</p>
                 ) : (
