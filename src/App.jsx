@@ -117,14 +117,14 @@ function ModalInformeProveedor({ onClose, proveedores, facturas, pagos, notasCre
     if (facturasProveedor.length > 0) {
       const facturasData = facturasProveedor.map(f => [
         formatDate(f.fecha),
-        f.numero,
+        f.numero || '-',
         f.concepto || '-',
         formatDate(f.vencimiento),
-        f.estado.charAt(0).toUpperCase() + f.estado.slice(1),
+        f.estado ? f.estado.charAt(0).toUpperCase() + f.estado.slice(1) : '-',
         formatCurrencyPDF(f.monto)
       ]);
 
-      const totalFacturas = facturasProveedor.reduce((sum, f) => sum + f.monto, 0);
+      const totalFacturas = facturasProveedor.reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0);
 
       doc.autoTable({
         startY: yPos,
@@ -165,7 +165,7 @@ function ModalInformeProveedor({ onClose, proveedores, facturas, pagos, notasCre
         ];
       });
 
-      const totalPagos = pagosProveedor.reduce((sum, p) => sum + p.monto, 0);
+      const totalPagos = pagosProveedor.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
 
       doc.autoTable({
         startY: yPos,
@@ -203,14 +203,14 @@ function ModalInformeProveedor({ onClose, proveedores, facturas, pagos, notasCre
         const factura = facturas.find(f => f.id === nc.factura_id);
         return [
           formatDate(nc.fecha),
-          nc.numero,
+          nc.numero || '-',
           nc.motivo || '-',
           factura?.numero || '-',
           formatCurrencyPDF(nc.monto)
         ];
       });
 
-      const totalNC = ncProveedor.reduce((sum, nc) => sum + nc.monto, 0);
+      const totalNC = ncProveedor.reduce((sum, nc) => sum + (parseFloat(nc.monto) || 0), 0);
 
       doc.autoTable({
         startY: yPos,
@@ -237,9 +237,9 @@ function ModalInformeProveedor({ onClose, proveedores, facturas, pagos, notasCre
     doc.text('RESUMEN', 14, yPos);
     yPos += 8;
 
-    const totalFacturasSum = facturasProveedor.reduce((sum, f) => sum + f.monto, 0);
-    const totalPagosSum = pagosProveedor.reduce((sum, p) => sum + p.monto, 0);
-    const totalNCSum = ncProveedor.reduce((sum, nc) => sum + nc.monto, 0);
+    const totalFacturasSum = facturasProveedor.reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0);
+    const totalPagosSum = pagosProveedor.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
+    const totalNCSum = ncProveedor.reduce((sum, nc) => sum + (parseFloat(nc.monto) || 0), 0);
     const saldoPendiente = totalFacturasSum - totalPagosSum - totalNCSum;
 
     doc.setFontSize(10);
@@ -269,7 +269,7 @@ function ModalInformeProveedor({ onClose, proveedores, facturas, pagos, notasCre
     onClose();
     } catch (error) {
       console.error('Error generando PDF:', error);
-      alert('Error al generar el PDF. Por favor, intenta de nuevo.');
+      alert(`Error al generar el PDF: ${error.message || error}`);
       setGenerando(false);
     }
   };
@@ -350,7 +350,8 @@ function ModalInformeProveedor({ onClose, proveedores, facturas, pagos, notasCre
 
 // Función auxiliar para formato de moneda en PDF (sin símbolo raro)
 const formatCurrencyPDF = (value) => {
-  return '$ ' + new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(value);
+  const num = parseFloat(value) || 0;
+  return '$ ' + new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(num);
 };
 
 // Modal Proveedor
