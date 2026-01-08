@@ -14,7 +14,7 @@ Dashboard de **gestión financiera/administrativa** para el restaurante Tero. Pe
 | Archivo | Descripción |
 |---------|-------------|
 | `src/App.jsx` | Componente principal con todo el dashboard |
-| `src/supabase.js` | Configuración de conexión a Supabase (PENDIENTE) |
+| `src/supabase.js` | Configuración de conexión a Supabase |
 | `src/index.css` | Estilos globales y clases custom |
 
 ## Tecnologías
@@ -25,7 +25,7 @@ Dashboard de **gestión financiera/administrativa** para el restaurante Tero. Pe
 - Recharts para gráficos
 - Lucide React para iconos
 
-## Base de Datos - Supabase (PENDIENTE CONFIGURAR)
+## Base de Datos - Supabase
 
 ### Tablas necesarias:
 
@@ -113,9 +113,9 @@ CREATE TABLE pagos (
 ## Estado Actual
 
 - ✅ Estructura base creada
-- ✅ Datos de ejemplo funcionando
-- ⏳ Pendiente: Conectar Supabase
-- ⏳ Pendiente: Formularios de creación/edición
+- ✅ Supabase conectado (tablas: proveedores, facturas, empleados, pagos)
+- ✅ Formularios de creación/edición (modales)
+- ✅ CRUD completo para todas las entidades
 - ⏳ Pendiente: Autenticación
 
 ## Deploy
