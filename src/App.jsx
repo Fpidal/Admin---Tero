@@ -233,9 +233,10 @@ function ModalEmpleado({ empleado, onClose, onSave }) {
 }
 
 // Modal Pago
-function ModalPago({ onClose, onSave, tipoDefault }) {
+function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados = [] }) {
   const [form, setForm] = useState({
     tipo: tipoDefault || 'otro',
+    referencia_id: '',
     descripcion: '',
     monto: '',
     fecha: new Date().toISOString().split('T')[0],
@@ -247,6 +248,25 @@ function ModalPago({ onClose, onSave, tipoDefault }) {
     if (tipoDefault === 'factura') return 'Registrar Pago a Proveedor';
     if (tipoDefault === 'sueldo') return 'Registrar Pago a Empleado';
     return 'Registrar Pago';
+  };
+
+  const handleProveedorChange = (proveedorId) => {
+    const proveedor = proveedores.find(p => p.id === parseInt(proveedorId));
+    setForm({
+      ...form,
+      referencia_id: proveedorId,
+      descripcion: proveedor ? `Pago a ${proveedor.nombre}` : ''
+    });
+  };
+
+  const handleEmpleadoChange = (empleadoId) => {
+    const empleado = empleados.find(e => e.id === parseInt(empleadoId));
+    setForm({
+      ...form,
+      referencia_id: empleadoId,
+      descripcion: empleado ? `Sueldo - ${empleado.nombre}` : '',
+      monto: empleado ? empleado.sueldo : ''
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -264,18 +284,26 @@ function ModalPago({ onClose, onSave, tipoDefault }) {
           <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {!tipoDefault && (
+          {tipoDefault === 'factura' && (
             <div>
-              <label className="block text-sm text-slate-400 mb-1">Tipo</label>
-              <select value={form.tipo} onChange={e => setForm({...form, tipo: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50">
-                <option value="otro">Otro</option>
-                <option value="factura">Proveedor</option>
-                <option value="sueldo">Empleado</option>
+              <label className="block text-sm text-slate-500 mb-1">Proveedor *</label>
+              <select required value={form.referencia_id} onChange={e => handleProveedorChange(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50">
+                <option value="">Seleccionar proveedor</option>
+                {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+              </select>
+            </div>
+          )}
+          {tipoDefault === 'sueldo' && (
+            <div>
+              <label className="block text-sm text-slate-500 mb-1">Empleado *</label>
+              <select required value={form.referencia_id} onChange={e => handleEmpleadoChange(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50">
+                <option value="">Seleccionar empleado</option>
+                {empleados.map(e => <option key={e.id} value={e.id}>{e.nombre} - {e.puesto || 'Sin puesto'}</option>)}
               </select>
             </div>
           )}
           <div>
-            <label className="block text-sm text-slate-400 mb-1">Descripción *</label>
+            <label className="block text-sm text-slate-500 mb-1">Descripción *</label>
             <input type="text" required value={form.descripcion} onChange={e => setForm({...form, descripcion: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
           </div>
           <div>
@@ -1129,6 +1157,8 @@ function App() {
           onClose={() => { setShowModal(null); setSelectedItem(null); }}
           onSave={createPago}
           tipoDefault={selectedItem?.tipo}
+          proveedores={proveedores}
+          empleados={empleados}
         />
       )}
 
