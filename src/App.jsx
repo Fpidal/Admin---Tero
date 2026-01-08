@@ -2492,8 +2492,8 @@ function App() {
                             <td className="px-3 py-2.5 text-xs text-slate-500">{p.metodo}</td>
                             <td className="px-3 py-2.5 text-right font-semibold mono text-emerald-500 text-xs">{formatCurrency(p.monto)}</td>
                             <td className="px-3 py-2.5 text-right">
-                              <button onClick={() => { setSelectedItem(p); setShowModal('edit-pago'); }} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Ver/Editar">
-                                <Eye className="w-3.5 h-3.5" />
+                              <button onClick={() => { setSelectedItem(p); setShowModal('edit-pago'); }} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Editar">
+                                <Edit3 className="w-3.5 h-3.5" />
                               </button>
                             </td>
                           </tr>
