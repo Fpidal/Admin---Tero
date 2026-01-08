@@ -233,16 +233,18 @@ function ModalEmpleado({ empleado, onClose, onSave }) {
 }
 
 // Modal Pago
-function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados = [] }) {
+function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados = [], facturas = [], onMarcarFacturaPagada }) {
   const [form, setForm] = useState({
     tipo: tipoDefault || 'otro',
     referencia_id: '',
+    factura_id: '',
     descripcion: '',
     monto: '',
     fecha: new Date().toISOString().split('T')[0],
     metodo: 'Transferencia'
   });
   const [saving, setSaving] = useState(false);
+  const [proveedorSeleccionado, setProveedorSeleccionado] = useState(null);
 
   const getTitulo = () => {
     if (tipoDefault === 'factura') return 'Registrar Pago a Proveedor';
@@ -250,12 +252,30 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
     return 'Registrar Pago';
   };
 
+  const facturasDelProveedor = proveedorSeleccionado
+    ? facturas.filter(f => f.proveedor_id === proveedorSeleccionado && f.estado !== 'pagada')
+    : [];
+
   const handleProveedorChange = (proveedorId) => {
     const proveedor = proveedores.find(p => p.id === parseInt(proveedorId));
+    setProveedorSeleccionado(parseInt(proveedorId));
     setForm({
       ...form,
       referencia_id: proveedorId,
-      descripcion: proveedor ? `Pago a ${proveedor.nombre}` : ''
+      factura_id: '',
+      descripcion: proveedor ? `Pago a ${proveedor.nombre}` : '',
+      monto: ''
+    });
+  };
+
+  const handleFacturaSelect = (facturaId) => {
+    const factura = facturas.find(f => f.id === parseInt(facturaId));
+    const proveedor = proveedores.find(p => p.id === proveedorSeleccionado);
+    setForm({
+      ...form,
+      factura_id: facturaId,
+      descripcion: factura ? `Pago ${proveedor?.nombre} - Factura ${factura.numero}` : form.descripcion,
+      monto: factura ? factura.monto : ''
     });
   };
 
@@ -272,26 +292,71 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
+
+    // Si se seleccionó una factura y el monto es igual al de la factura, marcarla como pagada
+    if (form.factura_id && tipoDefault === 'factura') {
+      const factura = facturas.find(f => f.id === parseInt(form.factura_id));
+      if (factura && parseFloat(form.monto) >= factura.monto && onMarcarFacturaPagada) {
+        await onMarcarFacturaPagada(parseInt(form.factura_id));
+      }
+    }
+
     await onSave({ ...form, monto: parseFloat(form.monto) });
     setSaving(false);
   };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="glass rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div className="glass rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold">{getTitulo()}</h2>
           <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           {tipoDefault === 'factura' && (
-            <div>
-              <label className="block text-sm text-slate-500 mb-1">Proveedor *</label>
-              <select required value={form.referencia_id} onChange={e => handleProveedorChange(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50">
-                <option value="">Seleccionar proveedor</option>
-                {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-              </select>
-            </div>
+            <>
+              <div>
+                <label className="block text-sm text-slate-500 mb-1">Proveedor *</label>
+                <select required value={form.referencia_id} onChange={e => handleProveedorChange(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50">
+                  <option value="">Seleccionar proveedor</option>
+                  {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                </select>
+              </div>
+
+              {proveedorSeleccionado && facturasDelProveedor.length > 0 && (
+                <div>
+                  <label className="block text-sm text-slate-500 mb-2">Facturas Pendientes</label>
+                  <div className="space-y-2 max-h-48 overflow-y-auto border border-slate-200 rounded-xl p-2">
+                    {facturasDelProveedor.map(f => (
+                      <label key={f.id} className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all ${form.factura_id === String(f.id) ? 'bg-blue-50 border border-blue-300' : 'bg-slate-50 hover:bg-slate-100'}`}>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="radio"
+                            name="factura"
+                            value={f.id}
+                            checked={form.factura_id === String(f.id)}
+                            onChange={e => handleFacturaSelect(e.target.value)}
+                            className="w-4 h-4 text-blue-500"
+                          />
+                          <div>
+                            <p className="font-medium text-sm">{f.numero}</p>
+                            <p className="text-xs text-slate-500">{f.concepto || 'Sin concepto'}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold text-sm mono">{formatCurrency(f.monto)}</p>
+                          <p className="text-xs text-slate-500">Vence: {formatDate(f.vencimiento)}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {proveedorSeleccionado && facturasDelProveedor.length === 0 && (
+                <p className="text-sm text-slate-500 italic">No hay facturas pendientes para este proveedor</p>
+              )}
+            </>
           )}
           {tipoDefault === 'sueldo' && (
             <div>
@@ -1266,6 +1331,11 @@ function App() {
           tipoDefault={selectedItem?.tipo}
           proveedores={proveedores}
           empleados={empleados}
+          facturas={facturas}
+          onMarcarFacturaPagada={async (facturaId) => {
+            await supabase.from('facturas').update({ estado: 'pagada' }).eq('id', facturaId);
+            await fetchFacturas();
+          }}
         />
       )}
 
