@@ -1,7 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
-// IMPORTANTE: Reemplazar con las credenciales del nuevo proyecto de Supabase
-const supabaseUrl = 'TU_SUPABASE_URL'
-const supabaseKey = 'TU_SUPABASE_KEY'
+const supabaseUrl = 'https://kvdnbnfcfhxxznxngxre.supabase.co'
+const supabaseKey = 'sb_publishable_gv9IuIWH54yzS6JZgouD9Q_sGVjyT1Y'
 
 export const supabase = createClient(supabaseUrl, supabaseKey)
+
+
