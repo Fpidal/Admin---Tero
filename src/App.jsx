@@ -9,7 +9,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { supabase } from './supabase';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 const formatCurrency = (value) => {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(value);
@@ -126,7 +126,7 @@ function ModalInformeProveedor({ onClose, proveedores, facturas, pagos, notasCre
 
       const totalFacturas = facturasProveedor.reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0);
 
-      doc.autoTable({
+      autoTable(doc, {
         startY: yPos,
         head: [['Fecha', 'Número', 'Concepto', 'Vencimiento', 'Estado', 'Monto']],
         body: facturasData,
@@ -167,7 +167,7 @@ function ModalInformeProveedor({ onClose, proveedores, facturas, pagos, notasCre
 
       const totalPagos = pagosProveedor.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
 
-      doc.autoTable({
+      autoTable(doc, {
         startY: yPos,
         head: [['Fecha', 'Descripción', 'Factura', 'Método', 'Monto']],
         body: pagosData,
@@ -212,7 +212,7 @@ function ModalInformeProveedor({ onClose, proveedores, facturas, pagos, notasCre
 
       const totalNC = ncProveedor.reduce((sum, nc) => sum + (parseFloat(nc.monto) || 0), 0);
 
-      doc.autoTable({
+      autoTable(doc, {
         startY: yPos,
         head: [['Fecha', 'Número NC', 'Motivo', 'Factura Aplicada', 'Monto']],
         body: ncData,
