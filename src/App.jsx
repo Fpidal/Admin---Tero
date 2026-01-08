@@ -45,36 +45,36 @@ function ModalProveedor({ proveedor, onClose, onSave }) {
       <div className="glass rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold">{proveedor ? 'Editar Proveedor' : 'Nuevo Proveedor'}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm text-slate-400 mb-1">Nombre *</label>
-            <input type="text" required value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white focus:outline-none focus:border-purple-500/50" />
+            <input type="text" required value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
           </div>
           <div>
             <label className="block text-sm text-slate-400 mb-1">CUIT</label>
-            <input type="text" value={form.cuit} onChange={e => setForm({...form, cuit: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white focus:outline-none focus:border-purple-500/50" placeholder="XX-XXXXXXXX-X" />
+            <input type="text" value={form.cuit} onChange={e => setForm({...form, cuit: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" placeholder="XX-XXXXXXXX-X" />
           </div>
           <div>
             <label className="block text-sm text-slate-400 mb-1">Teléfono</label>
-            <input type="text" value={form.telefono} onChange={e => setForm({...form, telefono: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white focus:outline-none focus:border-purple-500/50" />
+            <input type="text" value={form.telefono} onChange={e => setForm({...form, telefono: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
           </div>
           <div>
             <label className="block text-sm text-slate-400 mb-1">Email</label>
-            <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white focus:outline-none focus:border-purple-500/50" />
+            <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
           </div>
           <div>
             <label className="block text-sm text-slate-400 mb-1">Banco</label>
-            <input type="text" value={form.banco} onChange={e => setForm({...form, banco: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white focus:outline-none focus:border-purple-500/50" />
+            <input type="text" value={form.banco} onChange={e => setForm({...form, banco: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
           </div>
           <div>
             <label className="block text-sm text-slate-400 mb-1">CBU</label>
-            <input type="text" value={form.cbu} onChange={e => setForm({...form, cbu: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white focus:outline-none focus:border-purple-500/50" />
+            <input type="text" value={form.cbu} onChange={e => setForm({...form, cbu: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
           </div>
           <div className="flex gap-3 pt-4">
-            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-white/10 text-white hover:bg-white/5 transition-all">Cancelar</button>
-            <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium hover:from-purple-700 hover:to-indigo-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all">Cancelar</button>
+            <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
               {proveedor ? 'Guardar' : 'Crear'}
             </button>
@@ -110,37 +110,37 @@ function ModalFactura({ factura, proveedores, onClose, onSave }) {
       <div className="glass rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold">{factura ? 'Editar Factura' : 'Nueva Factura'}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm text-slate-400 mb-1">Proveedor *</label>
-            <select required value={form.proveedor_id} onChange={e => setForm({...form, proveedor_id: parseInt(e.target.value)})} className="w-full px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white focus:outline-none focus:border-purple-500/50">
+            <select required value={form.proveedor_id} onChange={e => setForm({...form, proveedor_id: parseInt(e.target.value)})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50">
               <option value="">Seleccionar proveedor</option>
               {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
             </select>
           </div>
           <div>
             <label className="block text-sm text-slate-400 mb-1">Número de Factura *</label>
-            <input type="text" required value={form.numero} onChange={e => setForm({...form, numero: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white focus:outline-none focus:border-purple-500/50" placeholder="A-0001-00000001" />
+            <input type="text" required value={form.numero} onChange={e => setForm({...form, numero: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" placeholder="A-0001-00000001" />
           </div>
           <div>
             <label className="block text-sm text-slate-400 mb-1">Monto *</label>
-            <input type="number" required min="0" step="0.01" value={form.monto} onChange={e => setForm({...form, monto: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white focus:outline-none focus:border-purple-500/50" />
+            <input type="number" required min="0" step="0.01" value={form.monto} onChange={e => setForm({...form, monto: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-slate-400 mb-1">Fecha *</label>
-              <input type="date" required value={form.fecha} onChange={e => setForm({...form, fecha: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white focus:outline-none focus:border-purple-500/50" />
+              <input type="date" required value={form.fecha} onChange={e => setForm({...form, fecha: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
             </div>
             <div>
               <label className="block text-sm text-slate-400 mb-1">Vencimiento *</label>
-              <input type="date" required value={form.vencimiento} onChange={e => setForm({...form, vencimiento: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white focus:outline-none focus:border-purple-500/50" />
+              <input type="date" required value={form.vencimiento} onChange={e => setForm({...form, vencimiento: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
             </div>
           </div>
           <div>
             <label className="block text-sm text-slate-400 mb-1">Estado</label>
-            <select value={form.estado} onChange={e => setForm({...form, estado: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white focus:outline-none focus:border-purple-500/50">
+            <select value={form.estado} onChange={e => setForm({...form, estado: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50">
               <option value="pendiente">Pendiente</option>
               <option value="pagada">Pagada</option>
               <option value="vencida">Vencida</option>
@@ -148,11 +148,11 @@ function ModalFactura({ factura, proveedores, onClose, onSave }) {
           </div>
           <div>
             <label className="block text-sm text-slate-400 mb-1">Concepto</label>
-            <input type="text" value={form.concepto} onChange={e => setForm({...form, concepto: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white focus:outline-none focus:border-purple-500/50" />
+            <input type="text" value={form.concepto} onChange={e => setForm({...form, concepto: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
           </div>
           <div className="flex gap-3 pt-4">
-            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-white/10 text-white hover:bg-white/5 transition-all">Cancelar</button>
-            <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium hover:from-purple-700 hover:to-indigo-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all">Cancelar</button>
+            <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
               {factura ? 'Guardar' : 'Crear'}
             </button>
@@ -188,40 +188,40 @@ function ModalEmpleado({ empleado, onClose, onSave }) {
       <div className="glass rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold">{empleado ? 'Editar Empleado' : 'Nuevo Empleado'}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm text-slate-400 mb-1">Nombre *</label>
-            <input type="text" required value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white focus:outline-none focus:border-purple-500/50" />
+            <input type="text" required value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
           </div>
           <div>
             <label className="block text-sm text-slate-400 mb-1">Documento</label>
-            <input type="text" value={form.documento} onChange={e => setForm({...form, documento: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white focus:outline-none focus:border-purple-500/50" placeholder="XX.XXX.XXX" />
+            <input type="text" value={form.documento} onChange={e => setForm({...form, documento: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" placeholder="XX.XXX.XXX" />
           </div>
           <div>
             <label className="block text-sm text-slate-400 mb-1">Puesto</label>
-            <input type="text" value={form.puesto} onChange={e => setForm({...form, puesto: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white focus:outline-none focus:border-purple-500/50" />
+            <input type="text" value={form.puesto} onChange={e => setForm({...form, puesto: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
           </div>
           <div>
             <label className="block text-sm text-slate-400 mb-1">Sueldo *</label>
-            <input type="number" required min="0" step="0.01" value={form.sueldo} onChange={e => setForm({...form, sueldo: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white focus:outline-none focus:border-purple-500/50" />
+            <input type="number" required min="0" step="0.01" value={form.sueldo} onChange={e => setForm({...form, sueldo: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
           </div>
           <div>
             <label className="block text-sm text-slate-400 mb-1">Fecha de Ingreso</label>
-            <input type="date" value={form.fecha_ingreso} onChange={e => setForm({...form, fecha_ingreso: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white focus:outline-none focus:border-purple-500/50" />
+            <input type="date" value={form.fecha_ingreso} onChange={e => setForm({...form, fecha_ingreso: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
           </div>
           <div>
             <label className="block text-sm text-slate-400 mb-1">Banco</label>
-            <input type="text" value={form.banco} onChange={e => setForm({...form, banco: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white focus:outline-none focus:border-purple-500/50" />
+            <input type="text" value={form.banco} onChange={e => setForm({...form, banco: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
           </div>
           <div>
             <label className="block text-sm text-slate-400 mb-1">CBU</label>
-            <input type="text" value={form.cbu} onChange={e => setForm({...form, cbu: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white focus:outline-none focus:border-purple-500/50" />
+            <input type="text" value={form.cbu} onChange={e => setForm({...form, cbu: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
           </div>
           <div className="flex gap-3 pt-4">
-            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-white/10 text-white hover:bg-white/5 transition-all">Cancelar</button>
-            <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium hover:from-purple-700 hover:to-indigo-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all">Cancelar</button>
+            <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
               {empleado ? 'Guardar' : 'Crear'}
             </button>
@@ -255,12 +255,12 @@ function ModalPago({ onClose, onSave }) {
       <div className="glass rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold">Registrar Pago</h2>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm text-slate-400 mb-1">Tipo</label>
-            <select value={form.tipo} onChange={e => setForm({...form, tipo: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white focus:outline-none focus:border-purple-500/50">
+            <select value={form.tipo} onChange={e => setForm({...form, tipo: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50">
               <option value="otro">Otro</option>
               <option value="factura">Factura</option>
               <option value="sueldo">Sueldo</option>
@@ -268,19 +268,19 @@ function ModalPago({ onClose, onSave }) {
           </div>
           <div>
             <label className="block text-sm text-slate-400 mb-1">Descripción *</label>
-            <input type="text" required value={form.descripcion} onChange={e => setForm({...form, descripcion: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white focus:outline-none focus:border-purple-500/50" />
+            <input type="text" required value={form.descripcion} onChange={e => setForm({...form, descripcion: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
           </div>
           <div>
             <label className="block text-sm text-slate-400 mb-1">Monto *</label>
-            <input type="number" required min="0" step="0.01" value={form.monto} onChange={e => setForm({...form, monto: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white focus:outline-none focus:border-purple-500/50" />
+            <input type="number" required min="0" step="0.01" value={form.monto} onChange={e => setForm({...form, monto: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
           </div>
           <div>
             <label className="block text-sm text-slate-400 mb-1">Fecha *</label>
-            <input type="date" required value={form.fecha} onChange={e => setForm({...form, fecha: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white focus:outline-none focus:border-purple-500/50" />
+            <input type="date" required value={form.fecha} onChange={e => setForm({...form, fecha: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
           </div>
           <div>
             <label className="block text-sm text-slate-400 mb-1">Método</label>
-            <select value={form.metodo} onChange={e => setForm({...form, metodo: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white focus:outline-none focus:border-purple-500/50">
+            <select value={form.metodo} onChange={e => setForm({...form, metodo: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50">
               <option value="Transferencia">Transferencia</option>
               <option value="Efectivo">Efectivo</option>
               <option value="Cheque">Cheque</option>
@@ -288,8 +288,8 @@ function ModalPago({ onClose, onSave }) {
             </select>
           </div>
           <div className="flex gap-3 pt-4">
-            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-white/10 text-white hover:bg-white/5 transition-all">Cancelar</button>
-            <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium hover:from-purple-700 hover:to-indigo-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all">Cancelar</button>
+            <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
               Registrar
             </button>
@@ -557,22 +557,22 @@ function App() {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <header className="glass border-b border-white/10 sticky top-0 z-40">
+      <header className="glass border-b border-slate-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 sm:gap-4">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center glow">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center glow">
                 <DollarSign className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
               <div>
-                <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">
+                <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-slate-800 to-blue-600 bg-clip-text text-transparent">
                   Administración Tero
                 </h1>
                 <p className="text-xs sm:text-sm text-slate-400">Gestión Financiera</p>
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
-              <button className="p-2 text-slate-400 hover:text-white transition-colors">
+              <button className="p-2 text-slate-500 hover:text-slate-800 transition-colors">
                 <LogOut className="w-5 h-5" />
               </button>
             </div>
@@ -594,7 +594,7 @@ function App() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-3 sm:px-5 py-2.5 rounded-xl transition-all text-sm font-medium whitespace-nowrap ${
-                activeTab === tab.id ? 'tab-active text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'
+                activeTab === tab.id ? 'tab-active text-white' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
               }`}
             >
               <tab.icon className="w-4 h-4" />
@@ -678,7 +678,7 @@ function App() {
                     {facturasProximas.slice(0, 5).map(f => {
                       const dias = getDiasVencimiento(f.vencimiento);
                       return (
-                        <div key={f.id} className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
+                        <div key={f.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
                           <div>
                             <p className="font-medium text-sm">{f.proveedor}</p>
                             <p className="text-xs text-slate-400">{f.numero}</p>
@@ -697,7 +697,7 @@ function App() {
               {/* Gráfico por proveedor */}
               <div className="glass rounded-2xl p-5 glow">
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-purple-400" />
+                  <Building2 className="w-5 h-5 text-blue-500" />
                   Gastos por Proveedor
                 </h3>
                 <ResponsiveContainer width="100%" height={200}>
@@ -730,7 +730,7 @@ function App() {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="text-left text-slate-400 text-sm border-b border-white/10">
+                    <tr className="text-left text-slate-400 text-sm border-b border-slate-200">
                       <th className="pb-3 font-medium">Fecha</th>
                       <th className="pb-3 font-medium">Descripción</th>
                       <th className="pb-3 font-medium">Método</th>
@@ -739,7 +739,7 @@ function App() {
                   </thead>
                   <tbody>
                     {pagos.slice(0, 5).map(p => (
-                      <tr key={p.id} className="border-b border-white/5">
+                      <tr key={p.id} className="border-b border-slate-100">
                         <td className="py-3 text-sm">{formatDate(p.fecha)}</td>
                         <td className="py-3 text-sm">{p.descripcion}</td>
                         <td className="py-3 text-sm text-slate-400">{p.metodo}</td>
@@ -767,13 +767,13 @@ function App() {
                     placeholder="Buscar factura..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 pr-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/50 w-full sm:w-64"
+                    className="pl-10 pr-4 py-2 rounded-xl border border-slate-200 bg-slate-50 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/50 w-full sm:w-64"
                   />
                 </div>
                 <select
                   value={filtroEstado}
                   onChange={(e) => setFiltroEstado(e.target.value)}
-                  className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white focus:outline-none focus:border-purple-500/50"
+                  className="px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50"
                 >
                   <option value="todos">Todos los estados</option>
                   <option value="pendiente">Pendientes</option>
@@ -783,7 +783,7 @@ function App() {
               </div>
               <button
                 onClick={() => { setSelectedItem(null); setShowModal('factura'); }}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium hover:from-purple-700 hover:to-indigo-700 transition-all w-full sm:w-auto justify-center"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all w-full sm:w-auto justify-center"
               >
                 <Plus className="w-5 h-5" />
                 Nueva Factura
@@ -794,7 +794,7 @@ function App() {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="text-left text-slate-400 text-sm border-b border-white/10">
+                    <tr className="text-left text-slate-400 text-sm border-b border-slate-200">
                       <th className="px-5 py-4 font-medium">Proveedor</th>
                       <th className="px-5 py-4 font-medium">Número</th>
                       <th className="px-5 py-4 font-medium">Concepto</th>
@@ -808,7 +808,7 @@ function App() {
                     {facturasFiltradas.map(f => {
                       const dias = getDiasVencimiento(f.vencimiento);
                       return (
-                        <tr key={f.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                        <tr key={f.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                           <td className="px-5 py-4 font-medium">{f.proveedor}</td>
                           <td className="px-5 py-4 text-sm text-slate-400">{f.numero}</td>
                           <td className="px-5 py-4 text-sm">{f.concepto}</td>
@@ -833,7 +833,7 @@ function App() {
                                   <CheckCircle className="w-4 h-4" />
                                 </button>
                               )}
-                              <button onClick={() => { setSelectedItem(f); setShowModal('factura'); }} className="p-2 hover:bg-white/10 rounded-lg transition-colors" title="Editar">
+                              <button onClick={() => { setSelectedItem(f); setShowModal('factura'); }} className="p-2 hover:bg-slate-100 rounded-lg transition-colors" title="Editar">
                                 <Edit3 className="w-4 h-4" />
                               </button>
                               <button onClick={() => deleteFactura(f.id)} className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-red-400" title="Eliminar">
@@ -858,7 +858,7 @@ function App() {
               <h2 className="text-xl font-bold">Proveedores</h2>
               <button
                 onClick={() => { setSelectedItem(null); setShowModal('proveedor'); }}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium hover:from-purple-700 hover:to-indigo-700 transition-all"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all"
               >
                 <Plus className="w-5 h-5" />
                 Nuevo Proveedor
@@ -867,13 +867,13 @@ function App() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {proveedores.map(p => (
-                <div key={p.id} className="glass rounded-2xl p-5 glow hover:border-purple-500/30 border border-transparent transition-all">
+                <div key={p.id} className="glass rounded-2xl p-5 glow hover:border-blue-500/30 border border-transparent transition-all">
                   <div className="flex items-start justify-between mb-3">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-indigo-500/20 flex items-center justify-center">
-                      <Building2 className="w-6 h-6 text-purple-400" />
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/20 flex items-center justify-center">
+                      <Building2 className="w-6 h-6 text-blue-500" />
                     </div>
                     <div className="flex gap-1">
-                      <button onClick={() => { setSelectedItem(p); setShowModal('proveedor'); }} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+                      <button onClick={() => { setSelectedItem(p); setShowModal('proveedor'); }} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
                         <Edit3 className="w-4 h-4" />
                       </button>
                       <button onClick={() => deleteProveedor(p.id)} className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-red-400">
@@ -901,7 +901,7 @@ function App() {
               <h2 className="text-xl font-bold">Empleados</h2>
               <button
                 onClick={() => { setSelectedItem(null); setShowModal('empleado'); }}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium hover:from-purple-700 hover:to-indigo-700 transition-all"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all"
               >
                 <Plus className="w-5 h-5" />
                 Nuevo Empleado
@@ -912,7 +912,7 @@ function App() {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="text-left text-slate-400 text-sm border-b border-white/10">
+                    <tr className="text-left text-slate-400 text-sm border-b border-slate-200">
                       <th className="px-5 py-4 font-medium">Nombre</th>
                       <th className="px-5 py-4 font-medium">Documento</th>
                       <th className="px-5 py-4 font-medium">Puesto</th>
@@ -924,7 +924,7 @@ function App() {
                   </thead>
                   <tbody>
                     {empleados.map(e => (
-                      <tr key={e.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                      <tr key={e.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
@@ -943,7 +943,7 @@ function App() {
                             <button onClick={() => pagarSueldo(e)} className="p-2 hover:bg-emerald-500/20 rounded-lg transition-colors text-emerald-400" title="Pagar sueldo">
                               <DollarSign className="w-4 h-4" />
                             </button>
-                            <button onClick={() => { setSelectedItem(e); setShowModal('empleado'); }} className="p-2 hover:bg-white/10 rounded-lg transition-colors" title="Editar">
+                            <button onClick={() => { setSelectedItem(e); setShowModal('empleado'); }} className="p-2 hover:bg-slate-100 rounded-lg transition-colors" title="Editar">
                               <Edit3 className="w-4 h-4" />
                             </button>
                             <button onClick={() => deleteEmpleado(e.id)} className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-red-400" title="Eliminar">
@@ -978,7 +978,7 @@ function App() {
               <h2 className="text-xl font-bold">Historial de Pagos</h2>
               <button
                 onClick={() => { setSelectedItem(null); setShowModal('pago'); }}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium hover:from-purple-700 hover:to-indigo-700 transition-all"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all"
               >
                 <Plus className="w-5 h-5" />
                 Registrar Pago
@@ -989,7 +989,7 @@ function App() {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="text-left text-slate-400 text-sm border-b border-white/10">
+                    <tr className="text-left text-slate-400 text-sm border-b border-slate-200">
                       <th className="px-5 py-4 font-medium">Fecha</th>
                       <th className="px-5 py-4 font-medium">Tipo</th>
                       <th className="px-5 py-4 font-medium">Descripción</th>
@@ -1000,11 +1000,11 @@ function App() {
                   </thead>
                   <tbody>
                     {pagos.map(p => (
-                      <tr key={p.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                      <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                         <td className="px-5 py-4 text-sm">{formatDate(p.fecha)}</td>
                         <td className="px-5 py-4">
                           <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            p.tipo === 'factura' ? 'bg-purple-500/20 text-purple-300' : p.tipo === 'sueldo' ? 'bg-blue-500/20 text-blue-300' : 'bg-slate-500/20 text-slate-300'
+                            p.tipo === 'factura' ? 'bg-blue-500/15 text-blue-700' : p.tipo === 'sueldo' ? 'bg-cyan-500/15 text-cyan-700' : 'bg-slate-500/15 text-slate-600'
                           }`}>
                             {p.tipo === 'factura' ? 'Factura' : p.tipo === 'sueldo' ? 'Sueldo' : 'Otro'}
                           </span>
@@ -1069,7 +1069,7 @@ function App() {
       {loading && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="glass rounded-2xl p-8 flex flex-col items-center gap-4">
-            <Loader2 className="w-10 h-10 animate-spin text-purple-400" />
+            <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
             <p className="text-white">Cargando datos...</p>
           </div>
         </div>
