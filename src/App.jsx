@@ -842,6 +842,7 @@ function App() {
   const [filtroMesPago, setFiltroMesPago] = useState('todos');
   const [filtroTipoPago, setFiltroTipoPago] = useState('todos');
   const [filtroMesEmpleado, setFiltroMesEmpleado] = useState(new Date().getMonth().toString()); // Mes actual por defecto
+  const [filtroConceptoEmpleado, setFiltroConceptoEmpleado] = useState('todos');
   const [filtroCategoriaProveedor, setFiltroCategoriaProveedor] = useState('todos');
   const [filtroMetodoPago, setFiltroMetodoPago] = useState('todos');
   const [filtroProveedorFactura, setFiltroProveedorFactura] = useState('todos');
@@ -1103,19 +1104,53 @@ function App() {
 
   // Stats calculados
   const stats = useMemo(() => {
-    const facturasPendientes = facturas.filter(f => f.estado === 'pendiente');
-    const facturasVencidas = facturas.filter(f => f.estado === 'vencida');
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const mesActual = hoy.getMonth();
+    const anioActual = hoy.getFullYear();
+
+    // Facturas pendientes (no vencidas)
+    const facturasPendientes = facturas.filter(f => {
+      if (f.estado === 'pagada') return false;
+      const venc = new Date(f.vencimiento + 'T12:00:00');
+      return venc >= hoy;
+    });
+
+    // Facturas vencidas (fecha pasada y no pagadas)
+    const facturasVencidas = facturas.filter(f => {
+      if (f.estado === 'pagada') return false;
+      const venc = new Date(f.vencimiento + 'T12:00:00');
+      return venc < hoy;
+    });
+
     const totalPendiente = facturasPendientes.reduce((sum, f) => sum + f.monto, 0);
     const totalVencido = facturasVencidas.reduce((sum, f) => sum + f.monto, 0);
-    const totalSueldos = empleados.reduce((sum, e) => sum + e.sueldo, 0);
-    const totalPagadoMes = pagos.reduce((sum, p) => sum + p.monto, 0);
-    
+
+    // Sueldos pagados este mes
+    const pagosSueldosMes = pagos.filter(p => {
+      if (p.tipo !== 'sueldo') return false;
+      const fechaPago = new Date(p.fecha);
+      return fechaPago.getMonth() === mesActual && fechaPago.getFullYear() === anioActual;
+    });
+    const totalSueldosPagados = pagosSueldosMes.reduce((sum, p) => sum + p.monto, 0);
+
+    const totalPagadoMes = pagos
+      .filter(p => {
+        const fechaPago = new Date(p.fecha);
+        return fechaPago.getMonth() === mesActual && fechaPago.getFullYear() === anioActual;
+      })
+      .reduce((sum, p) => sum + p.monto, 0);
+
+    // Total de sueldos fijos
+    const totalSueldosFijos = empleados.reduce((sum, e) => sum + (e.sueldo || 0), 0);
+
     return {
       facturasPendientes: facturasPendientes.length,
       facturasVencidas: facturasVencidas.length,
       totalPendiente,
       totalVencido,
-      totalSueldos,
+      totalSueldosPagados,
+      totalSueldosFijos,
       totalPagadoMes,
       totalProveedores: proveedores.length,
       totalEmpleados: empleados.length
@@ -1367,8 +1402,8 @@ function App() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-slate-400 text-xs sm:text-sm mb-1">Sueldos Mes</p>
-                    <p className="text-lg sm:text-2xl font-bold mono">{formatCurrency(stats.totalSueldos)}</p>
-                    <p className="text-xs text-slate-500 mt-1">{stats.totalEmpleados} empleados</p>
+                    <p className="text-lg sm:text-2xl font-bold mono">{formatCurrency(stats.totalSueldosPagados)}</p>
+                    <p className="text-xs text-slate-500 mt-1">pagados este mes</p>
                   </div>
                   <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
                     <Users className="w-5 h-5" />
@@ -1782,7 +1817,7 @@ function App() {
                     <h3 className="text-lg font-semibold">Sueldos Mensuales</h3>
                     <p className="text-slate-400 text-sm">{empleados.length} empleados</p>
                   </div>
-                  <p className="text-2xl font-bold mono text-slate-600">{formatCurrency(stats.totalSueldos)}</p>
+                  <p className="text-2xl font-bold mono text-slate-600">{formatCurrency(stats.totalSueldosFijos)}</p>
                 </div>
               </div>
               <div className="glass rounded-2xl p-5 glow">
@@ -1930,18 +1965,31 @@ function App() {
         {/* Pago Empleados */}
         {activeTab === 'pago-empleados' && (
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
               <h2 className="text-xl font-bold">Pago a Empleados</h2>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <select
+                  value={filtroConceptoEmpleado}
+                  onChange={(e) => setFiltroConceptoEmpleado(e.target.value)}
+                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                >
+                  <option value="todos">Todos los conceptos</option>
+                  {CONCEPTOS_EMPLEADO.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
                 <div className="text-right hidden sm:block">
-                  <p className="text-sm text-slate-500">Total pagado</p>
-                  <p className="text-xl font-bold text-emerald-500 mono">{formatCurrency(pagos.filter(p => p.tipo === 'sueldo').reduce((sum, p) => sum + p.monto, 0))}</p>
+                  <p className="text-xs text-slate-500">Total filtrado</p>
+                  <p className="text-lg font-bold text-emerald-500 mono">
+                    {formatCurrency(pagos
+                      .filter(p => p.tipo === 'sueldo')
+                      .filter(p => filtroConceptoEmpleado === 'todos' || p.descripcion?.includes(filtroConceptoEmpleado))
+                      .reduce((sum, p) => sum + p.monto, 0))}
+                  </p>
                 </div>
                 <button
                   onClick={() => { setSelectedItem({ tipo: 'sueldo' }); setShowModal('pago'); }}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all"
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all text-sm"
                 >
-                  <Plus className="w-5 h-5" />
+                  <Plus className="w-4 h-4" />
                   Registrar Pago
                 </button>
               </div>
@@ -1949,33 +1997,39 @@ function App() {
 
             <div className="glass rounded-2xl glow overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-slate-400 text-sm border-b border-slate-200">
-                      <th className="px-5 py-4 font-medium">Fecha</th>
-                      <th className="px-5 py-4 font-medium">Empleado / Concepto</th>
-                      <th className="px-5 py-4 font-medium">Método</th>
-                      <th className="px-5 py-4 font-medium text-right">Monto</th>
-                      <th className="px-5 py-4 font-medium text-right">Acciones</th>
+                    <tr className="text-left text-slate-400 text-xs border-b border-slate-200">
+                      <th className="px-3 py-3 font-medium">Fecha</th>
+                      <th className="px-3 py-3 font-medium">Empleado / Concepto</th>
+                      <th className="px-3 py-3 font-medium">Método</th>
+                      <th className="px-3 py-3 font-medium text-right">Monto</th>
+                      <th className="px-3 py-3 font-medium text-right">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {pagos.filter(p => p.tipo === 'sueldo').length === 0 ? (
-                      <tr><td colSpan="5" className="px-5 py-12 text-center text-slate-400">No hay pagos a empleados registrados</td></tr>
+                    {pagos
+                      .filter(p => p.tipo === 'sueldo')
+                      .filter(p => filtroConceptoEmpleado === 'todos' || p.descripcion?.includes(filtroConceptoEmpleado))
+                      .length === 0 ? (
+                      <tr><td colSpan="5" className="px-3 py-8 text-center text-slate-400 text-xs">No hay pagos con los filtros seleccionados</td></tr>
                     ) : (
-                      pagos.filter(p => p.tipo === 'sueldo').map(p => (
-                        <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                          <td className="px-5 py-4 text-sm">{formatDate(p.fecha)}</td>
-                          <td className="px-5 py-4 text-sm">{p.descripcion}</td>
-                          <td className="px-5 py-4 text-sm text-slate-500">{p.metodo}</td>
-                          <td className="px-5 py-4 text-right font-semibold mono text-emerald-500">{formatCurrency(p.monto)}</td>
-                          <td className="px-5 py-4 text-right">
-                            <button onClick={() => deletePago(p.id)} className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-red-400" title="Eliminar">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))
+                      pagos
+                        .filter(p => p.tipo === 'sueldo')
+                        .filter(p => filtroConceptoEmpleado === 'todos' || p.descripcion?.includes(filtroConceptoEmpleado))
+                        .map(p => (
+                          <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                            <td className="px-3 py-2.5 text-xs">{formatDate(p.fecha)}</td>
+                            <td className="px-3 py-2.5 text-xs">{p.descripcion}</td>
+                            <td className="px-3 py-2.5 text-xs text-slate-500">{p.metodo}</td>
+                            <td className="px-3 py-2.5 text-right font-semibold mono text-emerald-500 text-xs">{formatCurrency(p.monto)}</td>
+                            <td className="px-3 py-2.5 text-right">
+                              <button onClick={() => deletePago(p.id)} className="p-1.5 hover:bg-red-500/20 rounded-lg transition-colors text-red-400" title="Eliminar">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
                     )}
                   </tbody>
                 </table>
