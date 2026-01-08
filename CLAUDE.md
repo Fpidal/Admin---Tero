@@ -34,6 +34,8 @@ Dashboard de **gestión financiera/administrativa** para el restaurante Tero. Pe
 CREATE TABLE proveedores (
   id SERIAL PRIMARY KEY,
   nombre TEXT NOT NULL,
+  categoria TEXT, -- pescaderia, carnes, bodega, almacen, verduras, arreglos, bebidas, otros
+  condicion_pago INTEGER DEFAULT 0, -- 0=contado, 7, 15, 30, 45, 60 días
   cuit TEXT,
   telefono TEXT,
   email TEXT,
@@ -76,7 +78,19 @@ CREATE TABLE pagos (
   descripcion TEXT,
   monto NUMERIC NOT NULL,
   fecha DATE NOT NULL,
-  metodo TEXT,
+  metodo TEXT, -- Efectivo, Transferencia, Mercado Pago
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Notas de Crédito
+CREATE TABLE notas_credito (
+  id SERIAL PRIMARY KEY,
+  proveedor_id INTEGER REFERENCES proveedores(id),
+  factura_id INTEGER REFERENCES facturas(id), -- opcional, para asignar a una factura
+  numero TEXT NOT NULL,
+  monto NUMERIC NOT NULL,
+  fecha DATE NOT NULL,
+  concepto TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 ```
@@ -98,24 +112,36 @@ CREATE TABLE pagos (
    - Marcar como pagada
 
 3. **Proveedores** - CRUD de proveedores con:
-   - Datos de contacto
-   - Datos bancarios
+   - Categorías (Pescadería, Carnes, Bodega, Almacén, Verduras, Arreglos, Bebidas, Otros)
+   - Condiciones de pago (Contado, 7, 15, 30, 45, 60 días)
+   - Datos de contacto y bancarios
+   - Filtro por categoría
 
-4. **Empleados** - CRUD de empleados con:
+4. **Notas de Crédito** - CRUD de notas de crédito con:
+   - Asignación a factura específica (opcional)
+   - Gestión por proveedor
+
+5. **Empleados** - CRUD de empleados con:
    - Datos personales
    - Puesto y sueldo
    - Datos bancarios
+   - Seguimiento de pagos por mes
 
-5. **Pagos** - Historial de pagos con:
-   - Registro de pagos de facturas
+6. **Pagos** - Historial de pagos con:
+   - Registro de pagos de facturas (total/parcial)
    - Registro de pagos de sueldos
+   - Filtro por mes, tipo y forma de pago
 
 ## Estado Actual
 
 - ✅ Estructura base creada
-- ✅ Supabase conectado (tablas: proveedores, facturas, empleados, pagos)
+- ✅ Supabase conectado (tablas: proveedores, facturas, empleados, pagos, notas_credito)
 - ✅ Formularios de creación/edición (modales)
 - ✅ CRUD completo para todas las entidades
+- ✅ Categorías y condiciones de pago en proveedores
+- ✅ Auto-cálculo de vencimiento en facturas
+- ✅ Notas de crédito con asignación a facturas
+- ✅ Filtros por forma de pago, categoría, mes
 - ⏳ Pendiente: Autenticación
 
 ## Deploy

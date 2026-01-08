@@ -21,10 +21,32 @@ const formatDate = (dateStr) => {
 
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
+const CATEGORIAS_PROVEEDOR = [
+  { value: 'pescaderia', label: 'Pescadería' },
+  { value: 'carnes', label: 'Carnes' },
+  { value: 'bodega', label: 'Bodega' },
+  { value: 'almacen', label: 'Almacén' },
+  { value: 'verduras', label: 'Verduras' },
+  { value: 'arreglos', label: 'Arreglos de local' },
+  { value: 'bebidas', label: 'Bebidas' },
+  { value: 'otros', label: 'Otros' }
+];
+
+const CONDICIONES_PAGO = [
+  { value: 0, label: 'Contado' },
+  { value: 7, label: '7 días' },
+  { value: 15, label: '15 días' },
+  { value: 30, label: '30 días' },
+  { value: 45, label: '45 días' },
+  { value: 60, label: '60 días' }
+];
+
 // Modal Proveedor
 function ModalProveedor({ proveedor, onClose, onSave }) {
   const [form, setForm] = useState({
     nombre: proveedor?.nombre || '',
+    categoria: proveedor?.categoria || '',
+    condicion_pago: proveedor?.condicion_pago ?? 0,
     cuit: proveedor?.cuit || '',
     telefono: proveedor?.telefono || '',
     email: proveedor?.email || '',
@@ -52,39 +74,58 @@ function ModalProveedor({ proveedor, onClose, onSave }) {
           <h2 className="text-xl font-bold">{proveedor ? 'Editar Proveedor' : 'Nuevo Proveedor'}</h2>
           <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           <div>
             <label className="block text-sm text-slate-400 mb-1">Nombre *</label>
-            <input type="text" required value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
+            <input type="text" required value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm text-slate-400 mb-1">Categoría *</label>
+              <select required value={form.categoria} onChange={e => setForm({...form, categoria: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
+                <option value="">Seleccionar</option>
+                {CATEGORIAS_PROVEEDOR.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-slate-400 mb-1">Condición Pago</label>
+              <select value={form.condicion_pago} onChange={e => setForm({...form, condicion_pago: parseInt(e.target.value)})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
+                {CONDICIONES_PAGO.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+            </div>
           </div>
           <div>
             <label className="block text-sm text-slate-400 mb-1">CUIT</label>
-            <input type="text" value={form.cuit} onChange={e => setForm({...form, cuit: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" placeholder="XX-XXXXXXXX-X" />
+            <input type="text" value={form.cuit} onChange={e => setForm({...form, cuit: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" placeholder="XX-XXXXXXXX-X" />
           </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">Teléfono</label>
-            <input type="text" value={form.telefono} onChange={e => setForm({...form, telefono: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm text-slate-400 mb-1">Teléfono</label>
+              <input type="text" value={form.telefono} onChange={e => setForm({...form, telefono: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-400 mb-1">Email</label>
+              <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">Email</label>
-            <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
-          </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">Banco</label>
-            <input type="text" value={form.banco} onChange={e => setForm({...form, banco: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
-          </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">CBU</label>
-            <input type="text" value={form.cbu} onChange={e => setForm({...form, cbu: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm text-slate-400 mb-1">Banco</label>
+              <input type="text" value={form.banco} onChange={e => setForm({...form, banco: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-400 mb-1">CBU</label>
+              <input type="text" value={form.cbu} onChange={e => setForm({...form, cbu: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
+            </div>
           </div>
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
               {error}
             </div>
           )}
-          <div className="flex gap-3 pt-4">
-            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all">Cancelar</button>
-            <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all text-sm">Cancelar</button>
+            <button type="submit" disabled={saving} className="flex-1 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm">
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
               {proveedor ? 'Guardar' : 'Crear'}
             </button>
@@ -102,6 +143,7 @@ function ModalFactura({ factura, proveedores, onClose, onSave }) {
     numero: factura?.numero || '',
     monto: factura?.monto || '',
     fecha: factura?.fecha || new Date().toISOString().split('T')[0],
+    dias_vencimiento: factura ? null : 0,
     vencimiento: factura?.vencimiento || '',
     estado: factura?.estado || 'pendiente',
     concepto: factura?.concepto || ''
@@ -109,11 +151,55 @@ function ModalFactura({ factura, proveedores, onClose, onSave }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
+  // Calcular vencimiento cuando cambia la fecha o los días
+  const calcularVencimiento = (fecha, dias) => {
+    if (!fecha || dias === null || dias === undefined) return '';
+    const fechaBase = new Date(fecha + 'T12:00:00');
+    fechaBase.setDate(fechaBase.getDate() + dias);
+    return fechaBase.toISOString().split('T')[0];
+  };
+
+  const handleProveedorChange = (proveedorId) => {
+    const proveedor = proveedores.find(p => p.id === parseInt(proveedorId));
+    const dias = proveedor?.condicion_pago || 0;
+    const vencimiento = calcularVencimiento(form.fecha, dias);
+    setForm({
+      ...form,
+      proveedor_id: parseInt(proveedorId),
+      dias_vencimiento: dias,
+      vencimiento: vencimiento
+    });
+  };
+
+  const handleFechaChange = (fecha) => {
+    const vencimiento = calcularVencimiento(fecha, form.dias_vencimiento);
+    setForm({
+      ...form,
+      fecha: fecha,
+      vencimiento: vencimiento
+    });
+  };
+
+  const handleDiasChange = (dias) => {
+    const vencimiento = calcularVencimiento(form.fecha, parseInt(dias));
+    setForm({
+      ...form,
+      dias_vencimiento: parseInt(dias),
+      vencimiento: vencimiento
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     setSaving(true);
-    const result = await onSave({ ...form, monto: parseFloat(form.monto) });
+    // Quitar dias_vencimiento del form antes de guardar
+    const { dias_vencimiento, ...dataToSave } = form;
+    // Si es nueva factura, siempre pendiente
+    if (!factura) {
+      dataToSave.estado = 'pendiente';
+    }
+    const result = await onSave({ ...dataToSave, monto: parseFloat(form.monto) });
     setSaving(false);
     if (result?.error) {
       setError(result.error.message || 'Error al guardar. Verificá los permisos de la base de datos.');
@@ -127,40 +213,51 @@ function ModalFactura({ factura, proveedores, onClose, onSave }) {
           <h2 className="text-xl font-bold">{factura ? 'Editar Factura' : 'Nueva Factura'}</h2>
           <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           <div>
             <label className="block text-sm text-slate-400 mb-1">Proveedor *</label>
-            <select required value={form.proveedor_id} onChange={e => setForm({...form, proveedor_id: parseInt(e.target.value)})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50">
+            <select required value={form.proveedor_id} onChange={e => handleProveedorChange(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
               <option value="">Seleccionar proveedor</option>
-              {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+              {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre} {p.condicion_pago ? `(${p.condicion_pago} días)` : '(Contado)'}</option>)}
             </select>
           </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">Número de Factura *</label>
-            <input type="text" required value={form.numero} onChange={e => setForm({...form, numero: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" placeholder="A-0001-00000001" />
-          </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">Monto *</label>
-            <input type="number" required min="0" step="0.01" value={form.monto} onChange={e => setForm({...form, monto: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm text-slate-400 mb-1">Fecha *</label>
-              <input type="date" required value={form.fecha} onChange={e => setForm({...form, fecha: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
+              <label className="block text-sm text-slate-400 mb-1">Número Factura *</label>
+              <input type="text" required value={form.numero} onChange={e => setForm({...form, numero: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" placeholder="A-0001-00000001" />
             </div>
             <div>
-              <label className="block text-sm text-slate-400 mb-1">Vencimiento *</label>
-              <input type="date" required value={form.vencimiento} onChange={e => setForm({...form, vencimiento: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
+              <label className="block text-sm text-slate-400 mb-1">Monto *</label>
+              <input type="number" required min="0" step="0.01" value={form.monto} onChange={e => setForm({...form, monto: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
             </div>
           </div>
           <div>
-            <label className="block text-sm text-slate-400 mb-1">Estado</label>
-            <select value={form.estado} onChange={e => setForm({...form, estado: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50">
-              <option value="pendiente">Pendiente</option>
-              <option value="pagada">Pagada</option>
-              <option value="vencida">Vencida</option>
-            </select>
+            <label className="block text-sm text-slate-400 mb-1">Fecha Factura *</label>
+            <input type="date" required value={form.fecha} onChange={e => handleFechaChange(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm text-slate-400 mb-1">Días Vencimiento</label>
+              <select value={form.dias_vencimiento ?? ''} onChange={e => handleDiasChange(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
+                {CONDICIONES_PAGO.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-slate-400 mb-1">Vencimiento</label>
+              <input type="date" required value={form.vencimiento} onChange={e => setForm({...form, vencimiento: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
+            </div>
+          </div>
+          {/* Solo mostrar estado si es edición */}
+          {factura && (
+            <div>
+              <label className="block text-sm text-slate-400 mb-1">Estado</label>
+              <select value={form.estado} onChange={e => setForm({...form, estado: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
+                <option value="pendiente">Pendiente</option>
+                <option value="pagada">Pagada</option>
+                <option value="vencida">Vencida</option>
+              </select>
+            </div>
+          )}
           <div>
             <label className="block text-sm text-slate-400 mb-1">Concepto</label>
             <input type="text" value={form.concepto} onChange={e => setForm({...form, concepto: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
@@ -563,12 +660,109 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
   );
 }
 
+// Modal Nota de Crédito
+function ModalNotaCredito({ nota, proveedores, facturas, onClose, onSave }) {
+  const [form, setForm] = useState({
+    proveedor_id: nota?.proveedor_id || '',
+    factura_id: nota?.factura_id || '',
+    numero: nota?.numero || '',
+    monto: nota?.monto || '',
+    fecha: nota?.fecha || new Date().toISOString().split('T')[0],
+    concepto: nota?.concepto || ''
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Facturas pendientes del proveedor seleccionado
+  const facturasProveedor = form.proveedor_id
+    ? facturas.filter(f => f.proveedor_id === parseInt(form.proveedor_id) && f.estado !== 'pagada')
+    : [];
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setSaving(true);
+    const dataToSave = {
+      ...form,
+      monto: parseFloat(form.monto),
+      factura_id: form.factura_id ? parseInt(form.factura_id) : null,
+      proveedor_id: parseInt(form.proveedor_id)
+    };
+    const result = await onSave(dataToSave);
+    setSaving(false);
+    if (result?.error) {
+      setError(result.error.message || 'Error al guardar. Verificá los permisos de la base de datos.');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="glass rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold">{nota ? 'Editar Nota de Crédito' : 'Nueva Nota de Crédito'}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div>
+            <label className="block text-sm text-slate-400 mb-1">Proveedor *</label>
+            <select required value={form.proveedor_id} onChange={e => setForm({...form, proveedor_id: e.target.value, factura_id: ''})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
+              <option value="">Seleccionar proveedor</option>
+              {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm text-slate-400 mb-1">Asignar a Factura (opcional)</label>
+            <select value={form.factura_id} onChange={e => setForm({...form, factura_id: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
+              <option value="">Sin asignar</option>
+              {facturasProveedor.map(f => <option key={f.id} value={f.id}>{f.numero} - {formatCurrency(f.monto)}</option>)}
+            </select>
+            {form.proveedor_id && facturasProveedor.length === 0 && (
+              <p className="text-xs text-slate-400 mt-1">No hay facturas pendientes para este proveedor</p>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm text-slate-400 mb-1">Número NC *</label>
+              <input type="text" required value={form.numero} onChange={e => setForm({...form, numero: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" placeholder="NC-0001" />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-400 mb-1">Monto *</label>
+              <input type="number" required min="0" step="0.01" value={form.monto} onChange={e => setForm({...form, monto: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm text-slate-400 mb-1">Fecha *</label>
+            <input type="date" required value={form.fecha} onChange={e => setForm({...form, fecha: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
+          </div>
+          <div>
+            <label className="block text-sm text-slate-400 mb-1">Concepto</label>
+            <input type="text" value={form.concepto} onChange={e => setForm({...form, concepto: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" placeholder="Devolución, descuento, etc." />
+          </div>
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+              {error}
+            </div>
+          )}
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all text-sm">Cancelar</button>
+            <button type="submit" disabled={saving} className="flex-1 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm">
+              {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+              {nota ? 'Guardar' : 'Crear'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [proveedores, setProveedores] = useState([]);
   const [facturas, setFacturas] = useState([]);
   const [empleados, setEmpleados] = useState([]);
   const [pagos, setPagos] = useState([]);
+  const [notasCredito, setNotasCredito] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Modales
@@ -581,6 +775,8 @@ function App() {
   const [filtroMesPago, setFiltroMesPago] = useState('todos');
   const [filtroTipoPago, setFiltroTipoPago] = useState('todos');
   const [filtroMesEmpleado, setFiltroMesEmpleado] = useState(new Date().getMonth().toString()); // Mes actual por defecto
+  const [filtroCategoriaProveedor, setFiltroCategoriaProveedor] = useState('todos');
+  const [filtroMetodoPago, setFiltroMetodoPago] = useState('todos');
 
   // Cargar datos desde Supabase
   const fetchProveedores = async () => {
@@ -613,9 +809,24 @@ function App() {
     if (!error) setPagos(data || []);
   };
 
+  const fetchNotasCredito = async () => {
+    const { data, error } = await supabase
+      .from('notas_credito')
+      .select('*, proveedores(nombre), facturas(numero)')
+      .order('fecha', { ascending: false });
+    if (!error) {
+      const notasConRelaciones = (data || []).map(nc => ({
+        ...nc,
+        proveedor: nc.proveedores?.nombre || 'Sin proveedor',
+        factura_numero: nc.facturas?.numero || null
+      }));
+      setNotasCredito(notasConRelaciones);
+    }
+  };
+
   const fetchAllData = async () => {
     setLoading(true);
-    await Promise.all([fetchProveedores(), fetchFacturas(), fetchEmpleados(), fetchPagos()]);
+    await Promise.all([fetchProveedores(), fetchFacturas(), fetchEmpleados(), fetchPagos(), fetchNotasCredito()]);
     setLoading(false);
   };
 
@@ -762,6 +973,33 @@ function App() {
     if (!confirm('¿Estás seguro de eliminar este pago?')) return;
     const { error } = await supabase.from('pagos').delete().eq('id', id);
     if (!error) await fetchPagos();
+  };
+
+  // CRUD Notas de Crédito
+  const createNotaCredito = async (nota) => {
+    const { error } = await supabase.from('notas_credito').insert([nota]);
+    if (!error) {
+      await fetchNotasCredito();
+      setShowModal(null);
+      setSelectedItem(null);
+    }
+    return { error };
+  };
+
+  const updateNotaCredito = async (id, nota) => {
+    const { error } = await supabase.from('notas_credito').update(nota).eq('id', id);
+    if (!error) {
+      await fetchNotasCredito();
+      setShowModal(null);
+      setSelectedItem(null);
+    }
+    return { error };
+  };
+
+  const deleteNotaCredito = async (id) => {
+    if (!confirm('¿Estás seguro de eliminar esta nota de crédito?')) return;
+    const { error } = await supabase.from('notas_credito').delete().eq('id', id);
+    if (!error) await fetchNotasCredito();
   };
 
   // Stats calculados
@@ -915,6 +1153,7 @@ function App() {
             { id: 'facturas', label: 'Facturas', icon: FileText },
             { id: 'proveedores', label: 'Proveedores', icon: Building2 },
             { id: 'pago-proveedores', label: 'Pago Proveedores', icon: DollarSign },
+            { id: 'notas-credito', label: 'Notas Crédito', icon: FileText },
             { id: 'empleados', label: 'Empleados', icon: Users },
             { id: 'pago-empleados', label: 'Pago Empleados', icon: DollarSign },
             { id: 'pagos', label: 'Pagos', icon: CreditCard },
@@ -1195,43 +1434,54 @@ function App() {
 
         {/* Proveedores */}
         {activeTab === 'proveedores' && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
               <h2 className="text-xl font-bold">Proveedores</h2>
-              <button
-                onClick={() => { setSelectedItem(null); setShowModal('proveedor'); }}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all"
-              >
-                <Plus className="w-5 h-5" />
-                Nuevo Proveedor
-              </button>
+              <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+                <select
+                  value={filtroCategoriaProveedor}
+                  onChange={(e) => setFiltroCategoriaProveedor(e.target.value)}
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                >
+                  <option value="todos">Todas las categorías</option>
+                  {CATEGORIAS_PROVEEDOR.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                </select>
+                <button
+                  onClick={() => { setSelectedItem(null); setShowModal('proveedor'); }}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all text-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  Nuevo
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {proveedores.map(p => (
-                <div key={p.id} className="glass rounded-2xl p-5 glow hover:border-blue-500/30 border border-transparent transition-all">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/20 flex items-center justify-center">
-                      <Building2 className="w-6 h-6 text-blue-500" />
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {proveedores
+                .filter(p => filtroCategoriaProveedor === 'todos' || p.categoria === filtroCategoriaProveedor)
+                .map(p => {
+                  const categoriaLabel = CATEGORIAS_PROVEEDOR.find(c => c.value === p.categoria)?.label || 'Sin categoría';
+                  const condicionLabel = CONDICIONES_PAGO.find(c => c.value === p.condicion_pago)?.label || 'Contado';
+                  return (
+                    <div key={p.id} className="glass rounded-xl p-3 glow hover:border-blue-500/30 border border-transparent transition-all">
+                      <div className="flex items-start justify-between mb-2">
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">{categoriaLabel}</span>
+                        <div className="flex gap-0.5">
+                          <button onClick={() => { setSelectedItem(p); setShowModal('proveedor'); }} className="p-1 hover:bg-slate-100 rounded transition-colors">
+                            <Edit3 className="w-3 h-3" />
+                          </button>
+                          <button onClick={() => deleteProveedor(p.id)} className="p-1 hover:bg-red-500/20 rounded transition-colors text-red-400">
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                      <h3 className="font-semibold text-sm mb-1 truncate">{p.nombre}</h3>
+                      <p className="text-xs text-slate-400 truncate">{p.cuit || 'Sin CUIT'}</p>
+                      <p className="text-xs text-slate-500 mt-1">{condicionLabel}</p>
+                      {p.telefono && <p className="text-xs text-slate-400 truncate mt-1">{p.telefono}</p>}
                     </div>
-                    <div className="flex gap-1">
-                      <button onClick={() => { setSelectedItem(p); setShowModal('proveedor'); }} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => deleteProveedor(p.id)} className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-red-400">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                  <h3 className="font-semibold text-lg mb-1">{p.nombre}</h3>
-                  <p className="text-sm text-slate-400 mb-3">CUIT: {p.cuit || '-'}</p>
-                  <div className="space-y-1 text-sm">
-                    <p className="text-slate-400">Tel: {p.telefono || '-'}</p>
-                    <p className="text-slate-400">Email: {p.email || '-'}</p>
-                    <p className="text-slate-400">Banco: {p.banco || '-'}</p>
-                  </div>
-                </div>
-              ))}
+                  );
+                })}
             </div>
           </div>
         )}
@@ -1344,19 +1594,19 @@ function App() {
 
         {/* Pago Proveedores */}
         {activeTab === 'pago-proveedores' && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold">Pago a Proveedores</h2>
-              <div className="flex items-center gap-4">
+              <h2 className="text-lg font-bold">Pago a Proveedores</h2>
+              <div className="flex items-center gap-3">
                 <div className="text-right hidden sm:block">
-                  <p className="text-sm text-slate-500">Total pagado</p>
-                  <p className="text-xl font-bold text-emerald-500 mono">{formatCurrency(pagos.filter(p => p.tipo === 'factura').reduce((sum, p) => sum + p.monto, 0))}</p>
+                  <p className="text-xs text-slate-500">Total pagado</p>
+                  <p className="text-lg font-bold text-emerald-500 mono">{formatCurrency(pagos.filter(p => p.tipo === 'factura').reduce((sum, p) => sum + p.monto, 0))}</p>
                 </div>
                 <button
                   onClick={() => { setSelectedItem({ tipo: 'factura' }); setShowModal('pago'); }}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all text-sm"
                 >
-                  <Plus className="w-5 h-5" />
+                  <Plus className="w-4 h-4" />
                   Registrar Pago
                 </button>
               </div>
@@ -1364,30 +1614,102 @@ function App() {
 
             <div className="glass rounded-2xl glow overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-slate-400 text-sm border-b border-slate-200">
-                      <th className="px-5 py-4 font-medium">Fecha</th>
-                      <th className="px-5 py-4 font-medium">Proveedor / Factura</th>
-                      <th className="px-5 py-4 font-medium">Método</th>
-                      <th className="px-5 py-4 font-medium text-right">Monto</th>
-                      <th className="px-5 py-4 font-medium text-right">Acciones</th>
+                    <tr className="text-left text-slate-400 text-xs border-b border-slate-200">
+                      <th className="px-3 py-3 font-medium">Fecha</th>
+                      <th className="px-3 py-3 font-medium">Proveedor / Factura</th>
+                      <th className="px-3 py-3 font-medium">Método</th>
+                      <th className="px-3 py-3 font-medium text-right">Monto</th>
+                      <th className="px-3 py-3 font-medium text-right">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
                     {pagos.filter(p => p.tipo === 'factura').length === 0 ? (
-                      <tr><td colSpan="5" className="px-5 py-12 text-center text-slate-400">No hay pagos a proveedores registrados</td></tr>
+                      <tr><td colSpan="5" className="px-3 py-8 text-center text-slate-400 text-xs">No hay pagos a proveedores registrados</td></tr>
                     ) : (
                       pagos.filter(p => p.tipo === 'factura').map(p => (
                         <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                          <td className="px-5 py-4 text-sm">{formatDate(p.fecha)}</td>
-                          <td className="px-5 py-4 text-sm">{p.descripcion}</td>
-                          <td className="px-5 py-4 text-sm text-slate-500">{p.metodo}</td>
-                          <td className="px-5 py-4 text-right font-semibold mono text-emerald-500">{formatCurrency(p.monto)}</td>
-                          <td className="px-5 py-4 text-right">
-                            <button onClick={() => deletePago(p.id)} className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-red-400" title="Eliminar">
-                              <Trash2 className="w-4 h-4" />
+                          <td className="px-3 py-2.5 text-xs">{formatDate(p.fecha)}</td>
+                          <td className="px-3 py-2.5 text-xs">{p.descripcion}</td>
+                          <td className="px-3 py-2.5 text-xs text-slate-500">{p.metodo}</td>
+                          <td className="px-3 py-2.5 text-right font-semibold mono text-emerald-500 text-xs">{formatCurrency(p.monto)}</td>
+                          <td className="px-3 py-2.5 text-right">
+                            <button onClick={() => deletePago(p.id)} className="p-1.5 hover:bg-red-500/20 rounded-lg transition-colors text-red-400" title="Eliminar">
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Notas de Crédito */}
+        {activeTab === 'notas-credito' && (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-bold">Notas de Crédito Proveedores</h2>
+              <div className="flex items-center gap-3">
+                <div className="text-right hidden sm:block">
+                  <p className="text-xs text-slate-500">Total NC</p>
+                  <p className="text-lg font-bold text-purple-500 mono">{formatCurrency(notasCredito.reduce((sum, nc) => sum + nc.monto, 0))}</p>
+                </div>
+                <button
+                  onClick={() => { setSelectedItem(null); setShowModal('nota-credito'); }}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 text-white font-medium hover:from-purple-600 hover:to-purple-700 transition-all text-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  Nueva NC
+                </button>
+              </div>
+            </div>
+
+            <div className="glass rounded-2xl glow overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-slate-400 text-xs border-b border-slate-200">
+                      <th className="px-3 py-3 font-medium">Fecha</th>
+                      <th className="px-3 py-3 font-medium">Número</th>
+                      <th className="px-3 py-3 font-medium">Proveedor</th>
+                      <th className="px-3 py-3 font-medium">Factura Asignada</th>
+                      <th className="px-3 py-3 font-medium">Concepto</th>
+                      <th className="px-3 py-3 font-medium text-right">Monto</th>
+                      <th className="px-3 py-3 font-medium text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {notasCredito.length === 0 ? (
+                      <tr><td colSpan="7" className="px-3 py-8 text-center text-slate-400 text-xs">No hay notas de crédito registradas</td></tr>
+                    ) : (
+                      notasCredito.map(nc => (
+                        <tr key={nc.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                          <td className="px-3 py-2.5 text-xs">{formatDate(nc.fecha)}</td>
+                          <td className="px-3 py-2.5 text-xs font-medium">{nc.numero}</td>
+                          <td className="px-3 py-2.5 text-xs">{nc.proveedor}</td>
+                          <td className="px-3 py-2.5 text-xs">
+                            {nc.factura_numero ? (
+                              <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs">{nc.factura_numero}</span>
+                            ) : (
+                              <span className="text-slate-400">Sin asignar</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2.5 text-xs text-slate-500">{nc.concepto || '-'}</td>
+                          <td className="px-3 py-2.5 text-right font-semibold mono text-purple-500 text-xs">{formatCurrency(nc.monto)}</td>
+                          <td className="px-3 py-2.5 text-right">
+                            <div className="flex justify-end gap-1">
+                              <button onClick={() => { setSelectedItem(nc); setShowModal('nota-credito'); }} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Editar">
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                              <button onClick={() => deleteNotaCredito(nc.id)} className="p-1.5 hover:bg-red-500/20 rounded-lg transition-colors text-red-400" title="Eliminar">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -1458,14 +1780,14 @@ function App() {
 
         {/* Pagos - Consulta General */}
         {activeTab === 'pagos' && (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-              <h2 className="text-xl font-bold">Consulta de Pagos</h2>
-              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
+              <h2 className="text-lg font-bold">Consulta de Pagos</h2>
+              <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                 <select
                   value={filtroMesPago}
                   onChange={(e) => setFiltroMesPago(e.target.value)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50"
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
                 >
                   <option value="todos">Todos los meses</option>
                   {MESES.map((mes, index) => (
@@ -1475,41 +1797,54 @@ function App() {
                 <select
                   value={filtroTipoPago}
                   onChange={(e) => setFiltroTipoPago(e.target.value)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50"
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
                 >
                   <option value="todos">Todos los tipos</option>
                   <option value="factura">Proveedores</option>
                   <option value="sueldo">Empleados</option>
                 </select>
+                <select
+                  value={filtroMetodoPago}
+                  onChange={(e) => setFiltroMetodoPago(e.target.value)}
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                >
+                  <option value="todos">Todas las formas</option>
+                  <option value="Efectivo">Efectivo</option>
+                  <option value="Transferencia">Transferencia</option>
+                  <option value="Mercado Pago">Mercado Pago</option>
+                </select>
               </div>
             </div>
 
             {/* Resumen */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="glass rounded-xl p-4">
-                <p className="text-sm text-slate-500">Total Proveedores</p>
-                <p className="text-2xl font-bold text-blue-500 mono">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="glass rounded-xl p-3">
+                <p className="text-xs text-slate-500">Total Proveedores</p>
+                <p className="text-lg font-bold text-blue-500 mono">
                   {formatCurrency(pagos
                     .filter(p => p.tipo === 'factura')
                     .filter(p => filtroMesPago === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesPago))
+                    .filter(p => filtroMetodoPago === 'todos' || p.metodo === filtroMetodoPago)
                     .reduce((sum, p) => sum + p.monto, 0))}
                 </p>
               </div>
-              <div className="glass rounded-xl p-4">
-                <p className="text-sm text-slate-500">Total Empleados</p>
-                <p className="text-2xl font-bold text-cyan-500 mono">
+              <div className="glass rounded-xl p-3">
+                <p className="text-xs text-slate-500">Total Empleados</p>
+                <p className="text-lg font-bold text-cyan-500 mono">
                   {formatCurrency(pagos
                     .filter(p => p.tipo === 'sueldo')
                     .filter(p => filtroMesPago === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesPago))
+                    .filter(p => filtroMetodoPago === 'todos' || p.metodo === filtroMetodoPago)
                     .reduce((sum, p) => sum + p.monto, 0))}
                 </p>
               </div>
-              <div className="glass rounded-xl p-4">
-                <p className="text-sm text-slate-500">Total General</p>
-                <p className="text-2xl font-bold text-emerald-500 mono">
+              <div className="glass rounded-xl p-3">
+                <p className="text-xs text-slate-500">Total General</p>
+                <p className="text-lg font-bold text-emerald-500 mono">
                   {formatCurrency(pagos
                     .filter(p => filtroTipoPago === 'todos' || p.tipo === filtroTipoPago)
                     .filter(p => filtroMesPago === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesPago))
+                    .filter(p => filtroMetodoPago === 'todos' || p.metodo === filtroMetodoPago)
                     .reduce((sum, p) => sum + p.monto, 0))}
                 </p>
               </div>
@@ -1517,39 +1852,41 @@ function App() {
 
             <div className="glass rounded-2xl glow overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-slate-400 text-sm border-b border-slate-200">
-                      <th className="px-5 py-4 font-medium">Fecha</th>
-                      <th className="px-5 py-4 font-medium">Tipo</th>
-                      <th className="px-5 py-4 font-medium">Descripción</th>
-                      <th className="px-5 py-4 font-medium">Método</th>
-                      <th className="px-5 py-4 font-medium text-right">Monto</th>
+                    <tr className="text-left text-slate-400 text-xs border-b border-slate-200">
+                      <th className="px-3 py-3 font-medium">Fecha</th>
+                      <th className="px-3 py-3 font-medium">Tipo</th>
+                      <th className="px-3 py-3 font-medium">Descripción</th>
+                      <th className="px-3 py-3 font-medium">Método</th>
+                      <th className="px-3 py-3 font-medium text-right">Monto</th>
                     </tr>
                   </thead>
                   <tbody>
                     {pagos
                       .filter(p => filtroTipoPago === 'todos' || p.tipo === filtroTipoPago)
                       .filter(p => filtroMesPago === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesPago))
+                      .filter(p => filtroMetodoPago === 'todos' || p.metodo === filtroMetodoPago)
                       .length === 0 ? (
-                      <tr><td colSpan="5" className="px-5 py-12 text-center text-slate-400">No hay pagos con los filtros seleccionados</td></tr>
+                      <tr><td colSpan="5" className="px-3 py-8 text-center text-slate-400 text-xs">No hay pagos con los filtros seleccionados</td></tr>
                     ) : (
                       pagos
                         .filter(p => filtroTipoPago === 'todos' || p.tipo === filtroTipoPago)
                         .filter(p => filtroMesPago === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesPago))
+                        .filter(p => filtroMetodoPago === 'todos' || p.metodo === filtroMetodoPago)
                         .map(p => (
                           <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                            <td className="px-5 py-4 text-sm">{formatDate(p.fecha)}</td>
-                            <td className="px-5 py-4">
-                              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            <td className="px-3 py-2.5 text-xs">{formatDate(p.fecha)}</td>
+                            <td className="px-3 py-2.5">
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                                 p.tipo === 'factura' ? 'bg-blue-500/15 text-blue-700' : 'bg-cyan-500/15 text-cyan-700'
                               }`}>
                                 {p.tipo === 'factura' ? 'Proveedor' : 'Empleado'}
                               </span>
                             </td>
-                            <td className="px-5 py-4 text-sm">{p.descripcion}</td>
-                            <td className="px-5 py-4 text-sm text-slate-500">{p.metodo}</td>
-                            <td className="px-5 py-4 text-right font-semibold mono text-emerald-500">{formatCurrency(p.monto)}</td>
+                            <td className="px-3 py-2.5 text-xs">{p.descripcion}</td>
+                            <td className="px-3 py-2.5 text-xs text-slate-500">{p.metodo}</td>
+                            <td className="px-3 py-2.5 text-right font-semibold mono text-emerald-500 text-xs">{formatCurrency(p.monto)}</td>
                           </tr>
                         ))
                     )}
@@ -1602,6 +1939,17 @@ function App() {
             await supabase.from('facturas').update({ estado: 'pagada' }).eq('id', facturaId);
             await fetchFacturas();
           }}
+        />
+      )}
+
+      {/* Modal Nota de Crédito */}
+      {showModal === 'nota-credito' && (
+        <ModalNotaCredito
+          nota={selectedItem}
+          proveedores={proveedores}
+          facturas={facturas}
+          onClose={() => { setShowModal(null); setSelectedItem(null); }}
+          onSave={selectedItem ? (data) => updateNotaCredito(selectedItem.id, data) : createNotaCredito}
         />
       )}
 
