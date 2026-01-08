@@ -587,8 +587,9 @@ function App() {
             { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
             { id: 'facturas', label: 'Facturas', icon: FileText },
             { id: 'proveedores', label: 'Proveedores', icon: Building2 },
+            { id: 'pago-proveedores', label: 'Pago Proveedores', icon: DollarSign },
             { id: 'empleados', label: 'Empleados', icon: Users },
-            { id: 'pagos', label: 'Pagos', icon: CreditCard },
+            { id: 'pago-empleados', label: 'Pago Empleados', icon: DollarSign },
           ].map(tab => (
             <button
               key={tab.id}
@@ -971,49 +972,42 @@ function App() {
           </div>
         )}
 
-        {/* Pagos */}
-        {activeTab === 'pagos' && (
+        {/* Pago Proveedores */}
+        {activeTab === 'pago-proveedores' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold">Historial de Pagos</h2>
-              <button
-                onClick={() => { setSelectedItem(null); setShowModal('pago'); }}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all"
-              >
-                <Plus className="w-5 h-5" />
-                Registrar Pago
-              </button>
+              <h2 className="text-xl font-bold">Pago a Proveedores</h2>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <p className="text-sm text-slate-500">Total pagado</p>
+                  <p className="text-xl font-bold text-emerald-500 mono">{formatCurrency(pagos.filter(p => p.tipo === 'factura').reduce((sum, p) => sum + p.monto, 0))}</p>
+                </div>
+              </div>
             </div>
 
-            {/* Pago Proveedores */}
             <div className="glass rounded-2xl glow overflow-hidden">
-              <div className="px-5 py-4 border-b border-slate-200 flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-blue-500" />
-                <h3 className="font-semibold">Pago Proveedores</h3>
-                <span className="ml-auto text-sm text-slate-500">{pagos.filter(p => p.tipo === 'factura').length} pagos</span>
-              </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="text-left text-slate-400 text-sm border-b border-slate-200">
-                      <th className="px-5 py-3 font-medium">Fecha</th>
-                      <th className="px-5 py-3 font-medium">Descripción</th>
-                      <th className="px-5 py-3 font-medium">Método</th>
-                      <th className="px-5 py-3 font-medium text-right">Monto</th>
-                      <th className="px-5 py-3 font-medium text-right">Acciones</th>
+                      <th className="px-5 py-4 font-medium">Fecha</th>
+                      <th className="px-5 py-4 font-medium">Proveedor / Factura</th>
+                      <th className="px-5 py-4 font-medium">Método</th>
+                      <th className="px-5 py-4 font-medium text-right">Monto</th>
+                      <th className="px-5 py-4 font-medium text-right">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
                     {pagos.filter(p => p.tipo === 'factura').length === 0 ? (
-                      <tr><td colSpan="5" className="px-5 py-8 text-center text-slate-400">No hay pagos a proveedores</td></tr>
+                      <tr><td colSpan="5" className="px-5 py-12 text-center text-slate-400">No hay pagos a proveedores registrados</td></tr>
                     ) : (
                       pagos.filter(p => p.tipo === 'factura').map(p => (
                         <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                          <td className="px-5 py-3 text-sm">{formatDate(p.fecha)}</td>
-                          <td className="px-5 py-3 text-sm">{p.descripcion}</td>
-                          <td className="px-5 py-3 text-sm text-slate-400">{p.metodo}</td>
-                          <td className="px-5 py-3 text-right font-semibold mono text-emerald-500">{formatCurrency(p.monto)}</td>
-                          <td className="px-5 py-3 text-right">
+                          <td className="px-5 py-4 text-sm">{formatDate(p.fecha)}</td>
+                          <td className="px-5 py-4 text-sm">{p.descripcion}</td>
+                          <td className="px-5 py-4 text-sm text-slate-500">{p.metodo}</td>
+                          <td className="px-5 py-4 text-right font-semibold mono text-emerald-500">{formatCurrency(p.monto)}</td>
+                          <td className="px-5 py-4 text-right">
                             <button onClick={() => deletePago(p.id)} className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-red-400" title="Eliminar">
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -1025,36 +1019,45 @@ function App() {
                 </table>
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Pago Empleados */}
-            <div className="glass rounded-2xl glow overflow-hidden">
-              <div className="px-5 py-4 border-b border-slate-200 flex items-center gap-2">
-                <Users className="w-5 h-5 text-cyan-500" />
-                <h3 className="font-semibold">Pago Empleados</h3>
-                <span className="ml-auto text-sm text-slate-500">{pagos.filter(p => p.tipo === 'sueldo').length} pagos</span>
+        {/* Pago Empleados */}
+        {activeTab === 'pago-empleados' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-bold">Pago a Empleados</h2>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <p className="text-sm text-slate-500">Total pagado</p>
+                  <p className="text-xl font-bold text-emerald-500 mono">{formatCurrency(pagos.filter(p => p.tipo === 'sueldo').reduce((sum, p) => sum + p.monto, 0))}</p>
+                </div>
               </div>
+            </div>
+
+            <div className="glass rounded-2xl glow overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="text-left text-slate-400 text-sm border-b border-slate-200">
-                      <th className="px-5 py-3 font-medium">Fecha</th>
-                      <th className="px-5 py-3 font-medium">Descripción</th>
-                      <th className="px-5 py-3 font-medium">Método</th>
-                      <th className="px-5 py-3 font-medium text-right">Monto</th>
-                      <th className="px-5 py-3 font-medium text-right">Acciones</th>
+                      <th className="px-5 py-4 font-medium">Fecha</th>
+                      <th className="px-5 py-4 font-medium">Empleado / Concepto</th>
+                      <th className="px-5 py-4 font-medium">Método</th>
+                      <th className="px-5 py-4 font-medium text-right">Monto</th>
+                      <th className="px-5 py-4 font-medium text-right">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
                     {pagos.filter(p => p.tipo === 'sueldo').length === 0 ? (
-                      <tr><td colSpan="5" className="px-5 py-8 text-center text-slate-400">No hay pagos a empleados</td></tr>
+                      <tr><td colSpan="5" className="px-5 py-12 text-center text-slate-400">No hay pagos a empleados registrados</td></tr>
                     ) : (
                       pagos.filter(p => p.tipo === 'sueldo').map(p => (
                         <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                          <td className="px-5 py-3 text-sm">{formatDate(p.fecha)}</td>
-                          <td className="px-5 py-3 text-sm">{p.descripcion}</td>
-                          <td className="px-5 py-3 text-sm text-slate-400">{p.metodo}</td>
-                          <td className="px-5 py-3 text-right font-semibold mono text-emerald-500">{formatCurrency(p.monto)}</td>
-                          <td className="px-5 py-3 text-right">
+                          <td className="px-5 py-4 text-sm">{formatDate(p.fecha)}</td>
+                          <td className="px-5 py-4 text-sm">{p.descripcion}</td>
+                          <td className="px-5 py-4 text-sm text-slate-500">{p.metodo}</td>
+                          <td className="px-5 py-4 text-right font-semibold mono text-emerald-500">{formatCurrency(p.monto)}</td>
+                          <td className="px-5 py-4 text-right">
                             <button onClick={() => deletePago(p.id)} className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-red-400" title="Eliminar">
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -1066,45 +1069,6 @@ function App() {
                 </table>
               </div>
             </div>
-
-            {/* Otros Pagos */}
-            {pagos.filter(p => p.tipo === 'otro').length > 0 && (
-              <div className="glass rounded-2xl glow overflow-hidden">
-                <div className="px-5 py-4 border-b border-slate-200 flex items-center gap-2">
-                  <CreditCard className="w-5 h-5 text-slate-500" />
-                  <h3 className="font-semibold">Otros Pagos</h3>
-                  <span className="ml-auto text-sm text-slate-500">{pagos.filter(p => p.tipo === 'otro').length} pagos</span>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="text-left text-slate-400 text-sm border-b border-slate-200">
-                        <th className="px-5 py-3 font-medium">Fecha</th>
-                        <th className="px-5 py-3 font-medium">Descripción</th>
-                        <th className="px-5 py-3 font-medium">Método</th>
-                        <th className="px-5 py-3 font-medium text-right">Monto</th>
-                        <th className="px-5 py-3 font-medium text-right">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pagos.filter(p => p.tipo === 'otro').map(p => (
-                        <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                          <td className="px-5 py-3 text-sm">{formatDate(p.fecha)}</td>
-                          <td className="px-5 py-3 text-sm">{p.descripcion}</td>
-                          <td className="px-5 py-3 text-sm text-slate-400">{p.metodo}</td>
-                          <td className="px-5 py-3 text-right font-semibold mono text-emerald-500">{formatCurrency(p.monto)}</td>
-                          <td className="px-5 py-3 text-right">
-                            <button onClick={() => deletePago(p.id)} className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-red-400" title="Eliminar">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </main>
