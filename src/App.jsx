@@ -369,6 +369,271 @@ function ModalInformeProveedor({ onClose, proveedores, facturas, pagos, notasCre
   );
 }
 
+// Modal Informe Cliente
+function ModalInformeCliente({ onClose, clientes, facturasVenta, cobros }) {
+  const [clienteId, setClienteId] = useState('');
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState(new Date().toISOString().split('T')[0]);
+  const [generando, setGenerando] = useState(false);
+
+  const cliente = clientes.find(c => c.id === parseInt(clienteId));
+
+  const generarPDF = () => {
+    if (!clienteId) return;
+    setGenerando(true);
+
+    try {
+      const doc = new jsPDF();
+      const cli = clientes.find(c => c.id === parseInt(clienteId));
+
+      // Filtrar datos por cliente y fechas
+      const facturasCliente = facturasVenta
+        .filter(f => f.cliente_id === parseInt(clienteId))
+        .filter(f => {
+          if (!fechaDesde) return true;
+          return f.fecha >= fechaDesde && f.fecha <= fechaHasta;
+        })
+        .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+      const cobrosCliente = cobros
+        .filter(c => c.cliente_id === parseInt(clienteId))
+        .filter(c => {
+          if (!fechaDesde) return true;
+          return c.fecha >= fechaDesde && c.fecha <= fechaHasta;
+        })
+        .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+      // Encabezado
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text('CUENTA CORRIENTE', 105, 20, { align: 'center' });
+
+      doc.setFontSize(14);
+      doc.text(cli?.nombre || 'Cliente', 105, 30, { align: 'center' });
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      const periodoTexto = fechaDesde
+        ? `Período: ${formatDate(fechaDesde)} - ${formatDate(fechaHasta)}`
+        : `Hasta: ${formatDate(fechaHasta)}`;
+      doc.text(periodoTexto, 105, 38, { align: 'center' });
+
+      let yPos = 50;
+
+      // Datos del cliente
+      doc.setFontSize(10);
+      if (cli?.cuit) { doc.text(`CUIT: ${cli.cuit}`, 14, yPos); yPos += 5; }
+      if (cli?.telefono) { doc.text(`Tel: ${cli.telefono}`, 14, yPos); yPos += 5; }
+      if (cli?.email) { doc.text(`Email: ${cli.email}`, 14, yPos); yPos += 5; }
+      if (cli?.condicion_iva) { doc.text(`Cond. IVA: ${cli.condicion_iva}`, 14, yPos); yPos += 5; }
+      if (cli?.direccion) { doc.text(`Dirección: ${cli.direccion}`, 14, yPos); yPos += 5; }
+      yPos += 5;
+
+      // FACTURAS
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('FACTURAS EMITIDAS', 14, yPos);
+      yPos += 5;
+
+      if (facturasCliente.length > 0) {
+        const facturasData = facturasCliente.map(f => [
+          formatDate(f.fecha),
+          f.numero || '-',
+          formatDate(f.vencimiento),
+          f.estado ? f.estado.charAt(0).toUpperCase() + f.estado.slice(1) : '-',
+          formatCurrencyPDF(f.monto)
+        ]);
+
+        const totalFacturas = facturasCliente.reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0);
+
+        autoTable(doc, {
+          startY: yPos,
+          head: [['Fecha', 'Número', 'Vencimiento', 'Estado', 'Monto']],
+          body: facturasData,
+          foot: [['', '', '', 'TOTAL:', formatCurrencyPDF(totalFacturas)]],
+          theme: 'striped',
+          headStyles: { fillColor: [59, 130, 246], fontSize: 8 },
+          bodyStyles: { fontSize: 8 },
+          footStyles: { fillColor: [241, 245, 249], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8 },
+          columnStyles: { 4: { halign: 'right' } }
+        });
+        yPos = doc.lastAutoTable.finalY + 10;
+      } else {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text('No hay facturas en el período seleccionado', 14, yPos + 5);
+        yPos += 15;
+      }
+
+      // COBROS
+      if (yPos > 220) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('COBROS RECIBIDOS', 14, yPos);
+      yPos += 5;
+
+      if (cobrosCliente.length > 0) {
+        const cobrosData = cobrosCliente.map(c => {
+          const factura = facturasVenta.find(f => f.id === c.factura_venta_id);
+          return [
+            formatDate(c.fecha),
+            factura?.numero || '-',
+            c.metodo || '-',
+            formatCurrencyPDF(c.monto)
+          ];
+        });
+
+        const totalCobros = cobrosCliente.reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0);
+
+        autoTable(doc, {
+          startY: yPos,
+          head: [['Fecha', 'Factura', 'Método', 'Monto']],
+          body: cobrosData,
+          foot: [['', '', 'TOTAL:', formatCurrencyPDF(totalCobros)]],
+          theme: 'striped',
+          headStyles: { fillColor: [16, 185, 129], fontSize: 8 },
+          bodyStyles: { fontSize: 8 },
+          footStyles: { fillColor: [241, 245, 249], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8 },
+          columnStyles: { 3: { halign: 'right' } }
+        });
+        yPos = doc.lastAutoTable.finalY + 10;
+      } else {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text('No hay cobros en el período seleccionado', 14, yPos + 5);
+        yPos += 15;
+      }
+
+      // RESUMEN
+      if (yPos > 250) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('RESUMEN', 14, yPos);
+      yPos += 8;
+
+      const totalFacturasSum = facturasCliente.reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0);
+      const totalCobrosSum = cobrosCliente.filter(c => c.metodo !== 'Retención').reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0);
+      const totalRetencionesSum = cobrosCliente.filter(c => c.metodo === 'Retención').reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0);
+      const saldoPendiente = totalFacturasSum - totalCobrosSum - totalRetencionesSum;
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Total Facturado: ${formatCurrencyPDF(totalFacturasSum)}`, 14, yPos);
+      yPos += 6;
+      doc.text(`Total Cobros: ${formatCurrencyPDF(totalCobrosSum)}`, 14, yPos);
+      yPos += 6;
+      doc.text(`Total Retenciones: ${formatCurrencyPDF(totalRetencionesSum)}`, 14, yPos);
+      yPos += 8;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      const saldoColor = saldoPendiente > 0 ? [220, 38, 38] : [16, 185, 129];
+      doc.setTextColor(...saldoColor);
+      doc.text(`SALDO: ${formatCurrencyPDF(saldoPendiente)}`, 14, yPos);
+      doc.setTextColor(0, 0, 0);
+
+      // Pie de página
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Generado el ${new Date().toLocaleDateString('es-AR')} - Página ${i} de ${pageCount}`, 105, 290, { align: 'center' });
+      }
+
+      // Guardar PDF
+      const fileName = `CuentaCorriente_${cli?.nombre?.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+      setGenerando(false);
+      onClose();
+    } catch (error) {
+      console.error('Error generando PDF:', error);
+      alert(`Error al generar el PDF: ${error.message || error}`);
+      setGenerando(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="glass rounded-2xl p-6 w-full max-w-md">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold">Informe de Cliente</h2>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm text-slate-500 mb-1">Cliente *</label>
+            <select
+              required
+              value={clienteId}
+              onChange={e => setClienteId(e.target.value)}
+              className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50"
+            >
+              <option value="">Seleccionar cliente</option>
+              {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm text-slate-500 mb-1">Desde (opcional)</label>
+              <input
+                type="date"
+                value={fechaDesde}
+                onChange={e => setFechaDesde(e.target.value)}
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-500 mb-1">Hasta</label>
+              <input
+                type="date"
+                value={fechaHasta}
+                onChange={e => setFechaHasta(e.target.value)}
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50"
+              />
+            </div>
+          </div>
+
+          {cliente && (
+            <div className="p-3 bg-slate-50 rounded-xl text-sm">
+              <p className="font-medium">{cliente.nombre}</p>
+              {cliente.cuit && <p className="text-slate-500">CUIT: {cliente.cuit}</p>}
+              {cliente.condicion_iva && <p className="text-slate-500">Cond. IVA: {cliente.condicion_iva}</p>}
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={generarPDF}
+              disabled={!clienteId || generando}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all disabled:opacity-50"
+            >
+              {generando ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
+              {generando ? 'Generando...' : 'Generar PDF'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Función auxiliar para formato de moneda en PDF (sin símbolo raro)
 const formatCurrencyPDF = (value) => {
   const num = parseFloat(value) || 0;
@@ -2027,179 +2292,6 @@ function App() {
     if (!error) await fetchClientes();
   };
 
-  // Generar PDF de Cliente
-  const generarPDFCliente = (clienteId) => {
-    const cliente = clientes.find(c => c.id === clienteId);
-    if (!cliente) return;
-
-    const doc = new jsPDF();
-
-    // Facturas del cliente
-    const facturasCliente = facturasVenta
-      .filter(f => f.cliente_id === clienteId)
-      .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-
-    // Cobros del cliente
-    const cobrosCliente = cobros
-      .filter(c => c.cliente_id === clienteId)
-      .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-
-    // Encabezado
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.text('CUENTA CORRIENTE', 105, 20, { align: 'center' });
-
-    doc.setFontSize(14);
-    doc.text(cliente.nombre, 105, 30, { align: 'center' });
-
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Generado: ${new Date().toLocaleDateString('es-AR')}`, 105, 38, { align: 'center' });
-
-    let yPos = 50;
-
-    // Datos del cliente
-    doc.setFontSize(10);
-    if (cliente.cuit) { doc.text(`CUIT: ${cliente.cuit}`, 14, yPos); yPos += 5; }
-    if (cliente.telefono) { doc.text(`Tel: ${cliente.telefono}`, 14, yPos); yPos += 5; }
-    if (cliente.email) { doc.text(`Email: ${cliente.email}`, 14, yPos); yPos += 5; }
-    if (cliente.condicion_iva) { doc.text(`Cond. IVA: ${cliente.condicion_iva}`, 14, yPos); yPos += 5; }
-    if (cliente.direccion) { doc.text(`Dirección: ${cliente.direccion}`, 14, yPos); yPos += 5; }
-    yPos += 5;
-
-    // FACTURAS
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.text('FACTURAS EMITIDAS', 14, yPos);
-    yPos += 5;
-
-    if (facturasCliente.length > 0) {
-      const facturasData = facturasCliente.map(f => [
-        formatDate(f.fecha),
-        f.numero || '-',
-        formatDate(f.vencimiento),
-        f.estado ? f.estado.charAt(0).toUpperCase() + f.estado.slice(1) : '-',
-        formatCurrencyPDF(f.monto)
-      ]);
-
-      const totalFacturas = facturasCliente.reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0);
-
-      autoTable(doc, {
-        startY: yPos,
-        head: [['Fecha', 'Número', 'Vencimiento', 'Estado', 'Monto']],
-        body: facturasData,
-        foot: [['', '', '', 'TOTAL:', formatCurrencyPDF(totalFacturas)]],
-        theme: 'striped',
-        headStyles: { fillColor: [59, 130, 246], fontSize: 8 },
-        bodyStyles: { fontSize: 8 },
-        footStyles: { fillColor: [241, 245, 249], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8 },
-        columnStyles: { 4: { halign: 'right' } }
-      });
-      yPos = doc.lastAutoTable.finalY + 10;
-    } else {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.text('No hay facturas registradas', 14, yPos + 5);
-      yPos += 15;
-    }
-
-    // COBROS
-    if (yPos > 220) {
-      doc.addPage();
-      yPos = 20;
-    }
-
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.text('COBROS RECIBIDOS', 14, yPos);
-    yPos += 5;
-
-    if (cobrosCliente.length > 0) {
-      const cobrosData = cobrosCliente.map(c => {
-        const factura = facturasVenta.find(f => f.id === c.factura_venta_id);
-        return [
-          formatDate(c.fecha),
-          factura?.numero || '-',
-          c.metodo || '-',
-          formatCurrencyPDF(c.monto)
-        ];
-      });
-
-      const totalCobros = cobrosCliente.reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0);
-      const totalRetenciones = cobrosCliente.filter(c => c.metodo === 'Retención').reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0);
-
-      autoTable(doc, {
-        startY: yPos,
-        head: [['Fecha', 'Factura', 'Método', 'Monto']],
-        body: cobrosData,
-        foot: [['', '', 'TOTAL:', formatCurrencyPDF(totalCobros)]],
-        theme: 'striped',
-        headStyles: { fillColor: [16, 185, 129], fontSize: 8 },
-        bodyStyles: { fontSize: 8 },
-        footStyles: { fillColor: [241, 245, 249], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8 },
-        columnStyles: { 3: { halign: 'right' } }
-      });
-      yPos = doc.lastAutoTable.finalY + 10;
-
-      // Mostrar retenciones si hay
-      if (totalRetenciones > 0) {
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`(Incluye retenciones: ${formatCurrencyPDF(totalRetenciones)})`, 14, yPos);
-        yPos += 10;
-      }
-    } else {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.text('No hay cobros registrados', 14, yPos + 5);
-      yPos += 15;
-    }
-
-    // RESUMEN
-    if (yPos > 250) {
-      doc.addPage();
-      yPos = 20;
-    }
-
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.text('RESUMEN', 14, yPos);
-    yPos += 8;
-
-    const totalFacturasSum = facturasCliente.reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0);
-    const totalCobrosSum = cobrosCliente.filter(c => c.metodo !== 'Retención').reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0);
-    const totalRetencionesSum = cobrosCliente.filter(c => c.metodo === 'Retención').reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0);
-    const saldoPendiente = totalFacturasSum - totalCobrosSum - totalRetencionesSum;
-
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Total Facturado: ${formatCurrencyPDF(totalFacturasSum)}`, 14, yPos);
-    yPos += 6;
-    doc.text(`Total Cobros: ${formatCurrencyPDF(totalCobrosSum)}`, 14, yPos);
-    yPos += 6;
-    doc.text(`Total Retenciones: ${formatCurrencyPDF(totalRetencionesSum)}`, 14, yPos);
-    yPos += 8;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    const saldoColor = saldoPendiente > 0 ? [220, 38, 38] : [16, 185, 129];
-    doc.setTextColor(...saldoColor);
-    doc.text(`SALDO: ${formatCurrencyPDF(saldoPendiente)}`, 14, yPos);
-    doc.setTextColor(0, 0, 0);
-
-    // Pie de página
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Generado el ${new Date().toLocaleDateString('es-AR')} - Página ${i} de ${pageCount}`, 105, 290, { align: 'center' });
-    }
-
-    // Guardar PDF
-    const fileName = `CuentaCorriente_${cliente.nombre.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
-    doc.save(fileName);
-  };
-
   // CRUD Facturas de Venta
   const createFacturaVenta = async (factura) => {
     const { error } = await supabase.from('facturas_venta').insert([factura]);
@@ -3228,6 +3320,16 @@ function App() {
               >
                 Cta. Corriente
               </button>
+              <button
+                onClick={() => setSubTabIngresos('informes')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                  subTabIngresos === 'informes'
+                    ? 'border-red-500 text-red-600'
+                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                Informes
+              </button>
             </div>
 
             {/* Subtab: Facturas de Venta */}
@@ -3385,9 +3487,6 @@ function App() {
                         <div className="flex justify-between items-start mb-2">
                           <h3 className="font-semibold text-slate-800">{c.nombre}</h3>
                           <div className="flex gap-1">
-                            <button onClick={() => generarPDFCliente(c.id)} className="p-1.5 hover:bg-blue-100 rounded-lg transition-colors text-blue-500" title="Descargar PDF">
-                              <Download className="w-3.5 h-3.5" />
-                            </button>
                             <button onClick={() => { setSelectedItem(c); setShowModal('cliente'); }} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Editar">
                               <Edit3 className="w-3.5 h-3.5" />
                             </button>
@@ -3492,6 +3591,25 @@ function App() {
                       </tfoot>
                     </table>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Subtab: Informes */}
+            {subTabIngresos === 'informes' && (
+              <div className="space-y-4">
+                <div className="glass rounded-2xl p-6">
+                  <h3 className="text-lg font-semibold mb-4">Generar Informe de Cliente</h3>
+                  <p className="text-sm text-slate-500 mb-6">
+                    Seleccione un cliente y el rango de fechas para generar un PDF con el detalle de facturas, cobros y saldo.
+                  </p>
+                  <button
+                    onClick={() => setShowModal('informe-cliente')}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-medium hover:from-red-600 hover:to-red-700 transition-all"
+                  >
+                    <Download className="w-5 h-5" />
+                    Generar PDF de Cliente
+                  </button>
                 </div>
               </div>
             )}
@@ -5066,6 +5184,16 @@ function App() {
           facturas={facturas}
           pagos={pagos}
           notasCredito={notasCredito}
+        />
+      )}
+
+      {/* Modal Informe Cliente */}
+      {showModal === 'informe-cliente' && (
+        <ModalInformeCliente
+          onClose={() => setShowModal(null)}
+          clientes={clientes}
+          facturasVenta={facturasVenta}
+          cobros={cobros}
         />
       )}
 
