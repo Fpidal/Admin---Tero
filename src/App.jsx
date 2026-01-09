@@ -650,111 +650,90 @@ function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, on
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="glass rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold">{factura ? 'Editar Factura' : 'Nueva Factura'}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
+      <div className="glass rounded-2xl p-4 w-full max-w-lg">
+        <div className="flex justify-between items-center mb-3">
+          <h2 className="text-lg font-bold">{factura ? 'Editar Factura' : 'Nueva Factura'}</h2>
+          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg"><X className="w-4 h-4" /></button>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">Proveedor *</label>
-            <select required value={form.proveedor_id} onChange={e => handleProveedorChange(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
-              <option value="">Seleccionar proveedor</option>
-              {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">Número Factura *</label>
-            <input type="text" required value={form.numero} onChange={e => setForm({...form, numero: e.target.value})} className={`w-full px-3 py-2 rounded-xl border bg-white focus:outline-none text-sm ${facturaExistente() ? 'border-red-400 focus:border-red-500' : 'border-slate-200 focus:border-blue-500/50'}`} placeholder="A-0001-00000001" />
-            {facturaExistente() && (
-              <p className="text-xs text-red-500 mt-1">Ya existe esta factura para este proveedor</p>
-            )}
-          </div>
-          {/* Bruto + IVA + Retenciones = Neto */}
-          <div className="grid grid-cols-2 gap-3">
+        <form onSubmit={handleSubmit} className="space-y-2">
+          <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-sm text-slate-400 mb-1">Bruto *</label>
-              <input
-                type="text"
-                required
-                value={formatInputMonto(form.bruto)}
-                onChange={e => handleBrutoChange(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm text-right"
-                placeholder="0"
-              />
+              <label className="block text-xs text-slate-400 mb-0.5">Proveedor *</label>
+              <select required value={form.proveedor_id} onChange={e => handleProveedorChange(e.target.value)} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
+                <option value="">Seleccionar</option>
+                {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+              </select>
             </div>
             <div>
-              <label className="block text-sm text-slate-400 mb-1">IVA</label>
-              <select
-                value={form.iva_porcentaje}
-                onChange={e => handleIvaChange(parseFloat(e.target.value))}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
-              >
-                <option value={0}>Sin IVA</option>
+              <label className="block text-xs text-slate-400 mb-0.5">Número Factura *</label>
+              <input type="text" required value={form.numero} onChange={e => setForm({...form, numero: e.target.value})} className={`w-full px-2 py-1.5 rounded-lg border bg-white focus:outline-none text-sm ${facturaExistente() ? 'border-red-400' : 'border-slate-200 focus:border-blue-500/50'}`} placeholder="A-0001-00000001" />
+            </div>
+          </div>
+          {facturaExistente() && <p className="text-xs text-red-500">Ya existe esta factura para este proveedor</p>}
+
+          {/* Bruto + IVA + Retenciones = Neto */}
+          <div className="grid grid-cols-4 gap-2">
+            <div>
+              <label className="block text-xs text-slate-400 mb-0.5">Bruto *</label>
+              <input type="text" required value={formatInputMonto(form.bruto)} onChange={e => handleBrutoChange(e.target.value)} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm text-right" placeholder="0" />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-0.5">IVA</label>
+              <select value={form.iva_porcentaje} onChange={e => handleIvaChange(parseFloat(e.target.value))} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
+                <option value={0}>0%</option>
                 <option value={10.5}>10.5%</option>
                 <option value={21}>21%</option>
               </select>
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm text-slate-400 mb-1">Otras retenciones</label>
-              <input
-                type="text"
-                value={formatInputMonto(form.otras_retenciones)}
-                onChange={e => handleRetencionesChange(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm text-right"
-                placeholder="0"
-              />
+              <label className="block text-xs text-slate-400 mb-0.5">Retenciones</label>
+              <input type="text" value={formatInputMonto(form.otras_retenciones)} onChange={e => handleRetencionesChange(e.target.value)} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm text-right" placeholder="0" />
             </div>
             <div>
-              <label className="block text-sm text-slate-400 mb-1">Neto (Total)</label>
-              <div className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm text-right font-semibold text-emerald-600">
+              <label className="block text-xs text-slate-400 mb-0.5">Neto</label>
+              <div className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-sm text-right font-semibold text-emerald-600">
                 {formatInputMonto(form.monto)}
               </div>
             </div>
           </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">Fecha Factura *</label>
-            <input type="date" required value={form.fecha} onChange={e => handleFechaChange(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
+
+          <div className="grid grid-cols-3 gap-2">
             <div>
-              <label className="block text-sm text-slate-400 mb-1">Días Vencimiento</label>
-              <select value={form.dias_vencimiento ?? ''} onChange={e => handleDiasChange(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
+              <label className="block text-xs text-slate-400 mb-0.5">Fecha Factura *</label>
+              <input type="date" required value={form.fecha} onChange={e => handleFechaChange(e.target.value)} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-0.5">Días Venc.</label>
+              <select value={form.dias_vencimiento ?? ''} onChange={e => handleDiasChange(e.target.value)} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
                 {CONDICIONES_PAGO.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm text-slate-400 mb-1">Vencimiento</label>
-              <input type="date" required value={form.vencimiento} onChange={e => setForm({...form, vencimiento: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
+              <label className="block text-xs text-slate-400 mb-0.5">Vencimiento</label>
+              <input type="date" required value={form.vencimiento} onChange={e => setForm({...form, vencimiento: e.target.value})} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
             </div>
           </div>
+
           <div>
-            <label className="block text-sm text-slate-400 mb-1">Observaciones</label>
-            <input type="text" value={form.concepto} onChange={e => setForm({...form, concepto: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" placeholder="Opcional" />
+            <label className="block text-xs text-slate-400 mb-0.5">Observaciones</label>
+            <input type="text" value={form.concepto} onChange={e => setForm({...form, concepto: e.target.value})} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" placeholder="Opcional" />
           </div>
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
-              {error}
-            </div>
-          )}
-          <div className="flex flex-wrap gap-3 pt-4">
+
+          {error && <div className="p-2 bg-red-50 border border-red-200 rounded-lg text-red-700 text-xs">{error}</div>}
+
+          <div className="flex flex-wrap gap-2 pt-2">
             {factura && onDelete && (
-              <button type="button" onClick={handleDelete} className="px-4 py-2.5 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 transition-all text-sm">
-                Eliminar
-              </button>
+              <button type="button" onClick={handleDelete} className="px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-all text-sm">Eliminar</button>
             )}
             {factura && onRegistrarPago && (
-              <button type="button" onClick={() => onRegistrarPago(factura)} className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all text-sm flex items-center gap-2">
-                <DollarSign className="w-4 h-4" />
-                Registrar Pago
+              <button type="button" onClick={() => onRegistrarPago(factura)} className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all text-sm flex items-center gap-1">
+                <DollarSign className="w-3.5 h-3.5" />Pagar
               </button>
             )}
             <div className="flex-1"></div>
-            <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all">Cancelar</button>
-            <button type="submit" disabled={saving} className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-              {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+            <button type="button" onClick={onClose} className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all text-sm">Cancelar</button>
+            <button type="submit" disabled={saving} className="px-4 py-1.5 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center gap-1 text-sm">
+              {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               {factura ? 'Guardar' : 'Crear'}
             </button>
           </div>
