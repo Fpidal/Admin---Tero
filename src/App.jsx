@@ -627,6 +627,21 @@ function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, on
       return;
     }
 
+    const nuevoMonto = parseFloat(form.monto) || 0;
+    const montoOriginal = parseFloat(factura?.monto) || 0;
+
+    // Si es edición y el monto cambió, pedir motivo
+    let motivoModificacion = null;
+    if (factura && nuevoMonto !== montoOriginal) {
+      motivoModificacion = prompt(`El monto cambió de $${montoOriginal.toLocaleString('es-AR')} a $${nuevoMonto.toLocaleString('es-AR')}.\n\nIngresá el motivo de la modificación:`);
+      if (!motivoModificacion || !motivoModificacion.trim()) {
+        if (motivoModificacion !== null) {
+          alert('Debés ingresar un motivo para modificar el monto');
+        }
+        return;
+      }
+    }
+
     setSaving(true);
     // Quitar dias_vencimiento y estado del form antes de guardar
     // El estado se calcula automáticamente según los pagos
@@ -640,8 +655,8 @@ function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, on
       bruto: parseFloat(form.bruto) || 0,
       iva_porcentaje: parseFloat(form.iva_porcentaje) || 0,
       otras_retenciones: parseFloat(form.otras_retenciones) || 0,
-      monto: parseFloat(form.monto) || 0
-    });
+      monto: nuevoMonto
+    }, factura ? { montoAnterior: montoOriginal, motivo: motivoModificacion } : null);
     setSaving(false);
     if (result?.error) {
       setError(result.error.message || 'Error al guardar. Verificá los permisos de la base de datos.');
@@ -1746,8 +1761,24 @@ function App() {
     return { error };
   };
 
-  const updateFactura = async (id, factura) => {
-    const { error } = await supabase.from('facturas').update(factura).eq('id', id);
+  const updateFactura = async (id, facturaData, modificacion = null) => {
+    // Si hay modificación de monto, guardar en la tabla modificaciones
+    if (modificacion?.motivo) {
+      const facturaOriginal = facturas.find(f => f.id === id);
+      await supabase.from('modificaciones').insert([{
+        tipo: 'factura',
+        referencia_id: id,
+        datos_originales: facturaOriginal,
+        campo_modificado: 'monto',
+        valor_anterior: modificacion.montoAnterior,
+        valor_nuevo: facturaData.monto,
+        motivo: modificacion.motivo,
+        fecha_modificacion: new Date().toISOString()
+      }]);
+      await fetchModificaciones();
+    }
+
+    const { error } = await supabase.from('facturas').update(facturaData).eq('id', id);
     if (!error) {
       await fetchFacturas();
       setShowModal(null);
@@ -3861,11 +3892,11 @@ function App() {
                             <tr key={m.id} className="border-b border-slate-100 hover:bg-slate-50">
                               <td className="px-4 py-3 text-xs">{new Date(m.fecha_modificacion).toLocaleDateString('es-AR')}</td>
                               <td className="px-4 py-3">
-                                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-500/15 text-purple-700">
-                                  {m.tipo === 'pago' ? 'Pago' : m.tipo}
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${m.tipo === 'factura' ? 'bg-blue-500/15 text-blue-700' : 'bg-purple-500/15 text-purple-700'}`}>
+                                  {m.tipo === 'pago' ? 'Pago' : m.tipo === 'factura' ? 'Factura' : m.tipo}
                                 </span>
                               </td>
-                              <td className="px-4 py-3 text-xs">{m.datos_originales?.descripcion || '-'}</td>
+                              <td className="px-4 py-3 text-xs">{m.tipo === 'factura' ? `${m.datos_originales?.proveedor || proveedores.find(p => p.id === m.datos_originales?.proveedor_id)?.nombre || ''} - Fact. ${m.datos_originales?.numero || ''}` : (m.datos_originales?.descripcion || '-')}</td>
                               <td className="px-4 py-3 text-right font-semibold mono text-slate-500">{formatCurrency(m.valor_anterior || 0)}</td>
                               <td className="px-4 py-3 text-right font-semibold mono text-purple-600">{formatCurrency(m.valor_nuevo || 0)}</td>
                               <td className="px-4 py-3 text-xs text-slate-500">{m.motivo}</td>
@@ -4127,7 +4158,7 @@ function App() {
           proveedores={proveedores}
           facturas={facturas}
           onClose={() => { setShowModal(null); setSelectedItem(null); }}
-          onSave={selectedItem ? (data) => updateFactura(selectedItem.id, data) : createFactura}
+          onSave={selectedItem ? (data, modificacion) => updateFactura(selectedItem.id, data, modificacion) : createFactura}
           onDelete={deleteFactura}
           onRegistrarPago={(factura) => {
             setSelectedItem({ tipo: 'factura', facturaPreseleccionada: factura });
