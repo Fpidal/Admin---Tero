@@ -1317,6 +1317,7 @@ function App() {
   // Filtros Informes
   const [informeActivo, setInformeActivo] = useState('anulaciones');
   const [filtroMesInforme, setFiltroMesInforme] = useState('todos');
+  const [filtroAnioInforme, setFiltroAnioInforme] = useState(new Date().getFullYear().toString());
 
   // Cargar datos desde Supabase
   const fetchProveedores = async () => {
@@ -2700,19 +2701,30 @@ function App() {
         {/* INFORMES */}
         {activeTab === 'informes' && (
           <div className="space-y-4">
-            {/* Header con filtro de mes */}
+            {/* Header con filtros de año y mes */}
             <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
               <h2 className="text-lg font-bold">Informes</h2>
-              <select
-                value={filtroMesInforme}
-                onChange={(e) => setFiltroMesInforme(e.target.value)}
-                className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
-              >
-                <option value="todos">Todos los meses</option>
-                {MESES.map((mes, index) => (
-                  <option key={index} value={index}>{mes}</option>
-                ))}
-              </select>
+              <div className="flex gap-2">
+                <select
+                  value={filtroAnioInforme}
+                  onChange={(e) => setFiltroAnioInforme(e.target.value)}
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                >
+                  <option value="todos">Todos los años</option>
+                  <option value="2025">2025</option>
+                  <option value="2026">2026</option>
+                </select>
+                <select
+                  value={filtroMesInforme}
+                  onChange={(e) => setFiltroMesInforme(e.target.value)}
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                >
+                  <option value="todos">Todos los meses</option>
+                  {MESES.map((mes, index) => (
+                    <option key={index} value={index}>{mes}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {/* Sub-tabs de informes */}
@@ -2745,19 +2757,19 @@ function App() {
                   <div className="glass rounded-xl p-4 border-l-4 border-red-400">
                     <p className="text-xs text-slate-500">Facturas Anuladas</p>
                     <p className="text-2xl font-bold text-red-500">
-                      {anulaciones.filter(a => a.tipo === 'factura').filter(a => filtroMesInforme === 'todos' || new Date(a.fecha_anulacion).getMonth() === parseInt(filtroMesInforme)).length}
+                      {anulaciones.filter(a => a.tipo === 'factura').filter(a => (filtroAnioInforme === 'todos' || new Date(a.fecha_anulacion).getFullYear() === parseInt(filtroAnioInforme)) && (filtroMesInforme === 'todos' || new Date(a.fecha_anulacion).getMonth() === parseInt(filtroMesInforme))).length}
                     </p>
                     <p className="text-xs text-slate-400 mt-1">
-                      Total: {formatCurrency(anulaciones.filter(a => a.tipo === 'factura').filter(a => filtroMesInforme === 'todos' || new Date(a.fecha_anulacion).getMonth() === parseInt(filtroMesInforme)).reduce((sum, a) => sum + (parseFloat(a.datos_originales?.monto) || 0), 0))}
+                      Total: {formatCurrency(anulaciones.filter(a => a.tipo === 'factura').filter(a => (filtroAnioInforme === 'todos' || new Date(a.fecha_anulacion).getFullYear() === parseInt(filtroAnioInforme)) && (filtroMesInforme === 'todos' || new Date(a.fecha_anulacion).getMonth() === parseInt(filtroMesInforme))).reduce((sum, a) => sum + (parseFloat(a.datos_originales?.monto) || 0), 0))}
                     </p>
                   </div>
                   <div className="glass rounded-xl p-4 border-l-4 border-orange-400">
                     <p className="text-xs text-slate-500">Pagos Anulados</p>
                     <p className="text-2xl font-bold text-orange-500">
-                      {anulaciones.filter(a => a.tipo === 'pago').filter(a => filtroMesInforme === 'todos' || new Date(a.fecha_anulacion).getMonth() === parseInt(filtroMesInforme)).length}
+                      {anulaciones.filter(a => a.tipo === 'pago').filter(a => (filtroAnioInforme === 'todos' || new Date(a.fecha_anulacion).getFullYear() === parseInt(filtroAnioInforme)) && (filtroMesInforme === 'todos' || new Date(a.fecha_anulacion).getMonth() === parseInt(filtroMesInforme))).length}
                     </p>
                     <p className="text-xs text-slate-400 mt-1">
-                      Total: {formatCurrency(anulaciones.filter(a => a.tipo === 'pago').filter(a => filtroMesInforme === 'todos' || new Date(a.fecha_anulacion).getMonth() === parseInt(filtroMesInforme)).reduce((sum, a) => sum + (parseFloat(a.datos_originales?.monto) || 0), 0))}
+                      Total: {formatCurrency(anulaciones.filter(a => a.tipo === 'pago').filter(a => (filtroAnioInforme === 'todos' || new Date(a.fecha_anulacion).getFullYear() === parseInt(filtroAnioInforme)) && (filtroMesInforme === 'todos' || new Date(a.fecha_anulacion).getMonth() === parseInt(filtroMesInforme))).reduce((sum, a) => sum + (parseFloat(a.datos_originales?.monto) || 0), 0))}
                     </p>
                   </div>
                 </div>
@@ -2774,10 +2786,10 @@ function App() {
                         </tr>
                       </thead>
                       <tbody>
-                        {anulaciones.filter(a => filtroMesInforme === 'todos' || new Date(a.fecha_anulacion).getMonth() === parseInt(filtroMesInforme)).length === 0 ? (
+                        {anulaciones.filter(a => (filtroAnioInforme === 'todos' || new Date(a.fecha_anulacion).getFullYear() === parseInt(filtroAnioInforme)) && (filtroMesInforme === 'todos' || new Date(a.fecha_anulacion).getMonth() === parseInt(filtroMesInforme))).length === 0 ? (
                           <tr><td colSpan="5" className="px-4 py-8 text-center text-slate-400 text-sm">No hay anulaciones</td></tr>
                         ) : (
-                          anulaciones.filter(a => filtroMesInforme === 'todos' || new Date(a.fecha_anulacion).getMonth() === parseInt(filtroMesInforme)).map(a => (
+                          anulaciones.filter(a => (filtroAnioInforme === 'todos' || new Date(a.fecha_anulacion).getFullYear() === parseInt(filtroAnioInforme)) && (filtroMesInforme === 'todos' || new Date(a.fecha_anulacion).getMonth() === parseInt(filtroMesInforme))).map(a => (
                             <tr key={a.id} className="border-b border-slate-100 hover:bg-slate-50">
                               <td className="px-4 py-3 text-xs">{new Date(a.fecha_anulacion).toLocaleDateString('es-AR')}</td>
                               <td className="px-4 py-3">
@@ -2802,7 +2814,7 @@ function App() {
 
             {/* INFORME: Compras por Proveedor */}
             {informeActivo === 'compras-proveedor' && (() => {
-              const facturasFiltradas = facturas.filter(f => filtroMesInforme === 'todos' || new Date(f.fecha).getMonth() === parseInt(filtroMesInforme));
+              const facturasFiltradas = facturas.filter(f => (filtroAnioInforme === 'todos' || new Date(f.fecha).getFullYear() === parseInt(filtroAnioInforme)) && (filtroMesInforme === 'todos' || new Date(f.fecha).getMonth() === parseInt(filtroMesInforme)));
               const comprasPorProveedor = proveedores.map(p => {
                 const facturasProveedor = facturasFiltradas.filter(f => f.proveedor_id === p.id);
                 const total = facturasProveedor.reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0);
@@ -2862,7 +2874,7 @@ function App() {
 
             {/* INFORME: Compras por Rubro */}
             {informeActivo === 'compras-rubro' && (() => {
-              const facturasFiltradas = facturas.filter(f => filtroMesInforme === 'todos' || new Date(f.fecha).getMonth() === parseInt(filtroMesInforme));
+              const facturasFiltradas = facturas.filter(f => (filtroAnioInforme === 'todos' || new Date(f.fecha).getFullYear() === parseInt(filtroAnioInforme)) && (filtroMesInforme === 'todos' || new Date(f.fecha).getMonth() === parseInt(filtroMesInforme)));
               const comprasPorRubro = CATEGORIAS_PROVEEDOR.map(cat => {
                 const proveedoresRubro = proveedores.filter(p => p.categoria === cat.value);
                 const facturasRubro = facturasFiltradas.filter(f => proveedoresRubro.some(p => p.id === f.proveedor_id));
@@ -2923,7 +2935,7 @@ function App() {
 
             {/* INFORME: Pagos del Mes */}
             {informeActivo === 'pagos-mes' && (() => {
-              const pagosFiltrados = pagos.filter(p => filtroMesInforme === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesInforme));
+              const pagosFiltrados = pagos.filter(p => (filtroAnioInforme === 'todos' || new Date(p.fecha).getFullYear() === parseInt(filtroAnioInforme)) && (filtroMesInforme === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesInforme)));
               const pagosProveedores = pagosFiltrados.filter(p => p.tipo === 'factura');
               const pagosEmpleados = pagosFiltrados.filter(p => p.tipo === 'sueldo');
               const totalProveedores = pagosProveedores.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
