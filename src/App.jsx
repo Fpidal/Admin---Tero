@@ -373,6 +373,8 @@ const formatCurrencyPDF = (value) => {
 function ModalProveedor({ proveedor, onClose, onSave, onDelete }) {
   const [form, setForm] = useState({
     nombre: proveedor?.nombre || '',
+    contacto: proveedor?.contacto || '',
+    celular: proveedor?.celular || '',
     categoria: proveedor?.categoria || '',
     condicion_pago: proveedor?.condicion_pago ?? 0,
     cuit: proveedor?.cuit || '',
@@ -416,6 +418,16 @@ function ModalProveedor({ proveedor, onClose, onSave, onDelete }) {
           <div>
             <label className="block text-sm text-slate-400 mb-1">Nombre *</label>
             <input type="text" required value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm text-slate-400 mb-1">Contacto</label>
+              <input type="text" value={form.contacto} onChange={e => setForm({...form, contacto: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" placeholder="Nombre persona" />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-400 mb-1">Celular</label>
+              <input type="text" value={form.celular} onChange={e => setForm({...form, celular: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" placeholder="11-XXXX-XXXX" />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -1355,12 +1367,14 @@ function App() {
   const fetchProveedores = async () => {
     const { data, error } = await supabase.from('proveedores').select('*').order('nombre');
     if (!error) {
-      // Cargar extras desde localStorage (categoria, condicion_pago)
+      // Cargar extras desde localStorage (categoria, condicion_pago, contacto, celular)
       const extras = JSON.parse(localStorage.getItem('proveedores_extras') || '{}');
       const proveedoresConExtras = (data || []).map(p => ({
         ...p,
         categoria: extras[p.id]?.categoria || '',
-        condicion_pago: extras[p.id]?.condicion_pago || ''
+        condicion_pago: extras[p.id]?.condicion_pago || '',
+        contacto: extras[p.id]?.contacto || '',
+        celular: extras[p.id]?.celular || ''
       }));
       setProveedores(proveedoresConExtras);
     }
@@ -1459,17 +1473,17 @@ function App() {
   // CRUD Proveedores
   const createProveedor = async (proveedor) => {
     console.log('Creando proveedor:', proveedor);
-    // Excluir campos que no existen en Supabase (categoria, condicion_pago se guardan en localStorage)
-    const { categoria, condicion_pago, ...proveedorDB } = proveedor;
+    // Excluir campos que no existen en Supabase (se guardan en localStorage)
+    const { categoria, condicion_pago, contacto, celular, ...proveedorDB } = proveedor;
     const { data, error } = await supabase.from('proveedores').insert([proveedorDB]).select();
     console.log('Respuesta Supabase:', { data, error });
     if (error) {
       console.error('Error completo:', JSON.stringify(error, null, 2));
     } else {
-      // Guardar categoria y condicion_pago en localStorage
+      // Guardar extras en localStorage
       if (data && data[0]) {
         const extras = JSON.parse(localStorage.getItem('proveedores_extras') || '{}');
-        extras[data[0].id] = { categoria, condicion_pago };
+        extras[data[0].id] = { categoria, condicion_pago, contacto, celular };
         localStorage.setItem('proveedores_extras', JSON.stringify(extras));
       }
       await fetchProveedores();
@@ -1482,15 +1496,15 @@ function App() {
   const updateProveedor = async (id, proveedor) => {
     console.log('Actualizando proveedor:', id, proveedor);
     // Excluir campos que no existen en Supabase
-    const { categoria, condicion_pago, ...proveedorDB } = proveedor;
+    const { categoria, condicion_pago, contacto, celular, ...proveedorDB } = proveedor;
     const { data, error } = await supabase.from('proveedores').update(proveedorDB).eq('id', id).select();
     console.log('Respuesta Supabase:', { data, error });
     if (error) {
       console.error('Error completo:', JSON.stringify(error, null, 2));
     } else {
-      // Guardar categoria y condicion_pago en localStorage
+      // Guardar extras en localStorage
       const extras = JSON.parse(localStorage.getItem('proveedores_extras') || '{}');
-      extras[id] = { categoria, condicion_pago };
+      extras[id] = { categoria, condicion_pago, contacto, celular };
       localStorage.setItem('proveedores_extras', JSON.stringify(extras));
       await fetchProveedores();
       setShowModal(null);
@@ -2473,9 +2487,10 @@ function App() {
                         <Edit3 className="w-3 h-3 text-slate-400" />
                       </div>
                       <h3 className="font-semibold text-sm mb-1 truncate">{p.nombre}</h3>
-                      <p className="text-xs text-slate-400 truncate">{p.cuit || 'Sin CUIT'}</p>
-                      {condicionLabel !== 'Contado' && <p className="text-xs text-slate-500 mt-1">{condicionLabel}</p>}
-                      {p.telefono && <p className="text-xs text-slate-400 truncate mt-1">{p.telefono}</p>}
+                      {p.contacto && <p className="text-xs text-blue-600 truncate">{p.contacto}</p>}
+                      {p.celular && <p className="text-xs text-slate-500 truncate">{p.celular}</p>}
+                      <p className="text-xs text-slate-400 truncate mt-1">{p.cuit || 'Sin CUIT'}</p>
+                      {condicionLabel !== 'Contado' && <p className="text-xs text-slate-500">{condicionLabel}</p>}
                     </div>
                   );
                 })}
