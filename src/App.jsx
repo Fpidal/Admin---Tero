@@ -914,17 +914,17 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="glass rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold">{getTitulo()}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
+      <div className="glass rounded-2xl p-4 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-3">
+          <h2 className="text-lg font-bold">{getTitulo()}</h2>
+          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg"><X className="w-4 h-4" /></button>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           {tipoDefault === 'factura' && (
             <>
               <div>
-                <label className="block text-sm text-slate-500 mb-1">Proveedor *</label>
-                <select required value={form.referencia_id} onChange={e => handleProveedorChange(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50">
+                <label className="block text-xs text-slate-500 mb-0.5">Proveedor *</label>
+                <select required value={form.referencia_id} onChange={e => handleProveedorChange(e.target.value)} className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
                   <option value="">Seleccionar proveedor</option>
                   {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
                 </select>
@@ -932,26 +932,26 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
 
               {proveedorSeleccionado && facturasDelProveedor.length > 0 && (
                 <div>
-                  <label className="block text-sm text-slate-500 mb-2">Facturas Pendientes</label>
-                  <div className="space-y-2 max-h-48 overflow-y-auto border border-slate-200 rounded-xl p-2">
+                  <label className="block text-xs text-slate-500 mb-1">Facturas Pendientes</label>
+                  <div className="space-y-1.5 max-h-36 overflow-y-auto border border-slate-200 rounded-lg p-1.5">
                     {facturasDelProveedor.map(f => (
-                      <label key={f.id} className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all ${form.factura_id === String(f.id) ? 'bg-blue-50 border border-blue-300' : 'bg-slate-50 hover:bg-slate-100'}`}>
-                        <div className="flex items-center gap-3">
+                      <label key={f.id} className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all ${form.factura_id === String(f.id) ? 'bg-blue-50 border border-blue-300' : 'bg-slate-50 hover:bg-slate-100'}`}>
+                        <div className="flex items-center gap-2">
                           <input
                             type="radio"
                             name="factura"
                             value={f.id}
                             checked={form.factura_id === String(f.id)}
                             onChange={e => handleFacturaSelect(e.target.value)}
-                            className="w-4 h-4 text-blue-500"
+                            className="w-3.5 h-3.5 text-blue-500"
                           />
                           <div>
-                            <p className="font-medium text-sm">{f.numero}</p>
+                            <p className="font-medium text-xs">{f.numero}</p>
                             <p className="text-xs text-slate-500">{f.concepto || 'Sin concepto'}</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="font-semibold text-sm mono text-amber-600">Saldo: {formatCurrency(f.saldo)}</p>
+                          <p className="font-semibold text-xs mono text-amber-600">Saldo: {formatCurrency(f.saldo)}</p>
                           {(f.pagado > 0 || f.nc > 0) && (
                             <p className="text-xs text-slate-400">
                               Total: {formatCurrency(f.monto)}
@@ -969,31 +969,31 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
               {/* Selección de tipo de pago: Total o Parcial */}
               {facturaSeleccionada && (
                 <div>
-                  <label className="block text-sm text-slate-500 mb-2">Tipo de Pago</label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <label className="block text-xs text-slate-500 mb-1">Tipo de Pago</label>
+                  <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() => handleTipoPagoChange('total')}
-                      className={`p-3 rounded-xl border-2 transition-all text-center ${
+                      className={`p-2 rounded-lg border-2 transition-all text-center ${
                         tipoPago === 'total'
                           ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
                           : 'border-slate-200 hover:border-slate-300'
                       }`}
                     >
-                      <p className="font-semibold">Pagar Saldo</p>
-                      <p className="text-sm mono mt-1">{formatCurrency(facturaSeleccionada.saldo || facturaSeleccionada.monto)}</p>
+                      <p className="font-semibold text-sm">Pagar Saldo</p>
+                      <p className="text-xs mono">{formatCurrency(facturaSeleccionada.saldo || facturaSeleccionada.monto)}</p>
                     </button>
                     <button
                       type="button"
                       onClick={() => handleTipoPagoChange('parcial')}
-                      className={`p-3 rounded-xl border-2 transition-all text-center ${
+                      className={`p-2 rounded-lg border-2 transition-all text-center ${
                         tipoPago === 'parcial'
                           ? 'border-amber-500 bg-amber-50 text-amber-700'
                           : 'border-slate-200 hover:border-slate-300'
                       }`}
                     >
-                      <p className="font-semibold">Pago Parcial</p>
-                      <p className="text-sm text-slate-500 mt-1">Ingresar monto</p>
+                      <p className="font-semibold text-sm">Pago Parcial</p>
+                      <p className="text-xs text-slate-500">Ingresar monto</p>
                     </button>
                   </div>
                 </div>
@@ -1007,8 +1007,8 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
           {tipoDefault === 'sueldo' && (
             <>
               <div>
-                <label className="block text-sm text-slate-500 mb-1">Empleado *</label>
-                <select required value={form.referencia_id} onChange={e => handleEmpleadoChange(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50">
+                <label className="block text-xs text-slate-500 mb-0.5">Empleado *</label>
+                <select required value={form.referencia_id} onChange={e => handleEmpleadoChange(e.target.value)} className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
                   <option value="">Seleccionar empleado</option>
                   {empleados.map(e => <option key={e.id} value={e.id}>{e.nombre} - {e.puesto || 'Sin puesto'}</option>)}
                 </select>
@@ -1016,14 +1016,14 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
 
               {form.referencia_id && (
                 <div>
-                  <label className="block text-sm text-slate-500 mb-2">Concepto *</label>
+                  <label className="block text-xs text-slate-500 mb-1">Concepto *</label>
                   <div className="grid grid-cols-2 gap-2">
                     {CONCEPTOS_EMPLEADO.map(c => (
                       <button
                         key={c.value}
                         type="button"
                         onClick={() => handleConceptoEmpleadoChange(c.value)}
-                        className={`p-2.5 rounded-xl border-2 transition-all text-sm font-medium ${
+                        className={`p-2 rounded-lg border-2 transition-all text-xs font-medium ${
                           form.concepto_empleado === c.value
                             ? 'border-blue-500 bg-blue-50 text-blue-700'
                             : 'border-slate-200 hover:border-slate-300 text-slate-600'
@@ -1042,46 +1042,49 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
           {((tipoDefault === 'sueldo' && form.concepto_empleado) || (tipoDefault === 'factura' && tipoPago)) && (
             <>
               <div>
-                <label className="block text-sm text-slate-500 mb-1">Descripción *</label>
-                <input type="text" required value={form.descripcion} onChange={e => setForm({...form, descripcion: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
+                <label className="block text-xs text-slate-500 mb-0.5">Descripción *</label>
+                <input type="text" required value={form.descripcion} onChange={e => setForm({...form, descripcion: e.target.value})} className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs text-slate-400 mb-0.5">Monto * {tipoPago === 'parcial' && facturaSeleccionada && <span className="text-amber-600">(Máx: {formatCurrency(facturaSeleccionada.saldo || facturaSeleccionada.monto)})</span>}</label>
+                  <input
+                    type="text"
+                    required
+                    value={formatInputMonto(form.monto)}
+                    onChange={e => setForm({...form, monto: parseInputMonto(e.target.value)})}
+                    readOnly={tipoPago === 'total'}
+                    className={`w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-right text-sm ${tipoPago === 'total' ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-400 mb-0.5">Fecha *</label>
+                  <input type="date" required value={form.fecha} onChange={e => setForm({...form, fecha: e.target.value})} className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
+                </div>
               </div>
               <div>
-                <label className="block text-sm text-slate-400 mb-1">Monto * {tipoPago === 'parcial' && facturaSeleccionada && <span className="text-amber-600">(Máx: {formatCurrency(facturaSeleccionada.saldo || facturaSeleccionada.monto)})</span>}</label>
-                <input
-                  type="text"
-                  required
-                  value={formatInputMonto(form.monto)}
-                  onChange={e => setForm({...form, monto: parseInputMonto(e.target.value)})}
-                  readOnly={tipoPago === 'total'}
-                  className={`w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-right ${tipoPago === 'total' ? 'bg-slate-100 cursor-not-allowed' : ''}`}
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-slate-400 mb-1">Fecha *</label>
-                <input type="date" required value={form.fecha} onChange={e => setForm({...form, fecha: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
-              </div>
-              <div>
-                <label className="block text-sm text-slate-400 mb-1">Método</label>
-                <select value={form.metodo} onChange={e => setForm({...form, metodo: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50">
+                <label className="block text-xs text-slate-400 mb-0.5">Método</label>
+                <select value={form.metodo} onChange={e => setForm({...form, metodo: e.target.value})} className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
                   <option value="Efectivo">Efectivo</option>
                   <option value="Transferencia">Transferencia</option>
                   <option value="Mercado Pago">Mercado Pago</option>
+                  <option value="E-Cheq">E-Cheq</option>
                 </select>
               </div>
             </>
           )}
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+            <div className="p-2 bg-red-50 border border-red-200 rounded-lg text-red-700 text-xs">
               {error}
             </div>
           )}
-          <div className="flex gap-3 pt-4">
-            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all">Cancelar</button>
+          <div className="flex gap-2 pt-2">
+            <button type="button" onClick={onClose} className="flex-1 px-3 py-2 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all text-sm">Cancelar</button>
             <button
               type="submit"
               disabled={saving || (tipoDefault === 'factura' && !tipoPago) || (tipoDefault === 'sueldo' && !form.concepto_empleado) || !form.monto}
-              className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 px-3 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
             >
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
               {tipoPago === 'total' ? 'Pagar Total' : tipoPago === 'parcial' ? 'Pagar Parcial' : form.concepto_empleado ? 'Registrar Pago' : 'Registrar'}
@@ -1160,8 +1163,8 @@ function ModalEditPago({ pago, onClose, onSave, onDelete }) {
             >
               <option value="Efectivo">Efectivo</option>
               <option value="Transferencia">Transferencia</option>
-              <option value="Cheque">Cheque</option>
-              <option value="Tarjeta">Tarjeta</option>
+              <option value="Mercado Pago">Mercado Pago</option>
+              <option value="E-Cheq">E-Cheq</option>
             </select>
           </div>
           <div>
@@ -1353,7 +1356,7 @@ function App() {
   const [filtroMetodoPago, setFiltroMetodoPago] = useState('todos');
   const [filtroProveedorFactura, setFiltroProveedorFactura] = useState('todos');
   const [filtroMesFactura, setFiltroMesFactura] = useState('todos');
-  const [filtroAnioFactura, setFiltroAnioFactura] = useState(new Date().getFullYear().toString());
+  const [filtroAnioFactura, setFiltroAnioFactura] = useState('todos');
 
   // Filtros Informes
   const [informeActivo, setInformeActivo] = useState('saldo-proveedor');
@@ -1362,6 +1365,13 @@ function App() {
 
   // Orden de pago seleccionada para ver detalle
   const [ordenSeleccionada, setOrdenSeleccionada] = useState(null);
+
+  // Filtro compras del mes en dashboard
+  const [filtroMesComprasDash, setFiltroMesComprasDash] = useState(new Date().getMonth().toString());
+  const [filtroAnioComprasDash, setFiltroAnioComprasDash] = useState(new Date().getFullYear().toString());
+
+  // Filtro categoría para gráfico de gastos
+  const [filtroCategoriaGrafico, setFiltroCategoriaGrafico] = useState('todos');
 
   // Cargar datos desde Supabase
   const fetchProveedores = async () => {
@@ -1813,22 +1823,49 @@ function App() {
     const mesActual = hoy.getMonth();
     const anioActual = hoy.getFullYear();
 
-    // Facturas pendientes (no vencidas)
+    // Calcular pagos confirmados por factura para stats
+    const pagosConfirmadosPorFactura = {};
+    pagos.filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado').forEach(p => {
+      facturas.forEach(f => {
+        if (p.descripcion && p.descripcion.includes(f.numero)) {
+          pagosConfirmadosPorFactura[f.id] = (pagosConfirmadosPorFactura[f.id] || 0) + p.monto;
+        }
+      });
+    });
+
+    // Calcular NC por factura para stats (usando notasCredito)
+    const ncPorFacturaStats = {};
+    notasCredito.filter(nc => nc.factura_id).forEach(nc => {
+      ncPorFacturaStats[nc.factura_id] = (ncPorFacturaStats[nc.factura_id] || 0) + nc.monto;
+    });
+
+    // Calcular saldo de cada factura
+    const getSaldo = (f) => {
+      const pagado = pagosConfirmadosPorFactura[f.id] || 0;
+      const nc = ncPorFacturaStats[f.id] || 0;
+      return Math.max(0, f.monto - pagado - nc);
+    };
+
+    // Facturas pendientes (no vencidas y con saldo > 0)
     const facturasPendientes = facturas.filter(f => {
-      if (f.estado === 'pagada') return false;
+      if (f.estado === 'pagada' || f.tipo === 'NC') return false;
+      const saldo = getSaldo(f);
+      if (saldo <= 0) return false;
       const venc = new Date(f.vencimiento + 'T12:00:00');
       return venc >= hoy;
     });
 
-    // Facturas vencidas (fecha pasada y no pagadas)
+    // Facturas vencidas (fecha pasada, no pagadas y con saldo > 0)
     const facturasVencidas = facturas.filter(f => {
-      if (f.estado === 'pagada') return false;
+      if (f.estado === 'pagada' || f.tipo === 'NC') return false;
+      const saldo = getSaldo(f);
+      if (saldo <= 0) return false;
       const venc = new Date(f.vencimiento + 'T12:00:00');
       return venc < hoy;
     });
 
-    const totalPendiente = facturasPendientes.reduce((sum, f) => sum + f.monto, 0);
-    const totalVencido = facturasVencidas.reduce((sum, f) => sum + f.monto, 0);
+    const totalPendiente = facturasPendientes.reduce((sum, f) => sum + getSaldo(f), 0);
+    const totalVencido = facturasVencidas.reduce((sum, f) => sum + getSaldo(f), 0);
 
     // Sueldos pagados este mes (solo confirmados)
     const pagosSueldosMes = pagos.filter(p => {
@@ -1838,14 +1875,15 @@ function App() {
     });
     const totalSueldosPagados = pagosSueldosMes.reduce((sum, p) => sum + p.monto, 0);
 
-    // Solo contar pagos confirmados
-    const totalPagadoMes = pagos
+    // Solo contar pagos confirmados a proveedores
+    const pagosProveedoresMes = pagos
       .filter(p => {
-        if (p.estado_pago !== 'confirmado') return false;
+        if (p.estado_pago !== 'confirmado' || p.tipo !== 'factura') return false;
         const fechaPago = new Date(p.fecha);
         return fechaPago.getMonth() === mesActual && fechaPago.getFullYear() === anioActual;
-      })
-      .reduce((sum, p) => sum + p.monto, 0);
+      });
+    const totalPagadoProveedoresMes = pagosProveedoresMes.reduce((sum, p) => sum + p.monto, 0);
+    const cantidadPagosProveedoresMes = pagosProveedoresMes.length;
 
     // Total de sueldos fijos
     const totalSueldosFijos = empleados.reduce((sum, e) => sum + (e.sueldo || 0), 0);
@@ -1857,13 +1895,43 @@ function App() {
       totalVencido,
       totalSueldosPagados,
       totalSueldosFijos,
-      totalPagadoMes,
+      totalPagadoProveedoresMes,
+      cantidadPagosProveedoresMes,
       totalProveedores: proveedores.length,
       totalEmpleados: empleados.length
     };
-  }, [facturas, empleados, pagos, proveedores]);
+  }, [facturas, empleados, pagos, proveedores, notasCredito]);
 
-  // Facturas próximas a vencer (7 días)
+  // Calcular pagos por factura (pagos normales) - ANTES de usarlo en otros cálculos
+  const pagosPorFactura = useMemo(() => {
+    const pagosMap = {};
+    pagos.filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado').forEach(p => {
+      facturas.forEach(f => {
+        if (p.descripcion && p.descripcion.includes(f.numero)) {
+          pagosMap[f.id] = (pagosMap[f.id] || 0) + p.monto;
+        }
+      });
+    });
+    return pagosMap;
+  }, [pagos, facturas]);
+
+  // Calcular NC por factura
+  const ncPorFactura = useMemo(() => {
+    const ncMap = {};
+    notasCredito.filter(nc => nc.factura_id).forEach(nc => {
+      ncMap[nc.factura_id] = (ncMap[nc.factura_id] || 0) + nc.monto;
+    });
+    return ncMap;
+  }, [notasCredito]);
+
+  // Helper para calcular saldo de una factura
+  const getSaldoFactura = (f) => {
+    const pagado = pagosPorFactura[f.id] || 0;
+    const nc = ncPorFactura[f.id] || 0;
+    return Math.max(0, f.monto - pagado - nc);
+  };
+
+  // Facturas próximas a vencer (7 días) con saldo > 0
   const facturasProximas = useMemo(() => {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
@@ -1871,37 +1939,61 @@ function App() {
     en7dias.setDate(hoy.getDate() + 7);
 
     return facturas
-      .filter(f => f.estado === 'pendiente' || f.estado === 'vencida')
+      .filter(f => (f.estado === 'pendiente' || f.estado === 'vencida') && f.tipo !== 'NC')
       .filter(f => {
+        const saldo = getSaldoFactura(f);
+        if (saldo <= 0) return false;
         const venc = new Date(f.vencimiento + 'T12:00:00');
         return venc >= hoy && venc <= en7dias;
       })
+      .map(f => ({ ...f, saldo: getSaldoFactura(f) }))
       .sort((a, b) => new Date(a.vencimiento) - new Date(b.vencimiento));
-  }, [facturas]);
+  }, [facturas, pagosPorFactura, ncPorFactura]);
 
-  // Facturas vencidas para el dashboard
+  // Facturas vencidas para el dashboard (con saldo > 0)
   const facturasVencidasDash = useMemo(() => {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
 
     return facturas
-      .filter(f => f.estado === 'pendiente' || f.estado === 'vencida')
+      .filter(f => (f.estado === 'pendiente' || f.estado === 'vencida') && f.tipo !== 'NC')
       .filter(f => {
+        const saldo = getSaldoFactura(f);
+        if (saldo <= 0) return false;
         const venc = new Date(f.vencimiento + 'T12:00:00');
         return venc < hoy;
       })
+      .map(f => ({ ...f, saldo: getSaldoFactura(f) }))
       .sort((a, b) => new Date(a.vencimiento) - new Date(b.vencimiento));
-  }, [facturas]);
+  }, [facturas, pagosPorFactura, ncPorFactura]);
 
-  // Datos para gráficos
+  // Compras del mes para el dashboard
+  const comprasDelMes = useMemo(() => {
+    return facturas.filter(f => {
+      const fechaFactura = new Date(f.fecha + 'T12:00:00');
+      const matchMes = filtroMesComprasDash === 'todos' || fechaFactura.getMonth() === parseInt(filtroMesComprasDash);
+      const matchAnio = filtroAnioComprasDash === 'todos' || fechaFactura.getFullYear() === parseInt(filtroAnioComprasDash);
+      return matchMes && matchAnio;
+    });
+  }, [facturas, filtroMesComprasDash, filtroAnioComprasDash]);
+
+  // Datos para gráficos (filtrado por categoría de proveedor)
   const datosPorCategoria = useMemo(() => {
     const categorias = {};
-    facturas.forEach(f => {
-      const prov = f.proveedor;
-      categorias[prov] = (categorias[prov] || 0) + f.monto;
-    });
-    return Object.entries(categorias).map(([name, value]) => ({ name, value }));
-  }, [facturas]);
+    facturas
+      .filter(f => {
+        if (filtroCategoriaGrafico === 'todos') return true;
+        const proveedor = proveedores.find(p => p.id === f.proveedor_id);
+        return proveedor?.categoria === filtroCategoriaGrafico;
+      })
+      .forEach(f => {
+        const prov = f.proveedor;
+        categorias[prov] = (categorias[prov] || 0) + f.monto;
+      });
+    return Object.entries(categorias)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [facturas, proveedores, filtroCategoriaGrafico]);
 
   const COLORS = ['#8b5cf6', '#06b6d4', '#f59e0b', '#ef4444', '#22c55e', '#ec4899'];
 
@@ -1930,30 +2022,6 @@ function App() {
   const totalPagadoEmpleadosMes = useMemo(() => {
     return Object.values(pagosPorEmpleado).reduce((sum, monto) => sum + monto, 0);
   }, [pagosPorEmpleado]);
-
-  // Calcular pagos por factura (pagos normales)
-  const pagosPorFactura = useMemo(() => {
-    const pagosMap = {};
-    // Solo contar pagos confirmados
-    pagos.filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado').forEach(p => {
-      // Buscar en la descripción el número de factura para asociar el pago
-      facturas.forEach(f => {
-        if (p.descripcion && p.descripcion.includes(f.numero)) {
-          pagosMap[f.id] = (pagosMap[f.id] || 0) + p.monto;
-        }
-      });
-    });
-    return pagosMap;
-  }, [pagos, facturas]);
-
-  // Calcular NC por factura
-  const ncPorFactura = useMemo(() => {
-    const ncMap = {};
-    notasCredito.filter(nc => nc.factura_id).forEach(nc => {
-      ncMap[nc.factura_id] = (ncMap[nc.factura_id] || 0) + nc.monto;
-    });
-    return ncMap;
-  }, [notasCredito]);
 
   // Combinar pagos confirmados y NC aplicadas para mostrar en sección Pagos
   const pagosYNC = useMemo(() => {
@@ -1999,13 +2067,28 @@ function App() {
       .filter(f => {
         const matchSearch = f.proveedor.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            f.numero.toLowerCase().includes(searchTerm.toLowerCase());
-        // Para filtro, "parcial" se considera como "pendiente"
-        const estadoParaFiltro = f.estadoDisplay === 'parcial' ? 'pendiente' : f.estado;
-        const matchEstado = filtroEstado === 'todos' || estadoParaFiltro === filtroEstado || (filtroEstado === 'parcial' && f.estadoDisplay === 'parcial');
+        // Calcular si vence esta semana (próximos 7 días) y no está pagada
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        const venc = new Date(f.vencimiento + 'T12:00:00');
+        const diasHastaVenc = Math.ceil((venc - hoy) / (1000 * 60 * 60 * 24));
+        const venceEstaSemana = diasHastaVenc >= 0 && diasHastaVenc <= 7 && f.estado !== 'pagada';
+        // Para filtro de estado
+        let matchEstado = false;
+        if (filtroEstado === 'todos') {
+          matchEstado = true;
+        } else if (filtroEstado === 'parcial') {
+          matchEstado = f.estadoDisplay === 'parcial';
+        } else if (filtroEstado === 'vence_semana') {
+          matchEstado = venceEstaSemana;
+        } else {
+          matchEstado = f.estado === filtroEstado;
+        }
         const matchProveedor = filtroProveedorFactura === 'todos' || f.proveedor_id === parseInt(filtroProveedorFactura);
-        const fechaFactura = new Date(f.fecha);
-        const matchAnio = filtroAnioFactura === 'todos' || fechaFactura.getFullYear() === parseInt(filtroAnioFactura);
-        const matchMes = filtroMesFactura === 'todos' || fechaFactura.getMonth() === parseInt(filtroMesFactura);
+        // Usar vencimiento para filtrar por mes/año (no fecha de confección)
+        const fechaVencimiento = new Date(f.vencimiento + 'T12:00:00');
+        const matchAnio = filtroAnioFactura === 'todos' || fechaVencimiento.getFullYear() === parseInt(filtroAnioFactura);
+        const matchMes = filtroMesFactura === 'todos' || fechaVencimiento.getMonth() === parseInt(filtroMesFactura);
         return matchSearch && matchEstado && matchProveedor && matchAnio && matchMes;
       });
   }, [facturas, searchTerm, filtroEstado, filtroProveedorFactura, filtroAnioFactura, filtroMesFactura, pagosPorFactura, ncPorFactura]);
@@ -2127,15 +2210,84 @@ function App() {
               <div className="stat-card glass rounded-2xl p-4 sm:p-5 glow">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-slate-400 text-xs sm:text-sm mb-1">Pagado este Mes</p>
-                    <p className="text-lg sm:text-2xl font-bold mono text-emerald-400">{formatCurrency(stats.totalPagadoMes)}</p>
-                    <p className="text-xs text-slate-500 mt-1">{pagos.length} pagos</p>
+                    <p className="text-slate-400 text-xs sm:text-sm mb-1">Pago Proveedores</p>
+                    <p className="text-lg sm:text-2xl font-bold mono text-emerald-400">{formatCurrency(stats.totalPagadoProveedoresMes)}</p>
+                    <p className="text-xs text-slate-500 mt-1">{stats.cantidadPagosProveedoresMes} pagos este mes</p>
                   </div>
                   <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
                     <CheckCircle className="w-5 h-5" />
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Compras del Mes */}
+            <div className="glass rounded-2xl p-4 glow">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-blue-500" />
+                  Compras del Mes
+                </h3>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={filtroMesComprasDash}
+                    onChange={(e) => setFiltroMesComprasDash(e.target.value)}
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                  >
+                    {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                  </select>
+                  <select
+                    value={filtroAnioComprasDash}
+                    onChange={(e) => setFiltroAnioComprasDash(e.target.value)}
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                  >
+                    {[...new Set(facturas.map(f => new Date(f.fecha + 'T12:00:00').getFullYear()))].sort((a, b) => b - a).map(a => (
+                      <option key={a} value={a}>{a}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              {(() => {
+                const totalCompras = comprasDelMes.reduce((sum, f) => sum + f.monto, 0);
+                // Pagos a proveedores hechos en el mismo mes/año seleccionado
+                const pagosDelMes = pagos.filter(p => {
+                  if (p.estado_pago !== 'confirmado' || p.tipo !== 'factura') return false;
+                  const fechaPago = new Date(p.fecha);
+                  return fechaPago.getMonth() === parseInt(filtroMesComprasDash) &&
+                         fechaPago.getFullYear() === parseInt(filtroAnioComprasDash);
+                });
+                const totalPagadoMes = pagosDelMes.reduce((sum, p) => sum + p.monto, 0);
+                // Saldo pendiente actual de las facturas de ese mes
+                const saldoPendienteCompras = comprasDelMes.reduce((sum, f) => {
+                  const pagado = pagosPorFactura[f.id] || 0;
+                  const nc = ncPorFactura[f.id] || 0;
+                  const saldo = f.monto - pagado - nc;
+                  return sum + (saldo > 0 ? saldo : 0);
+                }, 0);
+                return (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                    <div className="bg-blue-50 rounded-xl p-3">
+                      <p className="text-xs text-slate-500">Compras del Mes</p>
+                      <p className="text-lg font-bold text-blue-600 mono">{formatCurrency(totalCompras)}</p>
+                      <p className="text-xs text-slate-400">{comprasDelMes.length} facturas</p>
+                    </div>
+                    <div className="bg-emerald-50 rounded-xl p-3">
+                      <p className="text-xs text-slate-500">Pago Proveedores</p>
+                      <p className="text-lg font-bold text-emerald-600 mono">{formatCurrency(totalPagadoMes)}</p>
+                      <p className="text-xs text-slate-400">{pagosDelMes.length} pagos</p>
+                    </div>
+                    <div className="bg-amber-50 rounded-xl p-3">
+                      <p className="text-xs text-slate-500">Saldo Pendiente</p>
+                      <p className="text-lg font-bold text-amber-600 mono">{formatCurrency(saldoPendienteCompras)}</p>
+                      <p className="text-xs text-slate-400">de compras del mes</p>
+                    </div>
+                    <div className="bg-purple-50 rounded-xl p-3">
+                      <p className="text-xs text-slate-500">Proveedores</p>
+                      <p className="text-lg font-bold text-purple-600">{new Set(comprasDelMes.map(f => f.proveedor_id)).size}</p>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Alertas de Vencimientos */}
@@ -2154,7 +2306,7 @@ function App() {
                   </h3>
                   {facturasVencidasDash.length > 0 && (
                     <p className="text-sm font-bold text-red-600 mono">
-                      {formatCurrency(facturasVencidasDash.reduce((sum, f) => sum + f.monto, 0))}
+                      {formatCurrency(facturasVencidasDash.reduce((sum, f) => sum + f.saldo, 0))}
                     </p>
                   )}
                 </div>
@@ -2171,7 +2323,7 @@ function App() {
                             <p className="text-[10px] text-slate-400">{f.numero}</p>
                           </div>
                           <div className="text-right">
-                            <p className="font-semibold mono text-xs text-red-600">{formatCurrency(f.monto)}</p>
+                            <p className="font-semibold mono text-xs text-red-600">{formatCurrency(f.saldo)}</p>
                             <p className={`text-[10px] ${dias.clase}`}>{dias.texto}</p>
                           </div>
                         </div>
@@ -2195,7 +2347,7 @@ function App() {
                   </h3>
                   {facturasProximas.length > 0 && (
                     <p className="text-sm font-bold text-amber-600 mono">
-                      {formatCurrency(facturasProximas.reduce((sum, f) => sum + f.monto, 0))}
+                      {formatCurrency(facturasProximas.reduce((sum, f) => sum + f.saldo, 0))}
                     </p>
                   )}
                 </div>
@@ -2212,7 +2364,7 @@ function App() {
                             <p className="text-[10px] text-slate-400">{f.numero}</p>
                           </div>
                           <div className="text-right">
-                            <p className="font-semibold mono text-xs">{formatCurrency(f.monto)}</p>
+                            <p className="font-semibold mono text-xs">{formatCurrency(f.saldo)}</p>
                             <p className={`text-[10px] ${dias.clase}`}>{dias.texto}</p>
                           </div>
                         </div>
@@ -2225,28 +2377,55 @@ function App() {
 
             {/* Gráfico por proveedor */}
             <div className="glass rounded-2xl p-5 glow">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-blue-500" />
-                Gastos por Proveedor
-              </h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={datosPorCategoria}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    dataKey="value"
-                    label={({ name, percent }) => `${name.split(' ')[0]} ${(percent * 100).toFixed(0)}%`}
-                    labelLine={false}
-                  >
-                    {datosPorCategoria.map((entry, index) => (
-                      <Cell key={index} fill={COLORS[index % COLORS.length]} />
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Building2 className="w-5 h-5 text-blue-500" />
+                  Gastos por Proveedor
+                </h3>
+                <select
+                  value={filtroCategoriaGrafico}
+                  onChange={(e) => setFiltroCategoriaGrafico(e.target.value)}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                >
+                  <option value="todos">Todas las categorías</option>
+                  {CATEGORIAS_PROVEEDOR.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                </select>
+              </div>
+              {datosPorCategoria.length > 0 ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                      <Pie
+                        data={datosPorCategoria.slice(0, 6)}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={70}
+                        dataKey="value"
+                        label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
+                        labelLine={false}
+                      >
+                        {datosPorCategoria.slice(0, 6).map((entry, index) => (
+                          <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => formatCurrency(value)} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {datosPorCategoria.map((item, index) => (
+                      <div key={item.name} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                          <span className="text-sm font-medium truncate max-w-32">{item.name}</span>
+                        </div>
+                        <span className="text-sm font-semibold mono">{formatCurrency(item.value)}</span>
+                      </div>
                     ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => formatCurrency(value)} />
-                </PieChart>
-              </ResponsiveContainer>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-slate-400 text-sm text-center py-8">No hay datos para mostrar</p>
+              )}
             </div>
 
             {/* Últimos pagos */}
@@ -2305,8 +2484,9 @@ function App() {
                   className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
                 >
                   <option value="todos">Todos los años</option>
-                  <option value="2025">2025</option>
-                  <option value="2026">2026</option>
+                  {[...new Set(facturas.map(f => new Date(f.vencimiento + 'T12:00:00').getFullYear()))].sort((a, b) => b - a).map(a => (
+                    <option key={a} value={a}>{a}</option>
+                  ))}
                 </select>
                 <select
                   value={filtroMesFactura}
@@ -2333,8 +2513,10 @@ function App() {
                 >
                   <option value="todos">Todos los estados</option>
                   <option value="pendiente">Pendientes</option>
+                  <option value="parcial">Parciales</option>
                   <option value="pagada">Pagadas</option>
                   <option value="vencida">Vencidas</option>
+                  <option value="vence_semana">Vence esta semana</option>
                 </select>
               </div>
               <button
@@ -2371,7 +2553,13 @@ function App() {
               <div className="glass rounded-xl p-3">
                 <p className="text-xs text-slate-500">Vencido</p>
                 <p className="text-lg font-bold text-red-500 mono">
-                  {formatCurrency(facturasFiltradas.filter(f => f.estado === 'vencida' || (f.estado === 'pendiente' && new Date(f.vencimiento) < new Date())).reduce((sum, f) => sum + (parseFloat(f.saldo) || 0), 0))}
+                  {formatCurrency(facturasFiltradas.filter(f => {
+                    if (f.estado === 'pagada' || f.saldo <= 0) return false;
+                    const hoy = new Date();
+                    hoy.setHours(0, 0, 0, 0);
+                    const venc = new Date(f.vencimiento + 'T12:00:00');
+                    return venc < hoy;
+                  }).reduce((sum, f) => sum + (parseFloat(f.saldo) || 0), 0))}
                 </p>
               </div>
             </div>
@@ -2396,8 +2584,21 @@ function App() {
                       const dias = getDiasVencimiento(f.vencimiento);
                       const tienePagos = f.pagado > 0;
                       const tieneNC = f.nc > 0;
+                      // Calcular si vence pronto (7 días o menos) y no está pagada
+                      const hoy = new Date();
+                      hoy.setHours(0, 0, 0, 0);
+                      const venc = new Date(f.vencimiento + 'T12:00:00');
+                      const diasHastaVenc = Math.ceil((venc - hoy) / (1000 * 60 * 60 * 24));
+                      const venceProximaSemana = diasHastaVenc >= 0 && diasHastaVenc <= 7 && f.estado !== 'pagada';
+                      const estaVencida = diasHastaVenc < 0 && f.estado !== 'pagada';
+                      // Color de fila según urgencia
+                      const rowBg = estaVencida
+                        ? 'bg-red-50 hover:bg-red-100'
+                        : venceProximaSemana
+                          ? 'bg-amber-50 hover:bg-amber-100'
+                          : 'hover:bg-slate-50';
                       return (
-                        <tr key={f.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                        <tr key={f.id} className={`border-b border-slate-100 transition-colors ${rowBg}`}>
                           <td className="px-3 py-2 font-medium">{f.proveedor}</td>
                           <td className="px-3 py-2 text-slate-400">{f.numero}</td>
                           <td className="px-3 py-2">{f.concepto}</td>
@@ -2833,6 +3034,7 @@ function App() {
                   <option value="Efectivo">Efectivo</option>
                   <option value="Transferencia">Transferencia</option>
                   <option value="Mercado Pago">Mercado Pago</option>
+                  <option value="E-Cheq">E-Cheq</option>
                 </select>
               </div>
             </div>
@@ -3406,7 +3608,7 @@ function App() {
 
             {/* INFORME: Pagos del Mes */}
             {informeActivo === 'pagos-mes' && (() => {
-              const pagosFiltrados = pagos.filter(p => (filtroAnioInforme === 'todos' || new Date(p.fecha).getFullYear() === parseInt(filtroAnioInforme)) && (filtroMesInforme === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesInforme)));
+              const pagosFiltrados = pagos.filter(p => p.estado_pago === 'confirmado' && (filtroAnioInforme === 'todos' || new Date(p.fecha).getFullYear() === parseInt(filtroAnioInforme)) && (filtroMesInforme === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesInforme)));
               const pagosProveedores = pagosFiltrados.filter(p => p.tipo === 'factura');
               const pagosEmpleados = pagosFiltrados.filter(p => p.tipo === 'sueldo');
               const totalProveedores = pagosProveedores.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
@@ -3414,7 +3616,7 @@ function App() {
               const totalGeneral = totalProveedores + totalEmpleados;
 
               // Agrupar por método de pago
-              const pagosPorMetodo = ['Efectivo', 'Transferencia', 'Cheque', 'Mercado Pago', 'Tarjeta'].map(metodo => {
+              const pagosPorMetodo = ['Efectivo', 'Transferencia', 'Mercado Pago', 'E-Cheq'].map(metodo => {
                 const pagosMetodo = pagosFiltrados.filter(p => p.metodo === metodo);
                 return { metodo, cantidad: pagosMetodo.length, total: pagosMetodo.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0) };
               }).filter(m => m.total > 0);
