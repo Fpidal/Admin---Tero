@@ -1482,7 +1482,59 @@ function ModalNotaCredito({ nota, proveedores, facturas, onClose, onSave, onDele
   );
 }
 
+// Pantalla de Login
+function LoginScreen({ onLogin }) {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (password === 'admin1234') {
+      localStorage.setItem('tero_auth', 'true');
+      onLogin();
+    } else {
+      setError('Contraseña incorrecta');
+      setPassword('');
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="glass rounded-2xl p-8 w-full max-w-sm">
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-bold text-slate-800">Tero Admin</h1>
+          <p className="text-sm text-slate-500 mt-1">Ingresá tu contraseña</p>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setError(''); }}
+              placeholder="Contraseña"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-center text-lg"
+              autoFocus
+            />
+          </div>
+          {error && (
+            <p className="text-red-500 text-sm text-center">{error}</p>
+          )}
+          <button
+            type="submit"
+            className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all"
+          >
+            Ingresar
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem('tero_auth') === 'true';
+  });
   const [activeTab, setActiveTab] = useState('dashboard');
   const [proveedores, setProveedores] = useState([]);
   const [facturas, setFacturas] = useState([]);
@@ -2411,6 +2463,15 @@ function App() {
     return { texto: `Vence en ${diff} días`, clase: 'text-slate-400' };
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('tero_auth');
+    setIsAuthenticated(false);
+  };
+
+  if (!isAuthenticated) {
+    return <LoginScreen onLogin={() => setIsAuthenticated(true)} />;
+  }
+
   return (
     <div className="min-h-screen">
       {/* Header */}
@@ -2429,7 +2490,7 @@ function App() {
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
-              <button className="p-2 text-slate-500 hover:text-slate-800 transition-colors">
+              <button onClick={handleLogout} className="p-2 text-slate-500 hover:text-red-500 transition-colors" title="Cerrar sesión">
                 <LogOut className="w-5 h-5" />
               </button>
             </div>
