@@ -1511,6 +1511,20 @@ function App() {
     const factura = facturas.find(f => f.id === id);
     if (!factura) return;
 
+    // Verificar si la factura tiene pagos asociados
+    const pagosFactura = pagos.filter(p => p.tipo === 'factura' && p.descripcion && p.descripcion.includes(factura.numero));
+    if (pagosFactura.length > 0) {
+      alert('No se puede anular esta factura porque tiene pagos registrados. Primero debe anular los pagos asociados.');
+      return;
+    }
+
+    // Verificar si la factura tiene notas de crédito asociadas
+    const ncFactura = notasCredito.filter(nc => nc.factura_id === id);
+    if (ncFactura.length > 0) {
+      alert('No se puede anular esta factura porque tiene notas de crédito asociadas. Primero debe anular las notas de crédito.');
+      return;
+    }
+
     // Guardar en anulaciones
     const { error: errorAnulacion } = await supabase.from('anulaciones').insert([{
       tipo: 'factura',
