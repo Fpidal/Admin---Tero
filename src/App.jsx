@@ -424,93 +424,93 @@ function ModalProveedor({ proveedor, onClose, onSave, onDelete }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="glass rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold">{proveedor ? 'Editar Proveedor' : 'Nuevo Proveedor'}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
+      <div className="glass rounded-2xl p-5 w-full max-w-lg">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-bold">{proveedor ? 'Editar Proveedor' : 'Nuevo Proveedor'}</h2>
+          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">Nombre *</label>
-            <input type="text" required value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
+        <form onSubmit={handleSubmit} className="space-y-2">
+          <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-sm text-slate-400 mb-1">Contacto</label>
-              <input type="text" value={form.contacto} onChange={e => setForm({...form, contacto: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" placeholder="Nombre persona" />
+              <label className="block text-xs text-slate-400 mb-0.5">Nombre *</label>
+              <input type="text" required value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
             </div>
             <div>
-              <label className="block text-sm text-slate-400 mb-1">Celular</label>
-              <input type="text" value={form.celular} onChange={e => setForm({...form, celular: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" placeholder="11-XXXX-XXXX" />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm text-slate-400 mb-1">Categoría</label>
-              <select value={form.categoria} onChange={e => setForm({...form, categoria: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
+              <label className="block text-xs text-slate-400 mb-0.5">Categoría</label>
+              <select value={form.categoria} onChange={e => setForm({...form, categoria: e.target.value})} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
                 <option value="">Sin categoría</option>
                 {CATEGORIAS_PROVEEDOR.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-sm text-slate-400 mb-1">Situación IVA</label>
-              <select value={form.situacion_iva} onChange={e => setForm({...form, situacion_iva: parseFloat(e.target.value)})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
+              <label className="block text-xs text-slate-400 mb-0.5">Contacto</label>
+              <input type="text" value={form.contacto} onChange={e => setForm({...form, contacto: e.target.value})} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" placeholder="Nombre persona" />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-0.5">Celular</label>
+              <input type="text" value={form.celular} onChange={e => setForm({...form, celular: e.target.value})} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" placeholder="11-XXXX-XXXX" />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label className="block text-xs text-slate-400 mb-0.5">Situación IVA</label>
+              <select value={form.situacion_iva} onChange={e => setForm({...form, situacion_iva: parseFloat(e.target.value)})} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
                 {SITUACIONES_IVA.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm text-slate-400 mb-1">Condición Pago</label>
-              <select value={form.condicion_pago} onChange={e => setForm({...form, condicion_pago: parseInt(e.target.value)})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
+              <label className="block text-xs text-slate-400 mb-0.5">Condición Pago</label>
+              <select value={form.condicion_pago} onChange={e => setForm({...form, condicion_pago: parseInt(e.target.value)})} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
                 {CONDICIONES_PAGO.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm text-slate-400 mb-1">Forma de Pago</label>
-              <select value={form.forma_pago} onChange={e => setForm({...form, forma_pago: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
-                <option value="">Sin especificar</option>
+              <label className="block text-xs text-slate-400 mb-0.5">Forma Pago</label>
+              <select value={form.forma_pago} onChange={e => setForm({...form, forma_pago: e.target.value})} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
+                <option value="">-</option>
                 {FORMAS_PAGO_PROVEEDOR.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
               </select>
             </div>
           </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">CUIT</label>
-            <input type="text" value={form.cuit} onChange={e => setForm({...form, cuit: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" placeholder="XX-XXXXXXXX-X" />
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label className="block text-xs text-slate-400 mb-0.5">CUIT</label>
+              <input type="text" value={form.cuit} onChange={e => setForm({...form, cuit: e.target.value})} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" placeholder="XX-XXXXXXXX-X" />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-0.5">Teléfono</label>
+              <input type="text" value={form.telefono} onChange={e => setForm({...form, telefono: e.target.value})} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-0.5">Email</label>
+              <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-sm text-slate-400 mb-1">Teléfono</label>
-              <input type="text" value={form.telefono} onChange={e => setForm({...form, telefono: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
+              <label className="block text-xs text-slate-400 mb-0.5">Banco</label>
+              <input type="text" value={form.banco} onChange={e => setForm({...form, banco: e.target.value})} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
             </div>
             <div>
-              <label className="block text-sm text-slate-400 mb-1">Email</label>
-              <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm text-slate-400 mb-1">Banco</label>
-              <input type="text" value={form.banco} onChange={e => setForm({...form, banco: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
-            </div>
-            <div>
-              <label className="block text-sm text-slate-400 mb-1">CBU</label>
-              <input type="text" value={form.cbu} onChange={e => setForm({...form, cbu: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
+              <label className="block text-xs text-slate-400 mb-0.5">CBU</label>
+              <input type="text" value={form.cbu} onChange={e => setForm({...form, cbu: e.target.value})} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
             </div>
           </div>
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+            <div className="p-2 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
               {error}
             </div>
           )}
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-2 pt-2">
             {proveedor && onDelete && (
-              <button type="button" onClick={handleDelete} className="px-4 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 transition-all text-sm">
+              <button type="button" onClick={handleDelete} className="px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-all text-sm">
                 Eliminar
               </button>
             )}
-            <button type="button" onClick={onClose} className="flex-1 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all text-sm">Cancelar</button>
-            <button type="submit" disabled={saving} className="flex-1 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm">
+            <button type="button" onClick={onClose} className="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all text-sm">Cancelar</button>
+            <button type="submit" disabled={saving} className="flex-1 px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm">
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
               {proveedor ? 'Guardar' : 'Crear'}
             </button>
@@ -705,7 +705,7 @@ function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, on
           {/* Bruto + IVA + Retenciones = Neto */}
           <div className="grid grid-cols-4 gap-2">
             <div>
-              <label className="block text-xs text-slate-400 mb-0.5">Bruto *</label>
+              <label className="block text-xs text-slate-400 mb-0.5">Sub Total *</label>
               <input type="text" required value={formatInputMonto(form.bruto)} onChange={e => handleBrutoChange(e.target.value)} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm text-right" placeholder="0" />
             </div>
             <div>
@@ -721,7 +721,7 @@ function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, on
               <input type="text" value={formatInputMonto(form.otras_retenciones)} onChange={e => handleRetencionesChange(e.target.value)} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm text-right" placeholder="0" />
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-0.5">Neto</label>
+              <label className="block text-xs text-slate-400 mb-0.5">Total</label>
               <div className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-sm text-right font-semibold text-emerald-600">
                 {formatInputMonto(form.monto) || '0'}
               </div>
@@ -3069,10 +3069,10 @@ function App() {
                       <h3 className="font-semibold text-sm mb-1 truncate">{p.nombre}</h3>
                       {p.contacto && <p className="text-xs text-blue-600 truncate">{p.contacto}</p>}
                       {p.celular && <p className="text-xs text-slate-500 truncate">{p.celular}</p>}
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        <span className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">{condicionLabel}</span>
-                        {formaLabel && <span className="text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">{formaLabel}</span>}
-                      </div>
+                      <p className="text-xs text-slate-500 mt-1">
+                        <span className="font-semibold">{condicionLabel}</span>
+                        {formaLabel && <span> · {formaLabel}</span>}
+                      </p>
                     </div>
                   );
                 })}
