@@ -1373,6 +1373,11 @@ function App() {
   // Filtro categoría para gráfico de gastos
   const [filtroCategoriaGrafico, setFiltroCategoriaGrafico] = useState('todos');
 
+  // Filtros para Pago Proveedores
+  const [filtroProveedorPagoProv, setFiltroProveedorPagoProv] = useState('todos');
+  const [filtroMesPagoProv, setFiltroMesPagoProv] = useState('todos');
+  const [filtroAnioPagoProv, setFiltroAnioPagoProv] = useState(new Date().getFullYear().toString());
+
   // Cargar datos desde Supabase
   const fetchProveedores = async () => {
     const { data, error } = await supabase.from('proveedores').select('*').order('nombre');
@@ -2519,13 +2524,22 @@ function App() {
                   <option value="vence_semana">Vence esta semana</option>
                 </select>
               </div>
-              <button
-                onClick={() => { setSelectedItem(null); setShowModal('factura'); }}
-                className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all text-sm"
-              >
-                <Plus className="w-4 h-4" />
-                Nueva Factura
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { setSelectedItem(null); setShowModal('factura'); }}
+                  className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all text-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  Nueva Factura
+                </button>
+                <button
+                  onClick={() => { setSelectedItem({ tipo: 'factura' }); setShowModal('pago'); }}
+                  className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all text-sm"
+                >
+                  <DollarSign className="w-4 h-4" />
+                  Registrar Pago
+                </button>
+              </div>
             </div>
 
             {/* Resumen de totales */}
@@ -2800,61 +2814,105 @@ function App() {
         )}
 
         {/* Pago Proveedores */}
-        {activeTab === 'pago-proveedores' && (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-lg font-bold">Pago a Proveedores</h2>
-              <div className="flex items-center gap-3">
-                <div className="text-right hidden sm:block">
-                  <p className="text-xs text-slate-500">Total pagado</p>
-                  <p className="text-lg font-bold text-emerald-500 mono">{formatCurrency(pagos.filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado').reduce((sum, p) => sum + p.monto, 0))}</p>
-                </div>
-                <button
-                  onClick={() => { setSelectedItem({ tipo: 'factura' }); setShowModal('pago'); }}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all text-sm"
-                >
-                  <Plus className="w-4 h-4" />
-                  Registrar Pago
-                </button>
-              </div>
-            </div>
+        {activeTab === 'pago-proveedores' && (() => {
+          // Filtrar pagos a proveedores
+          const pagosFiltrados = pagos.filter(p => {
+            if (p.tipo !== 'factura' || p.estado_pago !== 'confirmado') return false;
+            // Filtro por proveedor (buscar en descripción)
+            if (filtroProveedorPagoProv !== 'todos') {
+              const proveedor = proveedores.find(prov => prov.id === parseInt(filtroProveedorPagoProv));
+              if (!proveedor || !p.descripcion.includes(proveedor.nombre)) return false;
+            }
+            // Filtro por mes/año
+            const fechaPago = new Date(p.fecha + 'T12:00:00');
+            if (filtroAnioPagoProv !== 'todos' && fechaPago.getFullYear() !== parseInt(filtroAnioPagoProv)) return false;
+            if (filtroMesPagoProv !== 'todos' && fechaPago.getMonth() !== parseInt(filtroMesPagoProv)) return false;
+            return true;
+          });
+          const totalFiltrado = pagosFiltrados.reduce((sum, p) => sum + p.monto, 0);
 
-            <div className="glass rounded-2xl glow overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-slate-400 text-xs border-b border-slate-200">
-                      <th className="px-3 py-3 font-medium">Fecha</th>
-                      <th className="px-3 py-3 font-medium">Proveedor / Factura</th>
-                      <th className="px-3 py-3 font-medium">Método</th>
-                      <th className="px-3 py-3 font-medium text-right">Monto</th>
-                      <th className="px-3 py-3 font-medium text-right">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pagos.filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado').length === 0 ? (
-                      <tr><td colSpan="5" className="px-3 py-8 text-center text-slate-400 text-xs">No hay pagos a proveedores confirmados</td></tr>
-                    ) : (
-                      pagos.filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado').map(p => (
-                        <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                          <td className="px-3 py-2.5 text-xs">{formatDate(p.fecha)}</td>
-                          <td className="px-3 py-2.5 text-xs">{p.descripcion}</td>
-                          <td className="px-3 py-2.5 text-xs text-slate-500">{p.metodo}</td>
-                          <td className="px-3 py-2.5 text-right font-semibold mono text-emerald-500 text-xs">{formatCurrency(p.monto)}</td>
-                          <td className="px-3 py-2.5 text-right">
-                            <button onClick={() => { setSelectedItem(p); setShowModal('edit-pago'); }} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Ver detalle">
-                              <Edit3 className="w-3.5 h-3.5" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+          return (
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <h2 className="text-lg font-bold">Pago a Proveedores</h2>
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={filtroProveedorPagoProv}
+                    onChange={(e) => setFiltroProveedorPagoProv(e.target.value)}
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                  >
+                    <option value="todos">Todos los proveedores</option>
+                    {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                  </select>
+                  <select
+                    value={filtroMesPagoProv}
+                    onChange={(e) => setFiltroMesPagoProv(e.target.value)}
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                  >
+                    <option value="todos">Todos los meses</option>
+                    {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                  </select>
+                  <select
+                    value={filtroAnioPagoProv}
+                    onChange={(e) => setFiltroAnioPagoProv(e.target.value)}
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                  >
+                    <option value="todos">Todos los años</option>
+                    {[...new Set(pagos.filter(p => p.tipo === 'factura').map(p => new Date(p.fecha + 'T12:00:00').getFullYear()))].sort((a, b) => b - a).map(a => (
+                      <option key={a} value={a}>{a}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Resumen */}
+              <div className="glass rounded-xl p-4">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-xs text-slate-500">Total pagado {filtroMesPagoProv !== 'todos' ? MESES[parseInt(filtroMesPagoProv)] : ''} {filtroAnioPagoProv !== 'todos' ? filtroAnioPagoProv : ''}</p>
+                    <p className="text-xs text-slate-400">{pagosFiltrados.length} pagos</p>
+                  </div>
+                  <p className="text-2xl font-bold text-emerald-500 mono">{formatCurrency(totalFiltrado)}</p>
+                </div>
+              </div>
+
+              <div className="glass rounded-2xl glow overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-slate-400 text-xs border-b border-slate-200">
+                        <th className="px-3 py-3 font-medium">Fecha</th>
+                        <th className="px-3 py-3 font-medium">Proveedor / Factura</th>
+                        <th className="px-3 py-3 font-medium">Método</th>
+                        <th className="px-3 py-3 font-medium text-right">Monto</th>
+                        <th className="px-3 py-3 font-medium text-right">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pagosFiltrados.length === 0 ? (
+                        <tr><td colSpan="5" className="px-3 py-8 text-center text-slate-400 text-xs">No hay pagos en el período seleccionado</td></tr>
+                      ) : (
+                        pagosFiltrados.map(p => (
+                          <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                            <td className="px-3 py-2.5 text-xs">{formatDate(p.fecha)}</td>
+                            <td className="px-3 py-2.5 text-xs">{p.descripcion}</td>
+                            <td className="px-3 py-2.5 text-xs text-slate-500">{p.metodo}</td>
+                            <td className="px-3 py-2.5 text-right font-semibold mono text-emerald-500 text-xs">{formatCurrency(p.monto)}</td>
+                            <td className="px-3 py-2.5 text-right">
+                              <button onClick={() => { setSelectedItem(p); setShowModal('edit-pago'); }} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Ver detalle">
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Notas de Crédito */}
         {activeTab === 'notas-credito' && (
