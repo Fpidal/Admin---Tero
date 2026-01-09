@@ -1571,6 +1571,9 @@ function App() {
   // Modales
   const [showModal, setShowModal] = useState(null); // 'proveedor', 'factura', 'empleado', 'pago'
   const [selectedItem, setSelectedItem] = useState(null);
+  const [modalClienteId, setModalClienteId] = useState(null); // Cliente seleccionado en modal
+  const [modalSubtotal, setModalSubtotal] = useState('');
+  const [modalIva, setModalIva] = useState('21'); // 21, 10.5, 0 (exento)
 
   // Filtros
   const [searchTerm, setSearchTerm] = useState('');
@@ -5026,75 +5029,129 @@ function App() {
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold text-slate-800">{selectedItem ? 'Editar Factura' : 'Nueva Factura de Venta'}</h2>
-                <button onClick={() => { setShowModal(null); setSelectedItem(null); }} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                <button onClick={() => { setShowModal(null); setSelectedItem(null); setModalClienteId(null); setModalSubtotal(''); setModalIva('21'); }} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                const data = {
-                  numero: formData.get('numero'),
-                  cliente_id: parseInt(formData.get('cliente_id')) || null,
-                  monto: parseFloat(parseInputMonto(formData.get('monto'))),
-                  fecha: formData.get('fecha'),
-                  vencimiento: formData.get('vencimiento'),
-                  concepto: formData.get('concepto') || null,
-                  estado: formData.get('estado') || 'pendiente'
-                };
-                if (selectedItem) {
-                  await updateFacturaVenta(selectedItem.id, data);
-                } else {
-                  await createFacturaVenta(data);
-                }
-              }} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+
+              {/* Paso 1: Seleccionar Cliente */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-700 mb-1">Cliente *</label>
+                <select
+                  value={selectedItem?.cliente_id || modalClienteId || ''}
+                  onChange={(e) => setModalClienteId(e.target.value ? parseInt(e.target.value) : null)}
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500"
+                >
+                  <option value="">Seleccionar cliente...</option>
+                  {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                </select>
+              </div>
+
+              {/* Paso 2: Resto del formulario (solo si hay cliente) */}
+              {(modalClienteId || selectedItem?.cliente_id) && (
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.target);
+                  const subtotal = parseFloat(parseInputMonto(modalSubtotal)) || 0;
+                  const ivaPercent = parseFloat(modalIva) || 0;
+                  const ivaAmount = subtotal * (ivaPercent / 100);
+                  const total = subtotal + ivaAmount;
+
+                  const data = {
+                    numero: formData.get('numero'),
+                    cliente_id: selectedItem?.cliente_id || modalClienteId,
+                    subtotal: subtotal,
+                    iva_porcentaje: ivaPercent,
+                    iva_monto: ivaAmount,
+                    monto: total,
+                    fecha: formData.get('fecha'),
+                    vencimiento: formData.get('vencimiento'),
+                    concepto: formData.get('concepto') || null,
+                    estado: formData.get('estado') || 'pendiente'
+                  };
+                  if (selectedItem) {
+                    await updateFacturaVenta(selectedItem.id, data);
+                  } else {
+                    await createFacturaVenta(data);
+                  }
+                  setModalClienteId(null);
+                  setModalSubtotal('');
+                  setModalIva('21');
+                }} className="space-y-4">
+                  <input type="hidden" name="cliente_id" value={selectedItem?.cliente_id || modalClienteId} />
+
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Número *</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Número de Factura *</label>
                     <input name="numero" defaultValue={selectedItem?.numero || ''} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500" />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Cliente *</label>
-                    <select name="cliente_id" defaultValue={selectedItem?.cliente_id || ''} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
-                      <option value="">Seleccionar cliente...</option>
-                      {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                    </select>
+
+                  {/* Subtotal, IVA y Total */}
+                  <div className="p-4 bg-slate-50 rounded-xl space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Subtotal *</label>
+                      <input
+                        value={modalSubtotal || (selectedItem ? formatInputMonto(selectedItem.subtotal || selectedItem.monto) : '')}
+                        onChange={(e) => setModalSubtotal(formatInputMonto(e.target.value))}
+                        required
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">IVA</label>
+                      <select
+                        value={modalIva || (selectedItem?.iva_porcentaje?.toString() || '21')}
+                        onChange={(e) => setModalIva(e.target.value)}
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500"
+                      >
+                        <option value="21">21%</option>
+                        <option value="10.5">10,5%</option>
+                        <option value="0">Exento</option>
+                      </select>
+                    </div>
+                    <div className="pt-2 border-t border-slate-200">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-slate-700">Total:</span>
+                        <span className="text-lg font-bold text-blue-600 mono">
+                          {formatCurrency(
+                            (parseFloat(parseInputMonto(modalSubtotal || (selectedItem?.subtotal || selectedItem?.monto || 0))) || 0) *
+                            (1 + (parseFloat(modalIva || selectedItem?.iva_porcentaje || 21) / 100))
+                          )}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Monto *</label>
-                  <input name="monto" defaultValue={selectedItem ? formatInputMonto(selectedItem.monto) : ''} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500" onChange={(e) => e.target.value = formatInputMonto(e.target.value)} />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Fecha *</label>
-                    <input name="fecha" type="date" defaultValue={selectedItem?.fecha || new Date().toISOString().split('T')[0]} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500" />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Fecha *</label>
+                      <input name="fecha" type="date" defaultValue={selectedItem?.fecha || new Date().toISOString().split('T')[0]} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Vencimiento *</label>
+                      <input name="vencimiento" type="date" defaultValue={selectedItem?.vencimiento || ''} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500" />
+                    </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Vencimiento *</label>
-                    <input name="vencimiento" type="date" defaultValue={selectedItem?.vencimiento || ''} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500" />
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Concepto</label>
+                    <input name="concepto" defaultValue={selectedItem?.concepto || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500" />
                   </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Concepto</label>
-                  <input name="concepto" defaultValue={selectedItem?.concepto || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500" />
-                </div>
-                {selectedItem && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Estado</label>
-                    <select name="estado" defaultValue={selectedItem?.estado || 'pendiente'} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
-                      <option value="pendiente">Pendiente</option>
-                      <option value="cobrada">Cobrada</option>
-                      <option value="vencida">Vencida</option>
-                    </select>
+                  {selectedItem && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Estado</label>
+                      <select name="estado" defaultValue={selectedItem?.estado || 'pendiente'} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
+                        <option value="pendiente">Pendiente</option>
+                        <option value="cobrada">Cobrada</option>
+                        <option value="vencida">Vencida</option>
+                      </select>
+                    </div>
+                  )}
+                  <div className="flex gap-3 pt-4">
+                    <button type="submit" className="flex-1 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all">
+                      {selectedItem ? 'Guardar' : 'Crear Factura'}
+                    </button>
                   </div>
-                )}
-                <div className="flex gap-3 pt-4">
-                  <button type="submit" className="flex-1 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all">
-                    {selectedItem ? 'Guardar' : 'Crear Factura'}
-                  </button>
-                </div>
-              </form>
+                </form>
+              )}
             </div>
           </div>
         </div>
@@ -5107,127 +5164,156 @@ function App() {
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold text-slate-800">{selectedItem ? 'Editar Cobro' : 'Nuevo Cobro'}</h2>
-                <button onClick={() => { setShowModal(null); setSelectedItem(null); }} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                <button onClick={() => { setShowModal(null); setSelectedItem(null); setModalClienteId(null); }} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                const clienteId = formData.get('cliente_id');
-                const facturaId = formData.get('factura_venta_id');
-                const cliente = clientes.find(c => c.id === parseInt(clienteId));
-                const factura = facturasVenta.find(f => f.id === parseInt(facturaId));
-                const fecha = formData.get('fecha');
 
-                if (selectedItem) {
-                  // Editar cobro existente
-                  const data = {
-                    cliente_id: parseInt(clienteId) || null,
-                    factura_venta_id: parseInt(facturaId) || null,
-                    descripcion: `${cliente?.nombre || 'Cliente'} - ${factura ? 'Fact. ' + factura.numero : 'Cobro'}`,
-                    monto: parseFloat(parseInputMonto(formData.get('monto1'))),
-                    fecha: fecha,
-                    metodo: formData.get('metodo1')
-                  };
-                  await updateCobro(selectedItem.id, data);
-                } else {
-                  // Crear múltiples cobros si hay varios montos
-                  const montos = [
-                    { monto: formData.get('monto1'), metodo: formData.get('metodo1') },
-                    { monto: formData.get('monto2'), metodo: formData.get('metodo2') },
-                    { monto: formData.get('monto3'), metodo: formData.get('metodo3') }
-                  ].filter(m => m.monto && parseInputMonto(m.monto));
+              {/* Paso 1: Seleccionar Cliente */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-700 mb-1">Cliente *</label>
+                <select
+                  value={selectedItem?.cliente_id || modalClienteId || ''}
+                  onChange={(e) => setModalClienteId(e.target.value ? parseInt(e.target.value) : null)}
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="">Seleccionar cliente...</option>
+                  {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                </select>
+              </div>
 
-                  for (const item of montos) {
-                    const data = {
-                      cliente_id: parseInt(clienteId) || null,
-                      factura_venta_id: parseInt(facturaId) || null,
-                      descripcion: `${cliente?.nombre || 'Cliente'} - ${factura ? 'Fact. ' + factura.numero : 'Cobro'} (${item.metodo})`,
-                      monto: parseFloat(parseInputMonto(item.monto)),
-                      fecha: fecha,
-                      metodo: item.metodo
-                    };
-                    await createCobro(data);
-                  }
-                  setShowModal(null);
-                  setSelectedItem(null);
-                }
-              }} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Cliente *</label>
-                  <select name="cliente_id" defaultValue={selectedItem?.cliente_id || ''} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500">
-                    <option value="">Seleccionar cliente...</option>
-                    {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Factura (opcional)</label>
-                  <select name="factura_venta_id" defaultValue={selectedItem?.factura_venta_id || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500">
-                    <option value="">Sin factura asociada</option>
-                    {facturasVenta.filter(f => f.estado !== 'cobrada').map(f => <option key={f.id} value={f.id}>{f.numero} - {f.cliente} - {formatCurrency(f.monto)}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Fecha *</label>
-                  <input name="fecha" type="date" defaultValue={selectedItem?.fecha || new Date().toISOString().split('T')[0]} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500" />
-                </div>
+              {/* Paso 2: Resto del formulario (solo si hay cliente) */}
+              {(modalClienteId || selectedItem?.cliente_id) && (() => {
+                const clienteSeleccionado = selectedItem?.cliente_id || modalClienteId;
+                const facturasPendientesCliente = facturasVenta.filter(f =>
+                  f.cliente_id === clienteSeleccionado && f.estado !== 'cobrada'
+                );
 
-                {/* Monto 1 */}
-                <div className="p-3 bg-slate-50 rounded-xl space-y-2">
-                  <p className="text-xs font-medium text-slate-500">Pago 1</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <input name="monto1" defaultValue={selectedItem ? formatInputMonto(selectedItem.monto) : ''} placeholder="Monto" required className="px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm" onChange={(e) => e.target.value = formatInputMonto(e.target.value)} />
-                    <select name="metodo1" defaultValue={selectedItem?.metodo || 'Transferencia'} className="px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm">
-                      <option value="Transferencia">Transferencia</option>
-                      <option value="Efectivo">Efectivo</option>
-                      <option value="Mercado Pago">Mercado Pago</option>
-                      <option value="Retención">Retención</option>
-                      <option value="Tarjeta">Tarjeta</option>
-                    </select>
-                  </div>
-                </div>
+                return (
+                  <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    const formData = new FormData(e.target);
+                    const clienteId = clienteSeleccionado;
+                    const facturaId = formData.get('factura_venta_id');
+                    const cliente = clientes.find(c => c.id === parseInt(clienteId));
+                    const factura = facturasVenta.find(f => f.id === parseInt(facturaId));
+                    const fecha = formData.get('fecha');
 
-                {/* Monto 2 */}
-                {!selectedItem && (
-                  <div className="p-3 bg-slate-50 rounded-xl space-y-2">
-                    <p className="text-xs font-medium text-slate-500">Pago 2 (opcional)</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <input name="monto2" placeholder="Monto" className="px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm" onChange={(e) => e.target.value = formatInputMonto(e.target.value)} />
-                      <select name="metodo2" defaultValue="Efectivo" className="px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm">
-                        <option value="Transferencia">Transferencia</option>
-                        <option value="Efectivo">Efectivo</option>
-                        <option value="Mercado Pago">Mercado Pago</option>
-                        <option value="Retención">Retención</option>
-                        <option value="Tarjeta">Tarjeta</option>
-                      </select>
+                    if (selectedItem) {
+                      // Editar cobro existente
+                      const data = {
+                        cliente_id: parseInt(clienteId) || null,
+                        factura_venta_id: parseInt(facturaId) || null,
+                        descripcion: `${cliente?.nombre || 'Cliente'} - ${factura ? 'Fact. ' + factura.numero : 'Cobro'}`,
+                        monto: parseFloat(parseInputMonto(formData.get('monto1'))),
+                        fecha: fecha,
+                        metodo: formData.get('metodo1')
+                      };
+                      await updateCobro(selectedItem.id, data);
+                    } else {
+                      // Crear múltiples cobros si hay varios montos
+                      const montos = [
+                        { monto: formData.get('monto1'), metodo: formData.get('metodo1') },
+                        { monto: formData.get('monto2'), metodo: formData.get('metodo2') },
+                        { monto: formData.get('monto3'), metodo: formData.get('metodo3') }
+                      ].filter(m => m.monto && parseInputMonto(m.monto));
+
+                      for (const item of montos) {
+                        const data = {
+                          cliente_id: parseInt(clienteId) || null,
+                          factura_venta_id: parseInt(facturaId) || null,
+                          descripcion: `${cliente?.nombre || 'Cliente'} - ${factura ? 'Fact. ' + factura.numero : 'Cobro'} (${item.metodo})`,
+                          monto: parseFloat(parseInputMonto(item.monto)),
+                          fecha: fecha,
+                          metodo: item.metodo
+                        };
+                        await createCobro(data);
+                      }
+                    }
+                    setShowModal(null);
+                    setSelectedItem(null);
+                    setModalClienteId(null);
+                  }} className="space-y-4">
+
+                    {/* Facturas pendientes del cliente */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Factura pendiente</label>
+                      {facturasPendientesCliente.length === 0 ? (
+                        <p className="text-sm text-slate-500 italic py-2">Este cliente no tiene facturas pendientes</p>
+                      ) : (
+                        <select name="factura_venta_id" defaultValue={selectedItem?.factura_venta_id || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500">
+                          <option value="">Sin factura asociada</option>
+                          {facturasPendientesCliente.map(f => (
+                            <option key={f.id} value={f.id}>
+                              {f.numero} - {formatCurrency(f.monto)} - Vence: {formatDate(f.vencimiento)}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                     </div>
-                  </div>
-                )}
 
-                {/* Monto 3 */}
-                {!selectedItem && (
-                  <div className="p-3 bg-slate-50 rounded-xl space-y-2">
-                    <p className="text-xs font-medium text-slate-500">Pago 3 (opcional)</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <input name="monto3" placeholder="Monto" className="px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm" onChange={(e) => e.target.value = formatInputMonto(e.target.value)} />
-                      <select name="metodo3" defaultValue="Retención" className="px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm">
-                        <option value="Transferencia">Transferencia</option>
-                        <option value="Efectivo">Efectivo</option>
-                        <option value="Mercado Pago">Mercado Pago</option>
-                        <option value="Retención">Retención</option>
-                        <option value="Tarjeta">Tarjeta</option>
-                      </select>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Fecha *</label>
+                      <input name="fecha" type="date" defaultValue={selectedItem?.fecha || new Date().toISOString().split('T')[0]} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500" />
                     </div>
-                  </div>
-                )}
 
-                <div className="flex gap-3 pt-4">
-                  <button type="submit" className="flex-1 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all">
-                    {selectedItem ? 'Guardar' : 'Registrar Cobro(s)'}
-                  </button>
-                </div>
-              </form>
+                    {/* Monto 1 */}
+                    <div className="p-3 bg-slate-50 rounded-xl space-y-2">
+                      <p className="text-xs font-medium text-slate-500">Pago 1</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <input name="monto1" defaultValue={selectedItem ? formatInputMonto(selectedItem.monto) : ''} placeholder="Monto" required className="px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm" onChange={(e) => e.target.value = formatInputMonto(e.target.value)} />
+                        <select name="metodo1" defaultValue={selectedItem?.metodo || 'Transferencia'} className="px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm">
+                          <option value="Transferencia">Transferencia</option>
+                          <option value="Efectivo">Efectivo</option>
+                          <option value="Mercado Pago">Mercado Pago</option>
+                          <option value="Retención">Retención</option>
+                          <option value="Tarjeta">Tarjeta</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Monto 2 */}
+                    {!selectedItem && (
+                      <div className="p-3 bg-slate-50 rounded-xl space-y-2">
+                        <p className="text-xs font-medium text-slate-500">Pago 2 (opcional)</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <input name="monto2" placeholder="Monto" className="px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm" onChange={(e) => e.target.value = formatInputMonto(e.target.value)} />
+                          <select name="metodo2" defaultValue="Efectivo" className="px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm">
+                            <option value="Transferencia">Transferencia</option>
+                            <option value="Efectivo">Efectivo</option>
+                            <option value="Mercado Pago">Mercado Pago</option>
+                            <option value="Retención">Retención</option>
+                            <option value="Tarjeta">Tarjeta</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Monto 3 */}
+                    {!selectedItem && (
+                      <div className="p-3 bg-slate-50 rounded-xl space-y-2">
+                        <p className="text-xs font-medium text-slate-500">Pago 3 (opcional)</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <input name="monto3" placeholder="Monto" className="px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm" onChange={(e) => e.target.value = formatInputMonto(e.target.value)} />
+                          <select name="metodo3" defaultValue="Retención" className="px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm">
+                            <option value="Transferencia">Transferencia</option>
+                            <option value="Efectivo">Efectivo</option>
+                            <option value="Mercado Pago">Mercado Pago</option>
+                            <option value="Retención">Retención</option>
+                            <option value="Tarjeta">Tarjeta</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex gap-3 pt-4">
+                      <button type="submit" className="flex-1 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all">
+                        {selectedItem ? 'Guardar' : 'Registrar Cobro(s)'}
+                      </button>
+                    </div>
+                  </form>
+                );
+              })()}
             </div>
           </div>
         </div>
