@@ -640,8 +640,8 @@ function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, on
             </div>
           )}
           <div>
-            <label className="block text-sm text-slate-400 mb-1">Concepto</label>
-            <input type="text" value={form.concepto} onChange={e => setForm({...form, concepto: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
+            <label className="block text-sm text-slate-400 mb-1">Observaciones</label>
+            <input type="text" value={form.concepto} onChange={e => setForm({...form, concepto: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" placeholder="Opcional" />
           </div>
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
@@ -2369,7 +2369,7 @@ function App() {
                     <tr className="text-left text-slate-400 text-xs border-b border-slate-200">
                       <th className="px-3 py-2 font-medium">Proveedor</th>
                       <th className="px-3 py-2 font-medium">Número</th>
-                      <th className="px-3 py-2 font-medium">Concepto</th>
+                      <th className="px-3 py-2 font-medium">Obs.</th>
                       <th className="px-3 py-2 font-medium">Vencimiento</th>
                       <th className="px-3 py-2 font-medium">Estado</th>
                       <th className="px-3 py-2 font-medium text-right">Monto</th>
