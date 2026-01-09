@@ -3011,11 +3011,11 @@ function App() {
               <h2 className="text-lg font-bold">Ingresos</h2>
             </div>
 
-            {/* Solapas Facturas / Cobros / Clientes */}
-            <div className="flex gap-2 border-b border-slate-200">
+            {/* Solapas Facturas / Cobros / Clientes / Cta Cte */}
+            <div className="flex gap-2 border-b border-slate-200 overflow-x-auto">
               <button
                 onClick={() => setSubTabIngresos('facturas')}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                   subTabIngresos === 'facturas'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-slate-500 hover:text-slate-700'
@@ -3025,7 +3025,7 @@ function App() {
               </button>
               <button
                 onClick={() => setSubTabIngresos('cobros')}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                   subTabIngresos === 'cobros'
                     ? 'border-emerald-500 text-emerald-600'
                     : 'border-transparent text-slate-500 hover:text-slate-700'
@@ -3035,13 +3035,23 @@ function App() {
               </button>
               <button
                 onClick={() => setSubTabIngresos('clientes')}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                   subTabIngresos === 'clientes'
                     ? 'border-purple-500 text-purple-600'
                     : 'border-transparent text-slate-500 hover:text-slate-700'
                 }`}
               >
                 Clientes
+              </button>
+              <button
+                onClick={() => setSubTabIngresos('cta-cte')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                  subTabIngresos === 'cta-cte'
+                    ? 'border-amber-500 text-amber-600'
+                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                Cta. Corriente
               </button>
             </div>
 
@@ -3209,6 +3219,95 @@ function App() {
                       </div>
                     ))
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* Subtab: Cuentas Corrientes */}
+            {subTabIngresos === 'cta-cte' && (
+              <div className="space-y-4">
+                <div className="text-right">
+                  <p className="text-xs text-slate-500">Saldo Total Pendiente</p>
+                  <p className="text-lg font-bold text-amber-600 mono">
+                    {formatCurrency(
+                      clientes.reduce((total, cliente) => {
+                        const facturado = facturasVenta
+                          .filter(f => f.cliente_id === cliente.id)
+                          .reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0);
+                        const cobrado = cobros
+                          .filter(c => c.cliente_id === cliente.id)
+                          .reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0);
+                        return total + (facturado - cobrado);
+                      }, 0)
+                    )}
+                  </p>
+                </div>
+
+                <div className="glass rounded-2xl glow overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left text-slate-400 text-xs border-b border-slate-200">
+                          <th className="px-3 py-3 font-medium">Cliente</th>
+                          <th className="px-3 py-3 font-medium text-right">Facturado</th>
+                          <th className="px-3 py-3 font-medium text-right">Cobros</th>
+                          <th className="px-3 py-3 font-medium text-right">Retenciones</th>
+                          <th className="px-3 py-3 font-medium text-right">Saldo</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {clientes.length === 0 ? (
+                          <tr><td colSpan="5" className="px-3 py-8 text-center text-slate-400 text-xs">No hay clientes registrados</td></tr>
+                        ) : (
+                          clientes.map(cliente => {
+                            const facturado = facturasVenta
+                              .filter(f => f.cliente_id === cliente.id)
+                              .reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0);
+                            const cobrosCliente = cobros.filter(c => c.cliente_id === cliente.id);
+                            const totalCobros = cobrosCliente
+                              .filter(c => c.metodo !== 'Retención')
+                              .reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0);
+                            const totalRetenciones = cobrosCliente
+                              .filter(c => c.metodo === 'Retención')
+                              .reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0);
+                            const saldo = facturado - totalCobros - totalRetenciones;
+
+                            return (
+                              <tr key={cliente.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                                <td className="px-3 py-2.5 text-xs font-medium">{cliente.nombre}</td>
+                                <td className="px-3 py-2.5 text-right font-semibold mono text-blue-500 text-xs">{formatCurrency(facturado)}</td>
+                                <td className="px-3 py-2.5 text-right font-semibold mono text-emerald-500 text-xs">{formatCurrency(totalCobros)}</td>
+                                <td className="px-3 py-2.5 text-right font-semibold mono text-purple-500 text-xs">{formatCurrency(totalRetenciones)}</td>
+                                <td className={`px-3 py-2.5 text-right font-bold mono text-xs ${saldo > 0 ? 'text-amber-600' : saldo < 0 ? 'text-red-500' : 'text-slate-400'}`}>
+                                  {formatCurrency(saldo)}
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                      <tfoot>
+                        <tr className="border-t-2 border-slate-300 bg-slate-50 font-bold">
+                          <td className="px-3 py-3 text-xs">TOTALES</td>
+                          <td className="px-3 py-3 text-right mono text-blue-600 text-xs">
+                            {formatCurrency(facturasVenta.reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0))}
+                          </td>
+                          <td className="px-3 py-3 text-right mono text-emerald-600 text-xs">
+                            {formatCurrency(cobros.filter(c => c.metodo !== 'Retención').reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0))}
+                          </td>
+                          <td className="px-3 py-3 text-right mono text-purple-600 text-xs">
+                            {formatCurrency(cobros.filter(c => c.metodo === 'Retención').reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0))}
+                          </td>
+                          <td className="px-3 py-3 text-right mono text-amber-600 text-xs">
+                            {formatCurrency(
+                              facturasVenta.reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0) -
+                              cobros.reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0)
+                            )}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}
@@ -4876,28 +4975,28 @@ function App() {
                 } else {
                   await createCliente(data);
                 }
-              }} className="space-y-4">
+              }} className="space-y-4" autoComplete="off">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Nombre *</label>
-                  <input name="nombre" defaultValue={selectedItem?.nombre || ''} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500" />
+                  <input name="nombre" defaultValue={selectedItem?.nombre || ''} required autoComplete="off" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">CUIT</label>
-                  <input name="cuit" defaultValue={selectedItem?.cuit || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500" />
+                  <input name="cuit" defaultValue={selectedItem?.cuit || ''} autoComplete="off" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Teléfono</label>
-                    <input name="telefono" defaultValue={selectedItem?.telefono || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500" />
+                    <input name="telefono" defaultValue={selectedItem?.telefono || ''} autoComplete="off" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                    <input name="email" type="email" defaultValue={selectedItem?.email || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500" />
+                    <input name="email" type="email" defaultValue={selectedItem?.email || ''} autoComplete="off" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Dirección</label>
-                  <input name="direccion" defaultValue={selectedItem?.direccion || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500" />
+                  <input name="direccion" defaultValue={selectedItem?.direccion || ''} autoComplete="off" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Condición IVA</label>
@@ -4955,9 +5054,9 @@ function App() {
                     <input name="numero" defaultValue={selectedItem?.numero || ''} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Cliente</label>
-                    <select name="cliente_id" defaultValue={selectedItem?.cliente_id || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
-                      <option value="">Sin cliente</option>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Cliente *</label>
+                    <select name="cliente_id" defaultValue={selectedItem?.cliente_id || ''} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
+                      <option value="">Seleccionar cliente...</option>
                       {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                     </select>
                   </div>
@@ -5004,7 +5103,7 @@ function App() {
       {/* Modal Cobro */}
       {showModal === 'cobro' && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold text-slate-800">{selectedItem ? 'Editar Cobro' : 'Nuevo Cobro'}</h2>
@@ -5019,23 +5118,45 @@ function App() {
                 const facturaId = formData.get('factura_venta_id');
                 const cliente = clientes.find(c => c.id === parseInt(clienteId));
                 const factura = facturasVenta.find(f => f.id === parseInt(facturaId));
-                const data = {
-                  cliente_id: parseInt(clienteId) || null,
-                  factura_venta_id: parseInt(facturaId) || null,
-                  descripcion: `${cliente?.nombre || 'Cliente'} - ${factura ? 'Fact. ' + factura.numero : formData.get('descripcion') || 'Cobro'}`,
-                  monto: parseFloat(parseInputMonto(formData.get('monto'))),
-                  fecha: formData.get('fecha'),
-                  metodo: formData.get('metodo')
-                };
+                const fecha = formData.get('fecha');
+
                 if (selectedItem) {
+                  // Editar cobro existente
+                  const data = {
+                    cliente_id: parseInt(clienteId) || null,
+                    factura_venta_id: parseInt(facturaId) || null,
+                    descripcion: `${cliente?.nombre || 'Cliente'} - ${factura ? 'Fact. ' + factura.numero : 'Cobro'}`,
+                    monto: parseFloat(parseInputMonto(formData.get('monto1'))),
+                    fecha: fecha,
+                    metodo: formData.get('metodo1')
+                  };
                   await updateCobro(selectedItem.id, data);
                 } else {
-                  await createCobro(data);
+                  // Crear múltiples cobros si hay varios montos
+                  const montos = [
+                    { monto: formData.get('monto1'), metodo: formData.get('metodo1') },
+                    { monto: formData.get('monto2'), metodo: formData.get('metodo2') },
+                    { monto: formData.get('monto3'), metodo: formData.get('metodo3') }
+                  ].filter(m => m.monto && parseInputMonto(m.monto));
+
+                  for (const item of montos) {
+                    const data = {
+                      cliente_id: parseInt(clienteId) || null,
+                      factura_venta_id: parseInt(facturaId) || null,
+                      descripcion: `${cliente?.nombre || 'Cliente'} - ${factura ? 'Fact. ' + factura.numero : 'Cobro'} (${item.metodo})`,
+                      monto: parseFloat(parseInputMonto(item.monto)),
+                      fecha: fecha,
+                      metodo: item.metodo
+                    };
+                    await createCobro(data);
+                  }
+                  setShowModal(null);
+                  setSelectedItem(null);
                 }
               }} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Cliente</label>
-                  <select name="cliente_id" defaultValue={selectedItem?.cliente_id || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Cliente *</label>
+                  <select name="cliente_id" defaultValue={selectedItem?.cliente_id || ''} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500">
                     <option value="">Seleccionar cliente...</option>
                     {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                   </select>
@@ -5048,31 +5169,62 @@ function App() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
-                  <input name="descripcion" defaultValue={selectedItem?.descripcion || ''} placeholder="Opcional si seleccionó cliente/factura" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500" />
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Fecha *</label>
+                  <input name="fecha" type="date" defaultValue={selectedItem?.fecha || new Date().toISOString().split('T')[0]} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500" />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Monto *</label>
-                  <input name="monto" defaultValue={selectedItem ? formatInputMonto(selectedItem.monto) : ''} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500" onChange={(e) => e.target.value = formatInputMonto(e.target.value)} />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Fecha *</label>
-                    <input name="fecha" type="date" defaultValue={selectedItem?.fecha || new Date().toISOString().split('T')[0]} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Método *</label>
-                    <select name="metodo" defaultValue={selectedItem?.metodo || 'Transferencia'} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500">
-                      <option value="Efectivo">Efectivo</option>
+
+                {/* Monto 1 */}
+                <div className="p-3 bg-slate-50 rounded-xl space-y-2">
+                  <p className="text-xs font-medium text-slate-500">Pago 1</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input name="monto1" defaultValue={selectedItem ? formatInputMonto(selectedItem.monto) : ''} placeholder="Monto" required className="px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm" onChange={(e) => e.target.value = formatInputMonto(e.target.value)} />
+                    <select name="metodo1" defaultValue={selectedItem?.metodo || 'Transferencia'} className="px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm">
                       <option value="Transferencia">Transferencia</option>
+                      <option value="Efectivo">Efectivo</option>
                       <option value="Mercado Pago">Mercado Pago</option>
+                      <option value="Retención">Retención</option>
                       <option value="Tarjeta">Tarjeta</option>
                     </select>
                   </div>
                 </div>
+
+                {/* Monto 2 */}
+                {!selectedItem && (
+                  <div className="p-3 bg-slate-50 rounded-xl space-y-2">
+                    <p className="text-xs font-medium text-slate-500">Pago 2 (opcional)</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <input name="monto2" placeholder="Monto" className="px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm" onChange={(e) => e.target.value = formatInputMonto(e.target.value)} />
+                      <select name="metodo2" defaultValue="Efectivo" className="px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm">
+                        <option value="Transferencia">Transferencia</option>
+                        <option value="Efectivo">Efectivo</option>
+                        <option value="Mercado Pago">Mercado Pago</option>
+                        <option value="Retención">Retención</option>
+                        <option value="Tarjeta">Tarjeta</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {/* Monto 3 */}
+                {!selectedItem && (
+                  <div className="p-3 bg-slate-50 rounded-xl space-y-2">
+                    <p className="text-xs font-medium text-slate-500">Pago 3 (opcional)</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <input name="monto3" placeholder="Monto" className="px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm" onChange={(e) => e.target.value = formatInputMonto(e.target.value)} />
+                      <select name="metodo3" defaultValue="Retención" className="px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm">
+                        <option value="Transferencia">Transferencia</option>
+                        <option value="Efectivo">Efectivo</option>
+                        <option value="Mercado Pago">Mercado Pago</option>
+                        <option value="Retención">Retención</option>
+                        <option value="Tarjeta">Tarjeta</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex gap-3 pt-4">
                   <button type="submit" className="flex-1 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all">
-                    {selectedItem ? 'Guardar' : 'Registrar Cobro'}
+                    {selectedItem ? 'Guardar' : 'Registrar Cobro(s)'}
                   </button>
                 </div>
               </form>
