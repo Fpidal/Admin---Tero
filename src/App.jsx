@@ -3320,16 +3320,6 @@ function App() {
               >
                 Cta. Corriente
               </button>
-              <button
-                onClick={() => setSubTabIngresos('informes')}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                  subTabIngresos === 'informes'
-                    ? 'border-red-500 text-red-600'
-                    : 'border-transparent text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                Informes
-              </button>
             </div>
 
             {/* Subtab: Facturas de Venta */}
@@ -3469,13 +3459,22 @@ function App() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <p className="text-sm text-slate-500">{clientes.length} clientes registrados</p>
-                  <button
-                    onClick={() => { setSelectedItem(null); setShowModal('cliente'); }}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 text-white font-medium hover:from-purple-600 hover:to-purple-700 transition-all text-sm"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Nuevo Cliente
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowModal('informe-cliente')}
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 transition-all text-sm"
+                    >
+                      <Printer className="w-4 h-4" />
+                      Informe
+                    </button>
+                    <button
+                      onClick={() => { setSelectedItem(null); setShowModal('cliente'); }}
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 text-white font-medium hover:from-purple-600 hover:to-purple-700 transition-all text-sm"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Nuevo Cliente
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -3591,25 +3590,6 @@ function App() {
                       </tfoot>
                     </table>
                   </div>
-                </div>
-              </div>
-            )}
-
-            {/* Subtab: Informes */}
-            {subTabIngresos === 'informes' && (
-              <div className="space-y-4">
-                <div className="glass rounded-2xl p-6">
-                  <h3 className="text-lg font-semibold mb-4">Generar Informe de Cliente</h3>
-                  <p className="text-sm text-slate-500 mb-6">
-                    Seleccione un cliente y el rango de fechas para generar un PDF con el detalle de facturas, cobros y saldo.
-                  </p>
-                  <button
-                    onClick={() => setShowModal('informe-cliente')}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-medium hover:from-red-600 hover:to-red-700 transition-all"
-                  >
-                    <Download className="w-5 h-5" />
-                    Generar PDF de Cliente
-                  </button>
                 </div>
               </div>
             )}
