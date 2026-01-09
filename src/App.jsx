@@ -58,6 +58,12 @@ const CONDICIONES_PAGO = [
   { value: 60, label: '60 días' }
 ];
 
+const FORMAS_PAGO_PROVEEDOR = [
+  { value: 'efectivo', label: 'Efectivo' },
+  { value: 'transferencia', label: 'Transferencia' },
+  { value: 'echeq', label: 'E-Cheq' }
+];
+
 // Modal Informe Proveedor
 function ModalInformeProveedor({ onClose, proveedores, facturas, pagos, notasCredito }) {
   const [proveedorId, setProveedorId] = useState('');
@@ -384,6 +390,7 @@ function ModalProveedor({ proveedor, onClose, onSave, onDelete }) {
     celular: proveedor?.celular || '',
     categoria: proveedor?.categoria || '',
     condicion_pago: proveedor?.condicion_pago ?? 0,
+    forma_pago: proveedor?.forma_pago || '',
     situacion_iva: proveedor?.situacion_iva ?? 21,
     cuit: proveedor?.cuit || '',
     telefono: proveedor?.telefono || '',
@@ -452,11 +459,20 @@ function ModalProveedor({ proveedor, onClose, onSave, onDelete }) {
               </select>
             </div>
           </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">Condición Pago</label>
-            <select value={form.condicion_pago} onChange={e => setForm({...form, condicion_pago: parseInt(e.target.value)})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
-              {CONDICIONES_PAGO.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-            </select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm text-slate-400 mb-1">Condición Pago</label>
+              <select value={form.condicion_pago} onChange={e => setForm({...form, condicion_pago: parseInt(e.target.value)})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
+                {CONDICIONES_PAGO.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-slate-400 mb-1">Forma de Pago</label>
+              <select value={form.forma_pago} onChange={e => setForm({...form, forma_pago: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
+                <option value="">Sin especificar</option>
+                {FORMAS_PAGO_PROVEEDOR.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+              </select>
+            </div>
           </div>
           <div>
             <label className="block text-sm text-slate-400 mb-1">CUIT</label>
@@ -3042,7 +3058,8 @@ function App() {
                 .filter(p => filtroCategoriaProveedor === 'todos' || p.categoria === filtroCategoriaProveedor)
                 .map(p => {
                   const categoriaLabel = CATEGORIAS_PROVEEDOR.find(c => c.value === p.categoria)?.label || 'Sin categoría';
-                  const condicionLabel = CONDICIONES_PAGO.find(c => c.value === p.condicion_pago)?.label || 'Contado';
+                  const condicionLabel = CONDICIONES_PAGO.find(c => c.value == p.condicion_pago)?.label || 'Contado';
+                  const formaLabel = FORMAS_PAGO_PROVEEDOR.find(f => f.value === p.forma_pago)?.label || '';
                   return (
                     <div key={p.id} className="glass rounded-xl p-3 glow hover:border-blue-500/30 border border-transparent transition-all cursor-pointer" onClick={() => { setSelectedItem(p); setShowModal('proveedor'); }}>
                       <div className="flex items-start justify-between mb-2">
@@ -3052,7 +3069,10 @@ function App() {
                       <h3 className="font-semibold text-sm mb-1 truncate">{p.nombre}</h3>
                       {p.contacto && <p className="text-xs text-blue-600 truncate">{p.contacto}</p>}
                       {p.celular && <p className="text-xs text-slate-500 truncate">{p.celular}</p>}
-                      {condicionLabel !== 'Contado' && <p className="text-xs text-slate-400 mt-1">{condicionLabel}</p>}
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        <span className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">{condicionLabel}</span>
+                        {formaLabel && <span className="text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">{formaLabel}</span>}
+                      </div>
                     </div>
                   );
                 })}
