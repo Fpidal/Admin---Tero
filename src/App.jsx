@@ -692,7 +692,7 @@ function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, on
             <div>
               <label className="block text-xs text-slate-400 mb-0.5">Neto</label>
               <div className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-sm text-right font-semibold text-emerald-600">
-                {formatInputMonto(form.monto)}
+                {formatInputMonto(form.monto) || '0'}
               </div>
             </div>
           </div>
