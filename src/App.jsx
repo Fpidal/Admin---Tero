@@ -1231,8 +1231,24 @@ function ModalEditPago({ pago, onClose, onSave, onDelete }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+
+    const nuevoMonto = parseFloat(form.monto);
+    const montoOriginal = parseFloat(pago.monto);
+
+    // Si el monto cambió, pedir motivo
+    let motivoModificacion = null;
+    if (nuevoMonto !== montoOriginal) {
+      motivoModificacion = prompt(`El monto cambió de $${montoOriginal.toLocaleString('es-AR')} a $${nuevoMonto.toLocaleString('es-AR')}.\n\nIngresá el motivo de la modificación:`);
+      if (!motivoModificacion || !motivoModificacion.trim()) {
+        if (motivoModificacion !== null) {
+          alert('Debés ingresar un motivo para modificar el monto');
+        }
+        return;
+      }
+    }
+
     setSaving(true);
-    const result = await onSave(pago.id, { ...form, monto: parseFloat(form.monto) });
+    const result = await onSave(pago.id, { ...form, monto: nuevoMonto }, { montoAnterior: montoOriginal, motivo: motivoModificacion });
     setSaving(false);
     if (result?.error) {
       setError(result.error.message || 'Error al guardar');
@@ -1459,6 +1475,7 @@ function App() {
   const [pagos, setPagos] = useState([]);
   const [notasCredito, setNotasCredito] = useState([]);
   const [anulaciones, setAnulaciones] = useState([]);
+  const [modificaciones, setModificaciones] = useState([]);
   const [ordenesPago, setOrdenesPago] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -1580,6 +1597,22 @@ function App() {
     }
   };
 
+  const fetchModificaciones = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('modificaciones')
+        .select('*')
+        .order('fecha_modificacion', { ascending: false });
+      if (!error && data) {
+        setModificaciones(data);
+      } else {
+        setModificaciones([]);
+      }
+    } catch (e) {
+      setModificaciones([]);
+    }
+  };
+
   const fetchOrdenesPago = async () => {
     try {
       const { data, error } = await supabase
@@ -1598,7 +1631,7 @@ function App() {
 
   const fetchAllData = async () => {
     setLoading(true);
-    await Promise.all([fetchProveedores(), fetchFacturas(), fetchEmpleados(), fetchPagos(), fetchNotasCredito(), fetchAnulaciones(), fetchOrdenesPago()]);
+    await Promise.all([fetchProveedores(), fetchFacturas(), fetchEmpleados(), fetchPagos(), fetchNotasCredito(), fetchAnulaciones(), fetchModificaciones(), fetchOrdenesPago()]);
     setLoading(false);
   };
 
@@ -1839,8 +1872,24 @@ function App() {
     return { error };
   };
 
-  const updatePago = async (id, pago) => {
-    const { error } = await supabase.from('pagos').update(pago).eq('id', id);
+  const updatePago = async (id, pagoData, modificacion = null) => {
+    // Si hay modificación de monto, guardar en la tabla modificaciones
+    if (modificacion?.motivo) {
+      const pagoOriginal = pagos.find(p => p.id === id);
+      await supabase.from('modificaciones').insert([{
+        tipo: 'pago',
+        referencia_id: id,
+        datos_originales: pagoOriginal,
+        campo_modificado: 'monto',
+        valor_anterior: modificacion.montoAnterior,
+        valor_nuevo: pagoData.monto,
+        motivo: modificacion.motivo,
+        fecha_modificacion: new Date().toISOString()
+      }]);
+      await fetchModificaciones();
+    }
+
+    const { error } = await supabase.from('pagos').update(pagoData).eq('id', id);
     if (!error) {
       await fetchPagos();
       setShowModal(null);
@@ -3599,6 +3648,7 @@ function App() {
               {[
                 { id: 'saldo-proveedor', label: 'Saldo por Proveedor', icon: Building2 },
                 { id: 'anulaciones', label: 'Anulaciones', icon: AlertCircle },
+                { id: 'modificaciones', label: 'Modificaciones', icon: Edit3 },
                 { id: 'compras-proveedor', label: 'Compras por Proveedor', icon: Building2 },
                 { id: 'compras-rubro', label: 'Compras por Rubro', icon: Truck },
                 { id: 'pagos-mes', label: 'Pagos del Mes', icon: DollarSign },
@@ -3763,6 +3813,62 @@ function App() {
                               </td>
                               <td className="px-4 py-3 text-right font-semibold mono text-red-500">{formatCurrency(a.datos_originales?.monto || 0)}</td>
                               <td className="px-4 py-3 text-xs text-slate-500">{a.motivo}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* INFORME: Modificaciones */}
+            {informeActivo === 'modificaciones' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="glass rounded-xl p-4 border-l-4 border-purple-400">
+                    <p className="text-xs text-slate-500">Total Modificaciones</p>
+                    <p className="text-2xl font-bold text-purple-500">
+                      {modificaciones.filter(m => (filtroAnioInforme === 'todos' || new Date(m.fecha_modificacion).getFullYear() === parseInt(filtroAnioInforme)) && (filtroMesInforme === 'todos' || new Date(m.fecha_modificacion).getMonth() === parseInt(filtroMesInforme))).length}
+                    </p>
+                  </div>
+                  <div className="glass rounded-xl p-4 border-l-4 border-blue-400">
+                    <p className="text-xs text-slate-500">Diferencia Neta</p>
+                    <p className="text-2xl font-bold text-blue-500 mono">
+                      {formatCurrency(modificaciones.filter(m => (filtroAnioInforme === 'todos' || new Date(m.fecha_modificacion).getFullYear() === parseInt(filtroAnioInforme)) && (filtroMesInforme === 'todos' || new Date(m.fecha_modificacion).getMonth() === parseInt(filtroMesInforme))).reduce((sum, m) => sum + ((parseFloat(m.valor_nuevo) || 0) - (parseFloat(m.valor_anterior) || 0)), 0))}
+                    </p>
+                  </div>
+                </div>
+                <div className="glass rounded-2xl glow overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left text-slate-400 text-xs border-b border-slate-200 bg-slate-50">
+                          <th className="px-4 py-3 font-medium">Fecha</th>
+                          <th className="px-4 py-3 font-medium">Tipo</th>
+                          <th className="px-4 py-3 font-medium">Detalle</th>
+                          <th className="px-4 py-3 font-medium text-right">Anterior</th>
+                          <th className="px-4 py-3 font-medium text-right">Nuevo</th>
+                          <th className="px-4 py-3 font-medium">Motivo</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {modificaciones.filter(m => (filtroAnioInforme === 'todos' || new Date(m.fecha_modificacion).getFullYear() === parseInt(filtroAnioInforme)) && (filtroMesInforme === 'todos' || new Date(m.fecha_modificacion).getMonth() === parseInt(filtroMesInforme))).length === 0 ? (
+                          <tr><td colSpan="6" className="px-4 py-8 text-center text-slate-400 text-sm">No hay modificaciones</td></tr>
+                        ) : (
+                          modificaciones.filter(m => (filtroAnioInforme === 'todos' || new Date(m.fecha_modificacion).getFullYear() === parseInt(filtroAnioInforme)) && (filtroMesInforme === 'todos' || new Date(m.fecha_modificacion).getMonth() === parseInt(filtroMesInforme))).map(m => (
+                            <tr key={m.id} className="border-b border-slate-100 hover:bg-slate-50">
+                              <td className="px-4 py-3 text-xs">{new Date(m.fecha_modificacion).toLocaleDateString('es-AR')}</td>
+                              <td className="px-4 py-3">
+                                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-500/15 text-purple-700">
+                                  {m.tipo === 'pago' ? 'Pago' : m.tipo}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-xs">{m.datos_originales?.descripcion || '-'}</td>
+                              <td className="px-4 py-3 text-right font-semibold mono text-slate-500">{formatCurrency(m.valor_anterior || 0)}</td>
+                              <td className="px-4 py-3 text-right font-semibold mono text-purple-600">{formatCurrency(m.valor_nuevo || 0)}</td>
+                              <td className="px-4 py-3 text-xs text-slate-500">{m.motivo}</td>
                             </tr>
                           ))
                         )}
