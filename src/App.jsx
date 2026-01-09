@@ -1323,6 +1323,7 @@ function App() {
   const [pagos, setPagos] = useState([]);
   const [notasCredito, setNotasCredito] = useState([]);
   const [anulaciones, setAnulaciones] = useState([]);
+  const [ordenesPago, setOrdenesPago] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Modales
@@ -1426,9 +1427,25 @@ function App() {
     }
   };
 
+  const fetchOrdenesPago = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('ordenes_pago')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!error && data) {
+        setOrdenesPago(data);
+      } else {
+        setOrdenesPago([]);
+      }
+    } catch (e) {
+      setOrdenesPago([]);
+    }
+  };
+
   const fetchAllData = async () => {
     setLoading(true);
-    await Promise.all([fetchProveedores(), fetchFacturas(), fetchEmpleados(), fetchPagos(), fetchNotasCredito(), fetchAnulaciones()]);
+    await Promise.all([fetchProveedores(), fetchFacturas(), fetchEmpleados(), fetchPagos(), fetchNotasCredito(), fetchAnulaciones(), fetchOrdenesPago()]);
     setLoading(false);
   };
 
@@ -1608,12 +1625,30 @@ function App() {
     // Quitar campos que no existen en la tabla
     const { factura_id, concepto_empleado, ...pagoData } = pago;
     console.log('Creando pago:', pagoData);
+
+    // Si es pago a proveedor, agregarlo a una orden pendiente
+    if (pagoData.tipo === 'factura') {
+      // Buscar orden pendiente existente o crear una nueva
+      let ordenPendiente = ordenesPago.find(o => o.estado === 'pendiente');
+      if (!ordenPendiente) {
+        ordenPendiente = await createOrdenPago();
+      }
+      if (ordenPendiente) {
+        pagoData.orden_pago_id = ordenPendiente.id;
+        pagoData.estado_pago = 'pendiente';
+      }
+    } else {
+      // Pagos de empleados y otros se confirman directamente
+      pagoData.estado_pago = 'confirmado';
+    }
+
     const { data, error } = await supabase.from('pagos').insert([pagoData]).select();
     console.log('Respuesta Supabase pagos:', { data, error });
     if (error) {
       console.error('Error al crear pago:', JSON.stringify(error, null, 2));
     } else {
       await fetchPagos();
+      await fetchOrdenesPago();
       setShowModal(null);
       setSelectedItem(null);
     }
@@ -1654,6 +1689,76 @@ function App() {
       await fetchAnulaciones();
       setShowModal(null);
       setSelectedItem(null);
+    }
+  };
+
+  // CRUD Ordenes de Pago
+  const createOrdenPago = async () => {
+    const { data, error } = await supabase
+      .from('ordenes_pago')
+      .insert([{ fecha: new Date().toISOString().split('T')[0], estado: 'pendiente' }])
+      .select();
+    if (!error && data) {
+      await fetchOrdenesPago();
+      return data[0];
+    }
+    return null;
+  };
+
+  const confirmarOrdenPago = async (ordenId) => {
+    // Marcar todos los pagos de la orden como confirmados
+    const { error: errorPagos } = await supabase
+      .from('pagos')
+      .update({ estado_pago: 'confirmado' })
+      .eq('orden_pago_id', ordenId);
+
+    if (errorPagos) {
+      alert('Error al confirmar los pagos');
+      return;
+    }
+
+    // Marcar la orden como confirmada
+    const { error } = await supabase
+      .from('ordenes_pago')
+      .update({ estado: 'confirmada' })
+      .eq('id', ordenId);
+
+    if (!error) {
+      await fetchOrdenesPago();
+      await fetchPagos();
+    }
+  };
+
+  const anularPagoDeOrden = async (pagoId) => {
+    // Eliminar el pago pendiente de la orden (no va a anulaciones porque nunca se confirmó)
+    const { error } = await supabase.from('pagos').delete().eq('id', pagoId);
+    if (!error) {
+      await fetchPagos();
+    }
+  };
+
+  const anularOrdenPago = async (ordenId) => {
+    // Eliminar todos los pagos pendientes de la orden
+    const { error: errorPagos } = await supabase
+      .from('pagos')
+      .delete()
+      .eq('orden_pago_id', ordenId)
+      .eq('estado_pago', 'pendiente');
+
+    if (errorPagos) {
+      alert('Error al anular los pagos de la orden');
+      return;
+    }
+
+    // Marcar la orden como anulada
+    const { error } = await supabase
+      .from('ordenes_pago')
+      .update({ estado: 'anulada' })
+      .eq('id', ordenId);
+
+    if (!error) {
+      await fetchOrdenesPago();
+      await fetchPagos();
     }
   };
 
@@ -1708,16 +1813,18 @@ function App() {
     const totalPendiente = facturasPendientes.reduce((sum, f) => sum + f.monto, 0);
     const totalVencido = facturasVencidas.reduce((sum, f) => sum + f.monto, 0);
 
-    // Sueldos pagados este mes
+    // Sueldos pagados este mes (solo confirmados)
     const pagosSueldosMes = pagos.filter(p => {
-      if (p.tipo !== 'sueldo') return false;
+      if (p.tipo !== 'sueldo' || p.estado_pago !== 'confirmado') return false;
       const fechaPago = new Date(p.fecha);
       return fechaPago.getMonth() === mesActual && fechaPago.getFullYear() === anioActual;
     });
     const totalSueldosPagados = pagosSueldosMes.reduce((sum, p) => sum + p.monto, 0);
 
+    // Solo contar pagos confirmados
     const totalPagadoMes = pagos
       .filter(p => {
+        if (p.estado_pago !== 'confirmado') return false;
         const fechaPago = new Date(p.fecha);
         return fechaPago.getMonth() === mesActual && fechaPago.getFullYear() === anioActual;
       })
@@ -1785,7 +1892,7 @@ function App() {
   const pagosPorEmpleado = useMemo(() => {
     const pagosMap = {};
     pagos
-      .filter(p => p.tipo === 'sueldo')
+      .filter(p => p.tipo === 'sueldo' && p.estado_pago === 'confirmado')
       .filter(p => {
         if (filtroMesEmpleado === 'todos') return true;
         const fechaPago = new Date(p.fecha);
@@ -1810,7 +1917,8 @@ function App() {
   // Calcular pagos por factura (pagos normales)
   const pagosPorFactura = useMemo(() => {
     const pagosMap = {};
-    pagos.filter(p => p.tipo === 'factura').forEach(p => {
+    // Solo contar pagos confirmados
+    pagos.filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado').forEach(p => {
       // Buscar en la descripción el número de factura para asociar el pago
       facturas.forEach(f => {
         if (p.descripcion && p.descripcion.includes(f.numero)) {
@@ -1830,8 +1938,9 @@ function App() {
     return ncMap;
   }, [notasCredito]);
 
-  // Combinar pagos y NC aplicadas para mostrar en sección Pagos
+  // Combinar pagos confirmados y NC aplicadas para mostrar en sección Pagos
   const pagosYNC = useMemo(() => {
+    const pagosConfirmados = pagos.filter(p => p.estado_pago === 'confirmado');
     const ncAplicadas = notasCredito
       .filter(nc => nc.factura_id) // Solo NC aplicadas a facturas
       .map(nc => {
@@ -1846,7 +1955,7 @@ function App() {
           monto: nc.monto
         };
       });
-    return [...pagos, ...ncAplicadas].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+    return [...pagosConfirmados, ...ncAplicadas].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
   }, [pagos, notasCredito, facturas, proveedores]);
 
   // Facturas filtradas con saldo calculado (incluye pagos + NC)
@@ -1931,6 +2040,7 @@ function App() {
             { id: 'facturas', label: 'Facturas', short: 'Fact', icon: FileText },
             { id: 'proveedores', label: 'Proveedores', short: 'Prov', icon: Building2 },
             { id: 'pago-proveedores', label: 'Pago Prov.', short: 'PagProv', icon: DollarSign },
+            { id: 'ordenes-pago', label: 'Órdenes', short: 'Ord', icon: CheckCircle },
             { id: 'notas-credito', label: 'NC', short: 'NC', icon: FileText },
             { id: 'empleados', label: 'Empleados', short: 'Empl', icon: Users },
             { id: 'pago-empleados', label: 'Pago Empl.', short: 'PagEmpl', icon: DollarSign },
@@ -2479,7 +2589,7 @@ function App() {
               <div className="flex items-center gap-3">
                 <div className="text-right hidden sm:block">
                   <p className="text-xs text-slate-500">Total pagado</p>
-                  <p className="text-lg font-bold text-emerald-500 mono">{formatCurrency(pagos.filter(p => p.tipo === 'factura').reduce((sum, p) => sum + p.monto, 0))}</p>
+                  <p className="text-lg font-bold text-emerald-500 mono">{formatCurrency(pagos.filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado').reduce((sum, p) => sum + p.monto, 0))}</p>
                 </div>
                 <button
                   onClick={() => { setSelectedItem({ tipo: 'factura' }); setShowModal('pago'); }}
@@ -2716,7 +2826,7 @@ function App() {
                 <p className="text-xs text-slate-500">Total Proveedores</p>
                 <p className="text-lg font-bold text-blue-500 mono">
                   {formatCurrency(pagos
-                    .filter(p => p.tipo === 'factura')
+                    .filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado')
                     .filter(p => filtroMesPago === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesPago))
                     .filter(p => filtroMetodoPago === 'todos' || p.metodo === filtroMetodoPago)
                     .reduce((sum, p) => sum + p.monto, 0))}
@@ -2726,7 +2836,7 @@ function App() {
                 <p className="text-xs text-slate-500">Total Empleados</p>
                 <p className="text-lg font-bold text-cyan-500 mono">
                   {formatCurrency(pagos
-                    .filter(p => p.tipo === 'sueldo')
+                    .filter(p => p.tipo === 'sueldo' && p.estado_pago === 'confirmado')
                     .filter(p => filtroMesPago === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesPago))
                     .filter(p => filtroMetodoPago === 'todos' || p.metodo === filtroMetodoPago)
                     .reduce((sum, p) => sum + p.monto, 0))}
@@ -2736,6 +2846,7 @@ function App() {
                 <p className="text-xs text-slate-500">Total General</p>
                 <p className="text-lg font-bold text-emerald-500 mono">
                   {formatCurrency(pagos
+                    .filter(p => p.estado_pago === 'confirmado')
                     .filter(p => filtroTipoPago === 'todos' || p.tipo === filtroTipoPago)
                     .filter(p => filtroMesPago === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesPago))
                     .filter(p => filtroMetodoPago === 'todos' || p.metodo === filtroMetodoPago)
@@ -2790,6 +2901,140 @@ function App() {
                 </table>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ORDENES DE PAGO */}
+        {activeTab === 'ordenes-pago' && (
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
+              <h2 className="text-lg font-bold">Órdenes de Pago a Proveedores</h2>
+            </div>
+
+            {/* Órdenes pendientes */}
+            {ordenesPago.filter(o => o.estado === 'pendiente').length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-amber-600 flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  Órdenes Pendientes de Confirmación
+                </h3>
+                {ordenesPago.filter(o => o.estado === 'pendiente').map(orden => {
+                  const pagosOrden = pagos.filter(p => p.orden_pago_id === orden.id && p.estado_pago === 'pendiente');
+                  const totalOrden = pagosOrden.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
+
+                  return (
+                    <div key={orden.id} className="glass rounded-xl p-4 border-2 border-amber-200">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <p className="font-semibold">Orden #{orden.id}</p>
+                          <p className="text-xs text-slate-500">{formatDate(orden.fecha)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-amber-600 mono">{formatCurrency(totalOrden)}</p>
+                          <p className="text-xs text-slate-500">{pagosOrden.length} pago(s)</p>
+                        </div>
+                      </div>
+
+                      {/* Lista de pagos en la orden */}
+                      <div className="space-y-2 mb-4">
+                        {pagosOrden.map(p => (
+                          <div key={p.id} className="flex justify-between items-center bg-white/50 rounded-lg p-2 text-sm">
+                            <div className="flex-1">
+                              <p className="font-medium text-xs">{p.descripcion}</p>
+                              <p className="text-xs text-slate-400">{p.metodo}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold mono text-sm">{formatCurrency(p.monto)}</span>
+                              <button
+                                onClick={() => {
+                                  if (confirm('¿Quitar este pago de la orden?')) {
+                                    anularPagoDeOrden(p.id);
+                                  }
+                                }}
+                                className="p-1 text-red-500 hover:bg-red-50 rounded"
+                                title="Quitar de la orden"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Botones de acción */}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            if (confirm('¿Confirmar esta orden de pago? Los pagos serán aplicados.')) {
+                              confirmarOrdenPago(orden.id);
+                            }
+                          }}
+                          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all text-sm"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          Confirmar Orden
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm('¿Anular toda la orden? Se eliminarán todos los pagos pendientes.')) {
+                              anularOrdenPago(orden.id);
+                            }
+                          }}
+                          className="px-4 py-2 rounded-xl border border-red-200 text-red-500 hover:bg-red-50 transition-all text-sm"
+                        >
+                          Anular
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Mensaje si no hay órdenes pendientes */}
+            {ordenesPago.filter(o => o.estado === 'pendiente').length === 0 && (
+              <div className="glass rounded-xl p-8 text-center">
+                <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
+                <p className="text-slate-500">No hay órdenes pendientes de confirmación</p>
+                <p className="text-xs text-slate-400 mt-1">Los pagos a proveedores aparecerán aquí para su aprobación</p>
+              </div>
+            )}
+
+            {/* Historial de órdenes confirmadas */}
+            {ordenesPago.filter(o => o.estado === 'confirmada').length > 0 && (
+              <div className="space-y-3 mt-6">
+                <h3 className="text-sm font-semibold text-emerald-600 flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4" />
+                  Órdenes Confirmadas
+                </h3>
+                <div className="glass rounded-xl overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-slate-400 text-xs border-b border-slate-200">
+                        <th className="px-4 py-3 font-medium">Orden</th>
+                        <th className="px-4 py-3 font-medium">Fecha</th>
+                        <th className="px-4 py-3 font-medium text-center">Pagos</th>
+                        <th className="px-4 py-3 font-medium text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ordenesPago.filter(o => o.estado === 'confirmada').slice(0, 10).map(orden => {
+                        const pagosOrden = pagos.filter(p => p.orden_pago_id === orden.id);
+                        const totalOrden = pagosOrden.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
+                        return (
+                          <tr key={orden.id} className="border-b border-slate-100 hover:bg-slate-50">
+                            <td className="px-4 py-3 font-medium">#{orden.id}</td>
+                            <td className="px-4 py-3 text-slate-500">{formatDate(orden.fecha)}</td>
+                            <td className="px-4 py-3 text-center">{pagosOrden.length}</td>
+                            <td className="px-4 py-3 text-right font-semibold mono text-emerald-600">{formatCurrency(totalOrden)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
