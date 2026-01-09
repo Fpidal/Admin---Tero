@@ -15,6 +15,20 @@ const formatCurrency = (value) => {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(value);
 };
 
+// Formatear número con separador de miles para inputs
+const formatInputMonto = (value) => {
+  if (!value && value !== 0) return '';
+  const num = typeof value === 'string' ? value.replace(/\D/g, '') : value.toString();
+  if (!num) return '';
+  return new Intl.NumberFormat('es-AR').format(parseInt(num));
+};
+
+// Parsear monto formateado a número
+const parseInputMonto = (value) => {
+  if (!value) return '';
+  return value.replace(/\D/g, '');
+};
+
 const formatDate = (dateStr) => {
   if (!dateStr) return '-';
   const date = new Date(dateStr + 'T12:00:00');
@@ -587,7 +601,14 @@ function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, on
             </div>
             <div>
               <label className="block text-sm text-slate-400 mb-1">Monto *</label>
-              <input type="number" required min="0" step="0.01" value={form.monto} onChange={e => setForm({...form, monto: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
+              <input
+                type="text"
+                required
+                value={formatInputMonto(form.monto)}
+                onChange={e => setForm({...form, monto: parseInputMonto(e.target.value)})}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm text-right"
+                placeholder="0"
+              />
             </div>
           </div>
           <div>
@@ -691,7 +712,7 @@ function ModalEmpleado({ empleado, onClose, onSave, onDelete }) {
           </div>
           <div>
             <label className="block text-sm text-slate-400 mb-1">Sueldo *</label>
-            <input type="number" required min="0" step="0.01" value={form.sueldo} onChange={e => setForm({...form, sueldo: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
+            <input type="text" required value={formatInputMonto(form.sueldo)} onChange={e => setForm({...form, sueldo: parseInputMonto(e.target.value)})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-right" placeholder="0" />
           </div>
           <div>
             <label className="block text-sm text-slate-400 mb-1">Fecha de Ingreso</label>
@@ -1014,15 +1035,13 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
               <div>
                 <label className="block text-sm text-slate-400 mb-1">Monto * {tipoPago === 'parcial' && facturaSeleccionada && <span className="text-amber-600">(Máx: {formatCurrency(facturaSeleccionada.saldo || facturaSeleccionada.monto)})</span>}</label>
                 <input
-                  type="number"
+                  type="text"
                   required
-                  min="0"
-                  max={tipoPago === 'parcial' && facturaSeleccionada ? (facturaSeleccionada.saldo || facturaSeleccionada.monto) : undefined}
-                  step="0.01"
-                  value={form.monto}
-                  onChange={e => setForm({...form, monto: e.target.value})}
+                  value={formatInputMonto(form.monto)}
+                  onChange={e => setForm({...form, monto: parseInputMonto(e.target.value)})}
                   readOnly={tipoPago === 'total'}
-                  className={`w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 ${tipoPago === 'total' ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+                  className={`w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-right ${tipoPago === 'total' ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+                  placeholder="0"
                 />
               </div>
               <div>
@@ -1135,12 +1154,11 @@ function ModalEditPago({ pago, onClose, onSave, onDelete }) {
           <div>
             <label className="block text-sm text-slate-500 mb-1">Monto</label>
             <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.monto}
-              onChange={e => setForm({...form, monto: e.target.value})}
-              className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50"
+              type="text"
+              value={formatInputMonto(form.monto)}
+              onChange={e => setForm({...form, monto: parseInputMonto(e.target.value)})}
+              className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-right"
+              placeholder="0"
             />
           </div>
 
@@ -1254,7 +1272,14 @@ function ModalNotaCredito({ nota, proveedores, facturas, onClose, onSave, onDele
             </div>
             <div>
               <label className="block text-sm text-slate-400 mb-1">Monto *</label>
-              <input type="number" required min="0" step="0.01" value={form.monto} onChange={e => setForm({...form, monto: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
+              <input
+                type="text"
+                required
+                value={formatInputMonto(form.monto)}
+                onChange={e => setForm({...form, monto: parseInputMonto(e.target.value)})}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm text-right"
+                placeholder="0"
+              />
             </div>
           </div>
           <div>
