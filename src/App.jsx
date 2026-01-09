@@ -4,7 +4,7 @@ import {
   Calendar, Plus, X, Search, ChevronDown, ChevronUp,
   Building2, CreditCard, Clock, CheckCircle, AlertCircle,
   Truck, User, Edit3, Trash2, Filter, Download,
-  TrendingUp, TrendingDown, Loader2, LogOut, Eye, Printer
+  TrendingUp, TrendingDown, Loader2, LogOut, Eye, Printer, RefreshCw
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { supabase } from './supabase';
@@ -370,6 +370,13 @@ const formatCurrencyPDF = (value) => {
 };
 
 // Modal Proveedor
+// Situaciones de IVA
+const SITUACIONES_IVA = [
+  { value: 21, label: 'Responsable Inscripto (21%)' },
+  { value: 10.5, label: 'Responsable Inscripto (10.5%)' },
+  { value: 0, label: 'Monotributista / Exento (Sin IVA)' }
+];
+
 function ModalProveedor({ proveedor, onClose, onSave, onDelete }) {
   const [form, setForm] = useState({
     nombre: proveedor?.nombre || '',
@@ -377,6 +384,7 @@ function ModalProveedor({ proveedor, onClose, onSave, onDelete }) {
     celular: proveedor?.celular || '',
     categoria: proveedor?.categoria || '',
     condicion_pago: proveedor?.condicion_pago ?? 0,
+    situacion_iva: proveedor?.situacion_iva ?? 21,
     cuit: proveedor?.cuit || '',
     telefono: proveedor?.telefono || '',
     email: proveedor?.email || '',
@@ -438,11 +446,17 @@ function ModalProveedor({ proveedor, onClose, onSave, onDelete }) {
               </select>
             </div>
             <div>
-              <label className="block text-sm text-slate-400 mb-1">Condición Pago</label>
-              <select value={form.condicion_pago} onChange={e => setForm({...form, condicion_pago: parseInt(e.target.value)})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
-                {CONDICIONES_PAGO.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+              <label className="block text-sm text-slate-400 mb-1">Situación IVA</label>
+              <select value={form.situacion_iva} onChange={e => setForm({...form, situacion_iva: parseFloat(e.target.value)})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
+                {SITUACIONES_IVA.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
             </div>
+          </div>
+          <div>
+            <label className="block text-sm text-slate-400 mb-1">Condición Pago</label>
+            <select value={form.condicion_pago} onChange={e => setForm({...form, condicion_pago: parseInt(e.target.value)})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
+              {CONDICIONES_PAGO.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+            </select>
           </div>
           <div>
             <label className="block text-sm text-slate-400 mb-1">CUIT</label>
@@ -492,11 +506,20 @@ function ModalProveedor({ proveedor, onClose, onSave, onDelete }) {
 }
 
 // Modal Factura
-function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, onDelete }) {
+function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, onDelete, onRegistrarPago }) {
+  // Calcular bruto desde neto si es edición (bruto = neto / (1 + iva%))
+  const calcularBrutoDesdeNeto = (neto, ivaPct) => {
+    if (!neto || ivaPct === null) return neto;
+    return neto / (1 + ivaPct / 100);
+  };
+
   const [form, setForm] = useState({
     proveedor_id: factura?.proveedor_id || '',
     numero: factura?.numero || '',
-    monto: factura?.monto || '',
+    bruto: factura?.bruto || (factura?.monto ? calcularBrutoDesdeNeto(factura.monto, factura.iva_porcentaje || 21) : ''),
+    iva_porcentaje: factura?.iva_porcentaje ?? 21,
+    otras_retenciones: factura?.otras_retenciones || 0,
+    monto: factura?.monto || '', // monto = neto (total)
     fecha: factura?.fecha || new Date().toISOString().split('T')[0],
     dias_vencimiento: factura ? null : 0,
     vencimiento: factura?.vencimiento || '',
@@ -505,6 +528,31 @@ function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, on
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+
+  // Calcular neto (total) desde bruto + IVA + otras retenciones
+  const calcularNeto = (bruto, ivaPct, retenciones) => {
+    const brutoNum = parseFloat(bruto) || 0;
+    const iva = brutoNum * (ivaPct / 100);
+    const ret = parseFloat(retenciones) || 0;
+    return Math.round(brutoNum + iva + ret);
+  };
+
+  const handleBrutoChange = (valor) => {
+    const brutoNum = parseInputMonto(valor);
+    const neto = calcularNeto(brutoNum, form.iva_porcentaje, form.otras_retenciones);
+    setForm({ ...form, bruto: brutoNum, monto: neto });
+  };
+
+  const handleIvaChange = (ivaPct) => {
+    const neto = calcularNeto(form.bruto, ivaPct, form.otras_retenciones);
+    setForm({ ...form, iva_porcentaje: ivaPct, monto: neto });
+  };
+
+  const handleRetencionesChange = (valor) => {
+    const ret = parseInputMonto(valor);
+    const neto = calcularNeto(form.bruto, form.iva_porcentaje, ret);
+    setForm({ ...form, otras_retenciones: ret, monto: neto });
+  };
 
   // Validar si ya existe una factura con el mismo número para el mismo proveedor
   const facturaExistente = () => {
@@ -538,11 +586,15 @@ function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, on
   const handleProveedorChange = (proveedorId) => {
     const proveedor = proveedores.find(p => p.id === parseInt(proveedorId));
     const dias = proveedor?.condicion_pago || 0;
+    const ivaPct = proveedor?.situacion_iva ?? 21;
     const vencimiento = calcularVencimiento(form.fecha, dias);
+    const neto = calcularNeto(form.bruto, ivaPct, form.otras_retenciones);
     setForm({
       ...form,
       proveedor_id: parseInt(proveedorId),
       dias_vencimiento: dias,
+      iva_porcentaje: ivaPct,
+      monto: neto,
       vencimiento: vencimiento
     });
   };
@@ -576,13 +628,20 @@ function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, on
     }
 
     setSaving(true);
-    // Quitar dias_vencimiento del form antes de guardar
-    const { dias_vencimiento, ...dataToSave } = form;
+    // Quitar dias_vencimiento y estado del form antes de guardar
+    // El estado se calcula automáticamente según los pagos
+    const { dias_vencimiento, estado, ...dataToSave } = form;
     // Si es nueva factura, siempre pendiente
     if (!factura) {
       dataToSave.estado = 'pendiente';
     }
-    const result = await onSave({ ...dataToSave, monto: parseFloat(form.monto) });
+    const result = await onSave({
+      ...dataToSave,
+      bruto: parseFloat(form.bruto) || 0,
+      iva_porcentaje: parseFloat(form.iva_porcentaje) || 0,
+      otras_retenciones: parseFloat(form.otras_retenciones) || 0,
+      monto: parseFloat(form.monto) || 0
+    });
     setSaving(false);
     if (result?.error) {
       setError(result.error.message || 'Error al guardar. Verificá los permisos de la base de datos.');
@@ -604,24 +663,55 @@ function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, on
               {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
             </select>
           </div>
+          <div>
+            <label className="block text-sm text-slate-400 mb-1">Número Factura *</label>
+            <input type="text" required value={form.numero} onChange={e => setForm({...form, numero: e.target.value})} className={`w-full px-3 py-2 rounded-xl border bg-white focus:outline-none text-sm ${facturaExistente() ? 'border-red-400 focus:border-red-500' : 'border-slate-200 focus:border-blue-500/50'}`} placeholder="A-0001-00000001" />
+            {facturaExistente() && (
+              <p className="text-xs text-red-500 mt-1">Ya existe esta factura para este proveedor</p>
+            )}
+          </div>
+          {/* Bruto + IVA + Retenciones = Neto */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm text-slate-400 mb-1">Número Factura *</label>
-              <input type="text" required value={form.numero} onChange={e => setForm({...form, numero: e.target.value})} className={`w-full px-3 py-2 rounded-xl border bg-white focus:outline-none text-sm ${facturaExistente() ? 'border-red-400 focus:border-red-500' : 'border-slate-200 focus:border-blue-500/50'}`} placeholder="A-0001-00000001" />
-              {facturaExistente() && (
-                <p className="text-xs text-red-500 mt-1">Ya existe esta factura para este proveedor</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm text-slate-400 mb-1">Monto *</label>
+              <label className="block text-sm text-slate-400 mb-1">Bruto *</label>
               <input
                 type="text"
                 required
-                value={formatInputMonto(form.monto)}
-                onChange={e => setForm({...form, monto: parseInputMonto(e.target.value)})}
+                value={formatInputMonto(form.bruto)}
+                onChange={e => handleBrutoChange(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm text-right"
                 placeholder="0"
               />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-400 mb-1">IVA</label>
+              <select
+                value={form.iva_porcentaje}
+                onChange={e => handleIvaChange(parseFloat(e.target.value))}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+              >
+                <option value={0}>Sin IVA</option>
+                <option value={10.5}>10.5%</option>
+                <option value={21}>21%</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm text-slate-400 mb-1">Otras retenciones</label>
+              <input
+                type="text"
+                value={formatInputMonto(form.otras_retenciones)}
+                onChange={e => handleRetencionesChange(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm text-right"
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-400 mb-1">Neto (Total)</label>
+              <div className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm text-right font-semibold text-emerald-600">
+                {formatInputMonto(form.monto)}
+              </div>
             </div>
           </div>
           <div>
@@ -640,17 +730,6 @@ function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, on
               <input type="date" required value={form.vencimiento} onChange={e => setForm({...form, vencimiento: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
             </div>
           </div>
-          {/* Solo mostrar estado si es edición */}
-          {factura && (
-            <div>
-              <label className="block text-sm text-slate-400 mb-1">Estado</label>
-              <select value={form.estado} onChange={e => setForm({...form, estado: e.target.value})} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
-                <option value="pendiente">Pendiente</option>
-                <option value="pagada">Pagada</option>
-                <option value="vencida">Vencida</option>
-              </select>
-            </div>
-          )}
           <div>
             <label className="block text-sm text-slate-400 mb-1">Observaciones</label>
             <input type="text" value={form.concepto} onChange={e => setForm({...form, concepto: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" placeholder="Opcional" />
@@ -660,14 +739,21 @@ function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, on
               {error}
             </div>
           )}
-          <div className="flex gap-3 pt-4">
+          <div className="flex flex-wrap gap-3 pt-4">
             {factura && onDelete && (
               <button type="button" onClick={handleDelete} className="px-4 py-2.5 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 transition-all text-sm">
                 Eliminar
               </button>
             )}
-            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all">Cancelar</button>
-            <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+            {factura && onRegistrarPago && (
+              <button type="button" onClick={() => onRegistrarPago(factura)} className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all text-sm flex items-center gap-2">
+                <DollarSign className="w-4 h-4" />
+                Registrar Pago
+              </button>
+            )}
+            <div className="flex-1"></div>
+            <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all">Cancelar</button>
+            <button type="submit" disabled={saving} className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
               {factura ? 'Guardar' : 'Crear'}
             </button>
@@ -782,7 +868,7 @@ const CONCEPTOS_EMPLEADO = [
   { value: 'evento_parcial', label: 'Evento Parcial' }
 ];
 
-function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados = [], facturas = [], pagos = [], notasCredito = [], onMarcarFacturaPagada }) {
+function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados = [], facturas = [], pagos = [], notasCredito = [], facturaPreseleccionada }) {
   const [form, setForm] = useState({
     tipo: tipoDefault || 'otro',
     referencia_id: '',
@@ -795,9 +881,32 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-  const [proveedorSeleccionado, setProveedorSeleccionado] = useState(null);
+  const [proveedorSeleccionado, setProveedorSeleccionado] = useState(facturaPreseleccionada?.proveedor_id || null);
   const [tipoPago, setTipoPago] = useState(null); // 'total' o 'parcial'
   const [facturaSeleccionada, setFacturaSeleccionada] = useState(null);
+
+  // Pre-seleccionar factura si viene de ModalFactura
+  useEffect(() => {
+    if (facturaPreseleccionada) {
+      // Calcular saldo de la factura preseleccionada
+      const pagosFactura = pagos
+        .filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado' && p.descripcion && p.descripcion.includes(facturaPreseleccionada.numero))
+        .reduce((sum, p) => sum + p.monto, 0);
+      const ncFactura = notasCredito
+        .filter(nc => nc.factura_id === facturaPreseleccionada.id)
+        .reduce((sum, nc) => sum + nc.monto, 0);
+      const saldo = facturaPreseleccionada.monto - pagosFactura - ncFactura;
+
+      setFacturaSeleccionada({ ...facturaPreseleccionada, pagado: pagosFactura, nc: ncFactura, saldo });
+
+      // Setear el form con los datos del proveedor y factura
+      setForm(prev => ({
+        ...prev,
+        referencia_id: String(facturaPreseleccionada.proveedor_id),
+        factura_id: String(facturaPreseleccionada.id)
+      }));
+    }
+  }, [facturaPreseleccionada, pagos, notasCredito]);
 
   const getTitulo = () => {
     if (tipoDefault === 'factura') return 'Registrar Pago a Proveedor';
@@ -851,17 +960,18 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
 
   const handleTipoPagoChange = (tipo) => {
     setTipoPago(tipo);
-    const proveedor = proveedores.find(p => p.id === proveedorSeleccionado);
+    // Obtener nombre del proveedor (de facturaPreseleccionada o buscando por ID)
+    const nombreProveedor = facturaPreseleccionada?.proveedor || proveedores.find(p => p.id === proveedorSeleccionado)?.nombre || '';
     if (tipo === 'total' && facturaSeleccionada) {
       setForm({
         ...form,
-        descripcion: `Pago Saldo ${proveedor?.nombre} - Factura ${facturaSeleccionada.numero}`,
+        descripcion: `Pago Saldo ${nombreProveedor} - Factura ${facturaSeleccionada.numero}`,
         monto: facturaSeleccionada.saldo || facturaSeleccionada.monto
       });
     } else if (tipo === 'parcial') {
       setForm({
         ...form,
-        descripcion: `Pago Parcial ${proveedor?.nombre} - Factura ${facturaSeleccionada?.numero || ''}`,
+        descripcion: `Pago Parcial ${nombreProveedor} - Factura ${facturaSeleccionada?.numero || ''}`,
         monto: ''
       });
     }
@@ -900,10 +1010,7 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
     setError(null);
     setSaving(true);
 
-    // Si es pago total, marcar la factura como pagada
-    if (tipoPago === 'total' && facturaSeleccionada && onMarcarFacturaPagada) {
-      await onMarcarFacturaPagada(facturaSeleccionada.id);
-    }
+    // El estado de la factura se actualiza automáticamente cuando se confirma la orden de pago
 
     const result = await onSave({ ...form, monto: parseFloat(form.monto) });
     setSaving(false);
@@ -922,48 +1029,87 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
         <form onSubmit={handleSubmit} className="space-y-3">
           {tipoDefault === 'factura' && (
             <>
-              <div>
-                <label className="block text-xs text-slate-500 mb-0.5">Proveedor *</label>
-                <select required value={form.referencia_id} onChange={e => handleProveedorChange(e.target.value)} className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
-                  <option value="">Seleccionar proveedor</option>
-                  {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                </select>
-              </div>
-
-              {proveedorSeleccionado && facturasDelProveedor.length > 0 && (
-                <div>
-                  <label className="block text-xs text-slate-500 mb-1">Facturas Pendientes</label>
-                  <div className="space-y-1.5 max-h-36 overflow-y-auto border border-slate-200 rounded-lg p-1.5">
-                    {facturasDelProveedor.map(f => (
-                      <label key={f.id} className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all ${form.factura_id === String(f.id) ? 'bg-blue-50 border border-blue-300' : 'bg-slate-50 hover:bg-slate-100'}`}>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            name="factura"
-                            value={f.id}
-                            checked={form.factura_id === String(f.id)}
-                            onChange={e => handleFacturaSelect(e.target.value)}
-                            className="w-3.5 h-3.5 text-blue-500"
-                          />
-                          <div>
-                            <p className="font-medium text-xs">{f.numero}</p>
-                            <p className="text-xs text-slate-500">{f.concepto || 'Sin concepto'}</p>
-                          </div>
+              {/* Si viene con factura preseleccionada, mostrar info directamente */}
+              {facturaPreseleccionada ? (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-xs text-blue-600 mb-1">Factura seleccionada</p>
+                  <p className="font-semibold text-sm">{facturaPreseleccionada.proveedor}</p>
+                  <p className="text-xs text-slate-600">{facturaPreseleccionada.numero} {facturaPreseleccionada.concepto && `- ${facturaPreseleccionada.concepto}`}</p>
+                  {facturaSeleccionada && (
+                    <div className="mt-2 pt-2 border-t border-blue-200">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-500">Total factura:</span>
+                        <span className="mono">{formatCurrency(facturaSeleccionada.monto)}</span>
+                      </div>
+                      {facturaSeleccionada.pagado > 0 && (
+                        <div className="flex justify-between text-xs">
+                          <span className="text-slate-500">Ya pagado:</span>
+                          <span className="mono text-emerald-600">-{formatCurrency(facturaSeleccionada.pagado)}</span>
                         </div>
-                        <div className="text-right">
-                          <p className="font-semibold text-xs mono text-amber-600">Saldo: {formatCurrency(f.saldo)}</p>
-                          {(f.pagado > 0 || f.nc > 0) && (
-                            <p className="text-xs text-slate-400">
-                              Total: {formatCurrency(f.monto)}
-                              {f.pagado > 0 && ` | Pagado: ${formatCurrency(f.pagado)}`}
-                              {f.nc > 0 && ` | NC: ${formatCurrency(f.nc)}`}
-                            </p>
-                          )}
+                      )}
+                      {facturaSeleccionada.nc > 0 && (
+                        <div className="flex justify-between text-xs">
+                          <span className="text-slate-500">Nota de crédito:</span>
+                          <span className="mono text-emerald-600">-{formatCurrency(facturaSeleccionada.nc)}</span>
                         </div>
-                      </label>
-                    ))}
-                  </div>
+                      )}
+                      <div className="flex justify-between text-sm font-semibold mt-1 pt-1 border-t border-blue-200">
+                        <span className="text-amber-700">Saldo pendiente:</span>
+                        <span className="mono text-amber-700">{formatCurrency(facturaSeleccionada.saldo)}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-0.5">Proveedor *</label>
+                    <select required value={form.referencia_id} onChange={e => handleProveedorChange(e.target.value)} className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
+                      <option value="">Seleccionar proveedor</option>
+                      {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                    </select>
+                  </div>
+
+                  {proveedorSeleccionado && facturasDelProveedor.length > 0 && (
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-1">Facturas Pendientes</label>
+                      <div className="space-y-1.5 max-h-36 overflow-y-auto border border-slate-200 rounded-lg p-1.5">
+                        {facturasDelProveedor.map(f => (
+                          <label key={f.id} className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all ${form.factura_id === String(f.id) ? 'bg-blue-50 border border-blue-300' : 'bg-slate-50 hover:bg-slate-100'}`}>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="radio"
+                                name="factura"
+                                value={f.id}
+                                checked={form.factura_id === String(f.id)}
+                                onChange={e => handleFacturaSelect(e.target.value)}
+                                className="w-3.5 h-3.5 text-blue-500"
+                              />
+                              <div>
+                                <p className="font-medium text-xs">{f.numero}</p>
+                                <p className="text-xs text-slate-500">{f.concepto || 'Sin concepto'}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-semibold text-xs mono text-amber-600">Saldo: {formatCurrency(f.saldo)}</p>
+                              {(f.pagado > 0 || f.nc > 0) && (
+                                <p className="text-xs text-slate-400">
+                                  Total: {formatCurrency(f.monto)}
+                                  {f.pagado > 0 && ` | Pagado: ${formatCurrency(f.pagado)}`}
+                                  {f.nc > 0 && ` | NC: ${formatCurrency(f.nc)}`}
+                                </p>
+                              )}
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {proveedorSeleccionado && facturasDelProveedor.length === 0 && (
+                    <p className="text-sm text-slate-500 italic">No hay facturas pendientes para este proveedor</p>
+                  )}
+                </>
               )}
 
               {/* Selección de tipo de pago: Total o Parcial */}
@@ -997,10 +1143,6 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
                     </button>
                   </div>
                 </div>
-              )}
-
-              {proveedorSeleccionado && facturasDelProveedor.length === 0 && (
-                <p className="text-sm text-slate-500 italic">No hay facturas pendientes para este proveedor</p>
               )}
             </>
           )}
@@ -1481,6 +1623,53 @@ function App() {
     setLoading(false);
   };
 
+  // Corregir estados de facturas que figuran como pagadas pero tienen saldo
+  const corregirEstadosFacturas = async () => {
+    // Obtener datos frescos
+    const { data: facturasDB } = await supabase.from('facturas').select('*');
+    const { data: pagosDB } = await supabase.from('pagos').select('*');
+    const { data: notasCreditoDB } = await supabase.from('notas_credito').select('*');
+
+    if (!facturasDB) return { corregidas: 0 };
+
+    // Calcular pagos por factura
+    const pagosMap = {};
+    (pagosDB || []).filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado').forEach(p => {
+      facturasDB.forEach(f => {
+        if (p.descripcion && p.descripcion.includes(f.numero)) {
+          pagosMap[f.id] = (pagosMap[f.id] || 0) + p.monto;
+        }
+      });
+    });
+
+    // Calcular NC por factura
+    const ncMap = {};
+    (notasCreditoDB || []).filter(nc => nc.factura_id).forEach(nc => {
+      ncMap[nc.factura_id] = (ncMap[nc.factura_id] || 0) + nc.monto;
+    });
+
+    // Buscar facturas mal marcadas
+    const facturasACorregir = facturasDB.filter(f => {
+      if (f.estado !== 'pagada') return false;
+      const pagado = pagosMap[f.id] || 0;
+      const nc = ncMap[f.id] || 0;
+      const saldo = f.monto - pagado - nc;
+      return saldo > 0; // Tiene saldo pero figura como pagada
+    });
+
+    // Corregir cada una
+    let corregidas = 0;
+    for (const f of facturasACorregir) {
+      const { error } = await supabase.from('facturas').update({ estado: 'pendiente' }).eq('id', f.id);
+      if (!error) corregidas++;
+    }
+
+    // Refrescar datos
+    await fetchFacturas();
+
+    return { corregidas, total: facturasACorregir.length };
+  };
+
   useEffect(() => {
     fetchAllData();
   }, []);
@@ -1596,22 +1785,6 @@ function App() {
     }
   };
 
-  const marcarFacturaPagada = async (factura) => {
-    // Crear pago
-    const pago = {
-      tipo: 'factura',
-      referencia_id: factura.id,
-      descripcion: `Pago ${factura.proveedor} - Factura ${factura.numero}`,
-      monto: factura.monto,
-      fecha: new Date().toISOString().split('T')[0],
-      metodo: 'Transferencia'
-    };
-    await supabase.from('pagos').insert([pago]);
-    // Actualizar estado factura
-    await supabase.from('facturas').update({ estado: 'pagada' }).eq('id', factura.id);
-    await Promise.all([fetchFacturas(), fetchPagos()]);
-  };
-
   // CRUD Empleados
   const createEmpleado = async (empleado) => {
     const { error } = await supabase.from('empleados').insert([empleado]);
@@ -1719,6 +1892,8 @@ function App() {
     if (!error) {
       await fetchPagos();
       await fetchAnulaciones();
+      // Actualizar estados de facturas automáticamente
+      await actualizarEstadosFacturas();
       setShowModal(null);
       setSelectedItem(null);
     }
@@ -1758,7 +1933,48 @@ function App() {
     if (!error) {
       await fetchOrdenesPago();
       await fetchPagos();
+      // Actualizar estados de facturas automáticamente
+      await actualizarEstadosFacturas();
     }
+  };
+
+  // Actualizar estados de facturas según sus saldos
+  const actualizarEstadosFacturas = async () => {
+    const { data: facturasDB } = await supabase.from('facturas').select('*');
+    const { data: pagosDB } = await supabase.from('pagos').select('*');
+    const { data: notasCreditoDB } = await supabase.from('notas_credito').select('*');
+
+    if (!facturasDB) return;
+
+    // Calcular pagos por factura
+    const pagosMap = {};
+    (pagosDB || []).filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado').forEach(p => {
+      facturasDB.forEach(f => {
+        if (p.descripcion && p.descripcion.includes(f.numero)) {
+          pagosMap[f.id] = (pagosMap[f.id] || 0) + p.monto;
+        }
+      });
+    });
+
+    // Calcular NC por factura
+    const ncMap = {};
+    (notasCreditoDB || []).filter(nc => nc.factura_id).forEach(nc => {
+      ncMap[nc.factura_id] = (ncMap[nc.factura_id] || 0) + nc.monto;
+    });
+
+    // Actualizar cada factura según su saldo
+    for (const f of facturasDB) {
+      const pagado = pagosMap[f.id] || 0;
+      const nc = ncMap[f.id] || 0;
+      const saldo = f.monto - pagado - nc;
+      const nuevoEstado = saldo <= 0 ? 'pagada' : 'pendiente';
+
+      if (f.estado !== nuevoEstado) {
+        await supabase.from('facturas').update({ estado: nuevoEstado }).eq('id', f.id);
+      }
+    }
+
+    await fetchFacturas();
   };
 
   const anularPagoDeOrden = async (pagoId) => {
@@ -1799,6 +2015,7 @@ function App() {
     const { error } = await supabase.from('notas_credito').insert([nota]);
     if (!error) {
       await fetchNotasCredito();
+      await actualizarEstadosFacturas();
       setShowModal(null);
       setSelectedItem(null);
     }
@@ -1809,6 +2026,7 @@ function App() {
     const { error } = await supabase.from('notas_credito').update(nota).eq('id', id);
     if (!error) {
       await fetchNotasCredito();
+      await actualizarEstadosFacturas();
       setShowModal(null);
       setSelectedItem(null);
     }
@@ -1818,7 +2036,10 @@ function App() {
   const deleteNotaCredito = async (id) => {
     if (!confirm('¿Estás seguro de eliminar esta nota de crédito?')) return;
     const { error } = await supabase.from('notas_credito').delete().eq('id', id);
-    if (!error) await fetchNotasCredito();
+    if (!error) {
+      await fetchNotasCredito();
+      await actualizarEstadosFacturas();
+    }
   };
 
   // Stats calculados
@@ -1928,6 +2149,19 @@ function App() {
     });
     return ncMap;
   }, [notasCredito]);
+
+  // Calcular pagos PENDIENTES por factura (para mostrar estado "aprobar")
+  const pagosPendientesPorFactura = useMemo(() => {
+    const pagosMap = {};
+    pagos.filter(p => p.tipo === 'factura' && p.estado_pago === 'pendiente').forEach(p => {
+      facturas.forEach(f => {
+        if (p.descripcion && p.descripcion.includes(f.numero)) {
+          pagosMap[f.id] = (pagosMap[f.id] || 0) + p.monto;
+        }
+      });
+    });
+    return pagosMap;
+  }, [pagos, facturas]);
 
   // Helper para calcular saldo de una factura
   const getSaldoFactura = (f) => {
@@ -2053,16 +2287,21 @@ function App() {
     return facturas
       .map(f => {
         const pagado = pagosPorFactura[f.id] || 0;
+        const pendiente = pagosPendientesPorFactura[f.id] || 0;
         const nc = ncPorFactura[f.id] || 0;
         const saldo = f.monto - pagado - nc;
-        // Determinar estado visual: si hay pagos parciales y no está pagada, mostrar "parcial"
+        // Determinar estado visual
         let estadoDisplay = f.estado;
-        if (f.estado === 'pendiente' && (pagado > 0 || nc > 0) && saldo > 0) {
+        if (pendiente > 0) {
+          // Tiene pagos pendientes de aprobar
+          estadoDisplay = 'aprobar';
+        } else if (f.estado === 'pendiente' && (pagado > 0 || nc > 0) && saldo > 0) {
           estadoDisplay = 'parcial';
         }
         return {
           ...f,
           pagado,
+          pendiente,
           nc,
           totalPagado: pagado + nc,
           saldo,
@@ -2082,6 +2321,8 @@ function App() {
         let matchEstado = false;
         if (filtroEstado === 'todos') {
           matchEstado = true;
+        } else if (filtroEstado === 'aprobar') {
+          matchEstado = f.estadoDisplay === 'aprobar';
         } else if (filtroEstado === 'parcial') {
           matchEstado = f.estadoDisplay === 'parcial';
         } else if (filtroEstado === 'vence_semana') {
@@ -2096,7 +2337,7 @@ function App() {
         const matchMes = filtroMesFactura === 'todos' || fechaVencimiento.getMonth() === parseInt(filtroMesFactura);
         return matchSearch && matchEstado && matchProveedor && matchAnio && matchMes;
       });
-  }, [facturas, searchTerm, filtroEstado, filtroProveedorFactura, filtroAnioFactura, filtroMesFactura, pagosPorFactura, ncPorFactura]);
+  }, [facturas, searchTerm, filtroEstado, filtroProveedorFactura, filtroAnioFactura, filtroMesFactura, pagosPorFactura, pagosPendientesPorFactura, ncPorFactura]);
 
   const getDiasVencimiento = (vencimiento) => {
     const hoy = new Date();
@@ -2470,9 +2711,10 @@ function App() {
         {/* Facturas */}
         {activeTab === 'facturas' && (
           <div className="space-y-4">
-            {/* Filtros */}
-            <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
-              <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            {/* Barra de acciones y filtros */}
+            <div className="glass rounded-2xl p-4">
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Filtros */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
@@ -2480,15 +2722,15 @@ function App() {
                     placeholder="Buscar..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 pr-4 py-1.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 w-full sm:w-40 text-sm"
+                    className="pl-10 pr-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 w-36 text-sm"
                   />
                 </div>
                 <select
                   value={filtroAnioFactura}
                   onChange={(e) => setFiltroAnioFactura(e.target.value)}
-                  className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
                 >
-                  <option value="todos">Todos los años</option>
+                  <option value="todos">Año</option>
                   {[...new Set(facturas.map(f => new Date(f.vencimiento + 'T12:00:00').getFullYear()))].sort((a, b) => b - a).map(a => (
                     <option key={a} value={a}>{a}</option>
                   ))}
@@ -2496,9 +2738,9 @@ function App() {
                 <select
                   value={filtroMesFactura}
                   onChange={(e) => setFiltroMesFactura(e.target.value)}
-                  className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
                 >
-                  <option value="todos">Todos los meses</option>
+                  <option value="todos">Mes</option>
                   {MESES.map((mes, index) => (
                     <option key={index} value={index}>{mes}</option>
                   ))}
@@ -2506,67 +2748,76 @@ function App() {
                 <select
                   value={filtroProveedorFactura}
                   onChange={(e) => setFiltroProveedorFactura(e.target.value)}
-                  className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
                 >
-                  <option value="todos">Todos los proveedores</option>
+                  <option value="todos">Proveedor</option>
                   {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
                 </select>
                 <select
                   value={filtroEstado}
                   onChange={(e) => setFiltroEstado(e.target.value)}
-                  className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
                 >
-                  <option value="todos">Todos los estados</option>
+                  <option value="todos">Estado</option>
                   <option value="pendiente">Pendientes</option>
+                  <option value="aprobar">Por aprobar</option>
                   <option value="parcial">Parciales</option>
                   <option value="pagada">Pagadas</option>
                   <option value="vencida">Vencidas</option>
                   <option value="vence_semana">Vence esta semana</option>
                 </select>
-              </div>
-              <div className="flex items-center gap-2">
+
+                {/* Espaciador flexible */}
+                <div className="flex-1"></div>
+
+                {/* Botones de acción a la derecha */}
                 <button
                   onClick={() => { setSelectedItem(null); setShowModal('factura'); }}
-                  className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all text-sm"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all text-sm whitespace-nowrap"
                 >
                   <Plus className="w-4 h-4" />
                   Nueva Factura
                 </button>
                 <button
                   onClick={() => { setSelectedItem({ tipo: 'factura' }); setShowModal('pago'); }}
-                  className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all text-sm"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all text-sm whitespace-nowrap"
                 >
                   <DollarSign className="w-4 h-4" />
                   Registrar Pago
                 </button>
+                <button
+                  onClick={async () => {
+                    if (confirm('¿Corregir facturas marcadas como pagadas que tienen saldo pendiente?')) {
+                      const result = await corregirEstadosFacturas();
+                      alert(`Se corrigieron ${result.corregidas} facturas`);
+                    }
+                  }}
+                  className="p-2 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-all"
+                  title="Corregir estados incorrectos"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </button>
               </div>
             </div>
 
-            {/* Resumen de totales */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="glass rounded-xl p-3">
-                <p className="text-xs text-slate-500">Total Facturas</p>
-                <p className="text-lg font-bold text-blue-500 mono">
-                  {formatCurrency(facturasFiltradas.reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0))}
-                </p>
-                <p className="text-xs text-slate-400">{facturasFiltradas.length} facturas</p>
+            {/* Resumen de totales - más compacto */}
+            <div className="flex flex-wrap gap-4 px-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500">Total:</span>
+                <span className="font-bold text-blue-600 mono text-sm">{formatCurrency(facturasFiltradas.reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0))}</span>
+                <span className="text-xs text-slate-400">({facturasFiltradas.length})</span>
               </div>
-              <div className="glass rounded-xl p-3">
-                <p className="text-xs text-slate-500">Pendiente</p>
-                <p className="text-lg font-bold text-amber-500 mono">
-                  {formatCurrency(facturasFiltradas.filter(f => f.estado !== 'pagada').reduce((sum, f) => sum + (parseFloat(f.saldo) || 0), 0))}
-                </p>
-                <p className="text-xs text-slate-400">{facturasFiltradas.filter(f => f.estado !== 'pagada').length} facturas</p>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500">Pendiente:</span>
+                <span className="font-bold text-amber-600 mono text-sm">{formatCurrency(facturasFiltradas.filter(f => f.estado !== 'pagada').reduce((sum, f) => sum + (parseFloat(f.saldo) || 0), 0))}</span>
               </div>
-              <div className="glass rounded-xl p-3">
-                <p className="text-xs text-slate-500">Pagado</p>
-                <p className="text-lg font-bold text-emerald-500 mono">
-                  {formatCurrency(facturasFiltradas.reduce((sum, f) => sum + (parseFloat(f.totalPagado) || 0), 0))}
-                </p>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500">Pagado:</span>
+                <span className="font-bold text-emerald-600 mono text-sm">{formatCurrency(facturasFiltradas.reduce((sum, f) => sum + (parseFloat(f.totalPagado) || 0), 0))}</span>
               </div>
-              <div className="glass rounded-xl p-3">
-                <p className="text-xs text-slate-500">Vencido</p>
-                <p className="text-lg font-bold text-red-500 mono">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500">Vencido:</span>
+                <span className="font-bold text-red-600 mono text-sm">
                   {formatCurrency(facturasFiltradas.filter(f => {
                     if (f.estado === 'pagada' || f.saldo <= 0) return false;
                     const hoy = new Date();
@@ -2574,7 +2825,7 @@ function App() {
                     const venc = new Date(f.vencimiento + 'T12:00:00');
                     return venc < hoy;
                   }).reduce((sum, f) => sum + (parseFloat(f.saldo) || 0), 0))}
-                </p>
+                </span>
               </div>
             </div>
 
@@ -3793,6 +4044,10 @@ function App() {
           onClose={() => { setShowModal(null); setSelectedItem(null); }}
           onSave={selectedItem ? (data) => updateFactura(selectedItem.id, data) : createFactura}
           onDelete={deleteFactura}
+          onRegistrarPago={(factura) => {
+            setSelectedItem({ tipo: 'factura', facturaPreseleccionada: factura });
+            setShowModal('pago');
+          }}
         />
       )}
 
@@ -3817,10 +4072,7 @@ function App() {
           facturas={facturas}
           pagos={pagos}
           notasCredito={notasCredito}
-          onMarcarFacturaPagada={async (facturaId) => {
-            await supabase.from('facturas').update({ estado: 'pagada' }).eq('id', facturaId);
-            await fetchFacturas();
-          }}
+          facturaPreseleccionada={selectedItem?.facturaPreseleccionada}
         />
       )}
 

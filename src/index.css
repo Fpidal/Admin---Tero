@@ -70,6 +70,12 @@ body {
   border: 1px solid rgba(59, 130, 246, 0.4);
 }
 
+.badge-aprobar {
+  background: rgba(168, 85, 247, 0.15);
+  color: #7c3aed;
+  border: 1px solid rgba(168, 85, 247, 0.4);
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
