@@ -1313,6 +1313,8 @@ function App() {
   const [filtroCategoriaProveedor, setFiltroCategoriaProveedor] = useState('todos');
   const [filtroMetodoPago, setFiltroMetodoPago] = useState('todos');
   const [filtroProveedorFactura, setFiltroProveedorFactura] = useState('todos');
+  const [filtroMesFactura, setFiltroMesFactura] = useState('todos');
+  const [filtroAnioFactura, setFiltroAnioFactura] = useState(new Date().getFullYear().toString());
 
   // Filtros Informes
   const [informeActivo, setInformeActivo] = useState('anulaciones');
@@ -1835,9 +1837,12 @@ function App() {
         const estadoParaFiltro = f.estadoDisplay === 'parcial' ? 'pendiente' : f.estado;
         const matchEstado = filtroEstado === 'todos' || estadoParaFiltro === filtroEstado || (filtroEstado === 'parcial' && f.estadoDisplay === 'parcial');
         const matchProveedor = filtroProveedorFactura === 'todos' || f.proveedor_id === parseInt(filtroProveedorFactura);
-        return matchSearch && matchEstado && matchProveedor;
+        const fechaFactura = new Date(f.fecha);
+        const matchAnio = filtroAnioFactura === 'todos' || fechaFactura.getFullYear() === parseInt(filtroAnioFactura);
+        const matchMes = filtroMesFactura === 'todos' || fechaFactura.getMonth() === parseInt(filtroMesFactura);
+        return matchSearch && matchEstado && matchProveedor && matchAnio && matchMes;
       });
-  }, [facturas, searchTerm, filtroEstado, filtroProveedorFactura, pagosPorFactura, ncPorFactura]);
+  }, [facturas, searchTerm, filtroEstado, filtroProveedorFactura, filtroAnioFactura, filtroMesFactura, pagosPorFactura, ncPorFactura]);
 
   const getDiasVencimiento = (vencimiento) => {
     const hoy = new Date();
@@ -2113,8 +2118,9 @@ function App() {
 
         {/* Facturas */}
         {activeTab === 'facturas' && (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+          <div className="space-y-4">
+            {/* Filtros */}
+            <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
               <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -2123,13 +2129,32 @@ function App() {
                     placeholder="Buscar..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 pr-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 w-full sm:w-48 text-sm"
+                    className="pl-10 pr-4 py-1.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 w-full sm:w-40 text-sm"
                   />
                 </div>
                 <select
+                  value={filtroAnioFactura}
+                  onChange={(e) => setFiltroAnioFactura(e.target.value)}
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                >
+                  <option value="todos">Todos los años</option>
+                  <option value="2025">2025</option>
+                  <option value="2026">2026</option>
+                </select>
+                <select
+                  value={filtroMesFactura}
+                  onChange={(e) => setFiltroMesFactura(e.target.value)}
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                >
+                  <option value="todos">Todos los meses</option>
+                  {MESES.map((mes, index) => (
+                    <option key={index} value={index}>{mes}</option>
+                  ))}
+                </select>
+                <select
                   value={filtroProveedorFactura}
                   onChange={(e) => setFiltroProveedorFactura(e.target.value)}
-                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
                 >
                   <option value="todos">Todos los proveedores</option>
                   {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
@@ -2137,7 +2162,7 @@ function App() {
                 <select
                   value={filtroEstado}
                   onChange={(e) => setFiltroEstado(e.target.value)}
-                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
                 >
                   <option value="todos">Todos los estados</option>
                   <option value="pendiente">Pendientes</option>
@@ -2147,11 +2172,41 @@ function App() {
               </div>
               <button
                 onClick={() => { setSelectedItem(null); setShowModal('factura'); }}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all text-sm"
+                className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all text-sm"
               >
                 <Plus className="w-4 h-4" />
                 Nueva Factura
               </button>
+            </div>
+
+            {/* Resumen de totales */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="glass rounded-xl p-3">
+                <p className="text-xs text-slate-500">Total Facturas</p>
+                <p className="text-lg font-bold text-blue-500 mono">
+                  {formatCurrency(facturasFiltradas.reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0))}
+                </p>
+                <p className="text-xs text-slate-400">{facturasFiltradas.length} facturas</p>
+              </div>
+              <div className="glass rounded-xl p-3">
+                <p className="text-xs text-slate-500">Pendiente</p>
+                <p className="text-lg font-bold text-amber-500 mono">
+                  {formatCurrency(facturasFiltradas.filter(f => f.estado !== 'pagada').reduce((sum, f) => sum + (parseFloat(f.saldo) || 0), 0))}
+                </p>
+                <p className="text-xs text-slate-400">{facturasFiltradas.filter(f => f.estado !== 'pagada').length} facturas</p>
+              </div>
+              <div className="glass rounded-xl p-3">
+                <p className="text-xs text-slate-500">Pagado</p>
+                <p className="text-lg font-bold text-emerald-500 mono">
+                  {formatCurrency(facturasFiltradas.reduce((sum, f) => sum + (parseFloat(f.totalPagado) || 0), 0))}
+                </p>
+              </div>
+              <div className="glass rounded-xl p-3">
+                <p className="text-xs text-slate-500">Vencido</p>
+                <p className="text-lg font-bold text-red-500 mono">
+                  {formatCurrency(facturasFiltradas.filter(f => f.estado === 'vencida' || (f.estado === 'pendiente' && new Date(f.vencimiento) < new Date())).reduce((sum, f) => sum + (parseFloat(f.saldo) || 0), 0))}
+                </p>
+              </div>
             </div>
 
             <div className="glass rounded-2xl glow overflow-hidden">
