@@ -793,14 +793,14 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
     return 'Registrar Pago';
   };
 
-  // Calcular saldo de cada factura (monto - pagos - NC)
+  // Calcular saldo de cada factura (monto - pagos confirmados - NC)
   const facturasDelProveedor = proveedorSeleccionado
     ? facturas
         .filter(f => f.proveedor_id === proveedorSeleccionado && f.estado !== 'pagada')
         .map(f => {
-          // Calcular pagos de esta factura
+          // Calcular pagos CONFIRMADOS de esta factura
           const pagosFactura = pagos
-            .filter(p => p.tipo === 'factura' && p.descripcion && p.descripcion.includes(f.numero))
+            .filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado' && p.descripcion && p.descripcion.includes(f.numero))
             .reduce((sum, p) => sum + p.monto, 0);
           // Calcular NC de esta factura
           const ncFactura = notasCredito
