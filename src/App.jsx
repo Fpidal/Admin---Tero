@@ -1598,6 +1598,7 @@ function App() {
   const [filtroProveedorPagoProv, setFiltroProveedorPagoProv] = useState('todos');
   const [filtroMesPagoProv, setFiltroMesPagoProv] = useState('todos');
   const [filtroAnioPagoProv, setFiltroAnioPagoProv] = useState(new Date().getFullYear().toString());
+  const [subTabPagoProv, setSubTabPagoProv] = useState('pagos'); // 'pagos' | 'conciliacion'
 
   // Cargar datos desde Supabase
   const fetchProveedores = async () => {
@@ -3199,6 +3200,36 @@ function App() {
           });
           const totalFiltrado = pagosFiltrados.reduce((sum, p) => sum + p.monto, 0);
 
+          // Función para actualizar conciliación (actualiza estado local para evitar re-render)
+          const toggleConciliacion = async (pagoId, valorActual) => {
+            // Actualizar estado local inmediatamente
+            setPagos(prev => prev.map(p =>
+              p.id === pagoId ? { ...p, conciliado: !valorActual } : p
+            ));
+            // Guardar en Supabase
+            await supabase
+              .from('pagos')
+              .update({ conciliado: !valorActual })
+              .eq('id', pagoId);
+          };
+
+          // Función para guardar nota de conciliación
+          const guardarNotaConciliacion = async (pagoId, nota) => {
+            // Actualizar estado local
+            setPagos(prev => prev.map(p =>
+              p.id === pagoId ? { ...p, conciliado_nota: nota } : p
+            ));
+            // Guardar en Supabase
+            await supabase
+              .from('pagos')
+              .update({ conciliado_nota: nota })
+              .eq('id', pagoId);
+          };
+
+          // Contadores para conciliación
+          const pagosConciliados = pagosFiltrados.filter(p => p.conciliado).length;
+          const pagosPendientesConciliar = pagosFiltrados.filter(p => !p.conciliado).length;
+
           return (
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -3233,51 +3264,168 @@ function App() {
                 </div>
               </div>
 
-              {/* Resumen */}
-              <div className="glass rounded-xl p-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-xs text-slate-500">Total pagado {filtroMesPagoProv !== 'todos' ? MESES[parseInt(filtroMesPagoProv)] : ''} {filtroAnioPagoProv !== 'todos' ? filtroAnioPagoProv : ''}</p>
-                    <p className="text-xs text-slate-400">{pagosFiltrados.length} pagos</p>
-                  </div>
-                  <p className="text-2xl font-bold text-emerald-500 mono">{formatCurrency(totalFiltrado)}</p>
-                </div>
+              {/* Solapas Pagos / Conciliación */}
+              <div className="flex gap-2 border-b border-slate-200">
+                <button
+                  onClick={() => setSubTabPagoProv('pagos')}
+                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                    subTabPagoProv === 'pagos'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Pagos
+                </button>
+                <button
+                  onClick={() => setSubTabPagoProv('conciliacion')}
+                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+                    subTabPagoProv === 'conciliacion'
+                      ? 'border-emerald-500 text-emerald-600'
+                      : 'border-transparent text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Conciliación
+                  {pagosPendientesConciliar > 0 && (
+                    <span className="px-1.5 py-0.5 text-xs rounded-full bg-amber-100 text-amber-700">
+                      {pagosPendientesConciliar}
+                    </span>
+                  )}
+                </button>
               </div>
 
-              <div className="glass rounded-2xl glow overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-left text-slate-400 text-xs border-b border-slate-200">
-                        <th className="px-3 py-3 font-medium">Fecha</th>
-                        <th className="px-3 py-3 font-medium">Proveedor / Factura</th>
-                        <th className="px-3 py-3 font-medium">Método</th>
-                        <th className="px-3 py-3 font-medium text-right">Monto</th>
-                        <th className="px-3 py-3 font-medium text-right">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pagosFiltrados.length === 0 ? (
-                        <tr><td colSpan="5" className="px-3 py-8 text-center text-slate-400 text-xs">No hay pagos en el período seleccionado</td></tr>
-                      ) : (
-                        pagosFiltrados.map(p => (
-                          <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                            <td className="px-3 py-2.5 text-xs">{formatDate(p.fecha)}</td>
-                            <td className="px-3 py-2.5 text-xs">{p.descripcion}</td>
-                            <td className="px-3 py-2.5 text-xs text-slate-500">{p.metodo}</td>
-                            <td className="px-3 py-2.5 text-right font-semibold mono text-emerald-500 text-xs">{formatCurrency(p.monto)}</td>
-                            <td className="px-3 py-2.5 text-right">
-                              <button onClick={() => { setSelectedItem(p); setShowModal('edit-pago'); }} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Ver detalle">
-                                <Edit3 className="w-3.5 h-3.5" />
-                              </button>
-                            </td>
+              {/* Contenido según solapa activa */}
+              {subTabPagoProv === 'pagos' && (
+                <>
+                  {/* Resumen */}
+                  <div className="glass rounded-xl p-4">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="text-xs text-slate-500">Total pagado {filtroMesPagoProv !== 'todos' ? MESES[parseInt(filtroMesPagoProv)] : ''} {filtroAnioPagoProv !== 'todos' ? filtroAnioPagoProv : ''}</p>
+                        <p className="text-xs text-slate-400">{pagosFiltrados.length} pagos</p>
+                      </div>
+                      <p className="text-2xl font-bold text-emerald-500 mono">{formatCurrency(totalFiltrado)}</p>
+                    </div>
+                  </div>
+
+                  <div className="glass rounded-2xl glow overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="text-left text-slate-400 text-xs border-b border-slate-200">
+                            <th className="px-3 py-3 font-medium">Fecha</th>
+                            <th className="px-3 py-3 font-medium">Proveedor / Factura</th>
+                            <th className="px-3 py-3 font-medium">Método</th>
+                            <th className="px-3 py-3 font-medium text-right">Monto</th>
+                            <th className="px-3 py-3 font-medium text-right">Acciones</th>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+                        </thead>
+                        <tbody>
+                          {pagosFiltrados.length === 0 ? (
+                            <tr><td colSpan="5" className="px-3 py-8 text-center text-slate-400 text-xs">No hay pagos en el período seleccionado</td></tr>
+                          ) : (
+                            pagosFiltrados.map(p => (
+                              <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                                <td className="px-3 py-2.5 text-xs">{formatDate(p.fecha)}</td>
+                                <td className="px-3 py-2.5 text-xs">{p.descripcion}</td>
+                                <td className="px-3 py-2.5 text-xs text-slate-500">{p.metodo}</td>
+                                <td className="px-3 py-2.5 text-right font-semibold mono text-emerald-500 text-xs">{formatCurrency(p.monto)}</td>
+                                <td className="px-3 py-2.5 text-right">
+                                  <button onClick={() => { setSelectedItem(p); setShowModal('edit-pago'); }} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Ver detalle">
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {subTabPagoProv === 'conciliacion' && (
+                <>
+                  {/* Resumen Conciliación */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="glass rounded-xl p-4">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-5 h-5 text-emerald-500" />
+                        <div>
+                          <p className="text-xs text-slate-500">Conciliados</p>
+                          <p className="text-lg font-bold text-emerald-500">{pagosConciliados}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="glass rounded-xl p-4">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-5 h-5 text-amber-500" />
+                        <div>
+                          <p className="text-xs text-slate-500">Pendientes</p>
+                          <p className="text-lg font-bold text-amber-500">{pagosPendientesConciliar}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="glass rounded-2xl glow overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="text-left text-slate-400 text-xs border-b border-slate-200">
+                            <th className="px-3 py-3 font-medium w-12 text-center">Conciliado</th>
+                            <th className="px-3 py-3 font-medium">Observación</th>
+                            <th className="px-3 py-3 font-medium">Fecha Pago</th>
+                            <th className="px-3 py-3 font-medium">Proveedor / Factura</th>
+                            <th className="px-3 py-3 font-medium">Método</th>
+                            <th className="px-3 py-3 font-medium text-right">Monto</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pagosFiltrados.length === 0 ? (
+                            <tr><td colSpan="6" className="px-3 py-8 text-center text-slate-400 text-xs">No hay pagos en el período seleccionado</td></tr>
+                          ) : (
+                            pagosFiltrados.map(p => (
+                              <tr key={p.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${p.conciliado ? 'bg-emerald-50/50' : ''}`}>
+                                <td className="px-3 py-2.5 text-center">
+                                  <button
+                                    onClick={() => toggleConciliacion(p.id, p.conciliado)}
+                                    className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
+                                      p.conciliado
+                                        ? 'bg-emerald-500 border-emerald-500 text-white'
+                                        : 'border-slate-300 hover:border-emerald-400'
+                                    }`}
+                                    title={p.conciliado ? 'Marcar como no conciliado' : 'Marcar como conciliado'}
+                                  >
+                                    {p.conciliado && <CheckCircle className="w-4 h-4" />}
+                                  </button>
+                                </td>
+                                <td className="px-3 py-2.5">
+                                  <input
+                                    type="text"
+                                    defaultValue={p.conciliado_nota || ''}
+                                    onBlur={(e) => {
+                                      if (e.target.value !== (p.conciliado_nota || '')) {
+                                        guardarNotaConciliacion(p.id, e.target.value);
+                                      }
+                                    }}
+                                    placeholder="Ej: Banco OP 123"
+                                    className="w-full px-2 py-1 text-xs rounded border border-slate-200 focus:outline-none focus:border-blue-400 bg-white"
+                                  />
+                                </td>
+                                <td className="px-3 py-2.5 text-xs">{formatDate(p.fecha)}</td>
+                                <td className="px-3 py-2.5 text-xs">{p.descripcion}</td>
+                                <td className="px-3 py-2.5 text-xs text-slate-500">{p.metodo}</td>
+                                <td className="px-3 py-2.5 text-right font-semibold mono text-emerald-500 text-xs">{formatCurrency(p.monto)}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           );
         })()}

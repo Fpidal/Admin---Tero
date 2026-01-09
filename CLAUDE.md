@@ -85,6 +85,8 @@ CREATE TABLE pagos (
   fecha DATE NOT NULL,
   metodo TEXT, -- Efectivo, Transferencia, Mercado Pago
   estado TEXT DEFAULT 'confirmado', -- confirmado, anulado
+  conciliado BOOLEAN DEFAULT FALSE, -- para conciliación bancaria
+  conciliado_nota TEXT, -- observación de conciliación (ej: "Banco OP 123")
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -162,6 +164,7 @@ CREATE TABLE modificaciones (
    - Pagos totales o parciales de facturas
    - Filtros por proveedor, mes, año
    - Vista de facturas pendientes con saldo
+   - Solapa de Conciliación bancaria (marcar pagos como conciliados)
 
 5. **Órdenes de Pago** - Sistema de órdenes:
    - Generación de órdenes de pago
@@ -213,6 +216,7 @@ CREATE TABLE modificaciones (
 - ✅ Filtros avanzados en todas las secciones
 - ✅ Separador de miles en inputs numéricos
 - ✅ Responsive design
+- ✅ Conciliación bancaria en Pago Proveedores
 
 ## Deploy
 
