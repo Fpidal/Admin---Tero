@@ -2678,28 +2678,28 @@ function App() {
 
       {/* Navigation */}
       <nav className="max-w-7xl mx-auto px-2 sm:px-6 py-3">
-        <div className="flex gap-0.5 p-1 glass rounded-xl overflow-x-auto">
+        <div className="flex gap-1 p-1.5 glass rounded-xl overflow-x-auto">
           {[
-            { id: 'dashboard', label: 'Dash', icon: BarChart3 },
-            { id: 'ingresos', label: 'Ing', icon: TrendingUp },
-            { id: 'facturas', label: 'Fact', icon: FileText },
-            { id: 'proveedores', label: 'Prov', icon: Building2 },
-            { id: 'pago-proveedores', label: 'PagPr', icon: DollarSign },
-            { id: 'ordenes-pago', label: 'Ord', icon: CheckCircle },
+            { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+            { id: 'ingresos', label: 'Ingresos', icon: TrendingUp },
+            { id: 'facturas', label: 'Facturas', icon: FileText },
+            { id: 'proveedores', label: 'Proveed.', icon: Building2 },
+            { id: 'pago-proveedores', label: 'Pago Prov', icon: DollarSign },
+            { id: 'ordenes-pago', label: 'Órdenes', icon: CheckCircle },
             { id: 'notas-credito', label: 'NC', icon: FileText },
-            { id: 'empleados', label: 'Empl', icon: Users },
-            { id: 'pago-empleados', label: 'PagEm', icon: DollarSign },
+            { id: 'empleados', label: 'Empleados', icon: Users },
+            { id: 'pago-empleados', label: 'Pago Emp', icon: DollarSign },
             { id: 'pagos', label: 'Pagos', icon: CreditCard },
-            { id: 'informes', label: 'Inf', icon: AlertCircle },
+            { id: 'informes', label: 'Informes', icon: AlertCircle },
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1 px-2 py-1.5 rounded-lg transition-all text-xs font-medium whitespace-nowrap ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all text-sm font-medium whitespace-nowrap ${
                 activeTab === tab.id ? 'tab-active text-white' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
               }`}
             >
-              <tab.icon className="w-3.5 h-3.5" />
+              <tab.icon className="w-4 h-4" />
               <span>{tab.label}</span>
             </button>
           ))}
