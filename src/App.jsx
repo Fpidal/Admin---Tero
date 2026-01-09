@@ -1348,6 +1348,9 @@ function App() {
   const [filtroMesInforme, setFiltroMesInforme] = useState('todos');
   const [filtroAnioInforme, setFiltroAnioInforme] = useState(new Date().getFullYear().toString());
 
+  // Orden de pago seleccionada para ver detalle
+  const [ordenSeleccionada, setOrdenSeleccionada] = useState(null);
+
   // Cargar datos desde Supabase
   const fetchProveedores = async () => {
     const { data, error } = await supabase.from('proveedores').select('*').order('nombre');
@@ -2614,10 +2617,10 @@ function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {pagos.filter(p => p.tipo === 'factura').length === 0 ? (
-                      <tr><td colSpan="5" className="px-3 py-8 text-center text-slate-400 text-xs">No hay pagos a proveedores registrados</td></tr>
+                    {pagos.filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado').length === 0 ? (
+                      <tr><td colSpan="5" className="px-3 py-8 text-center text-slate-400 text-xs">No hay pagos a proveedores confirmados</td></tr>
                     ) : (
-                      pagos.filter(p => p.tipo === 'factura').map(p => (
+                      pagos.filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado').map(p => (
                         <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                           <td className="px-3 py-2.5 text-xs">{formatDate(p.fecha)}</td>
                           <td className="px-3 py-2.5 text-xs">{p.descripcion}</td>
@@ -3006,32 +3009,52 @@ function App() {
                 <h3 className="text-sm font-semibold text-emerald-600 flex items-center gap-2">
                   <CheckCircle className="w-4 h-4" />
                   Órdenes Confirmadas
+                  <span className="text-xs text-slate-400 font-normal ml-2">(click para ver detalle)</span>
                 </h3>
-                <div className="glass rounded-xl overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-left text-slate-400 text-xs border-b border-slate-200">
-                        <th className="px-4 py-3 font-medium">Orden</th>
-                        <th className="px-4 py-3 font-medium">Fecha</th>
-                        <th className="px-4 py-3 font-medium text-center">Pagos</th>
-                        <th className="px-4 py-3 font-medium text-right">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {ordenesPago.filter(o => o.estado === 'confirmada').slice(0, 10).map(orden => {
-                        const pagosOrden = pagos.filter(p => p.orden_pago_id === orden.id);
-                        const totalOrden = pagosOrden.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
-                        return (
-                          <tr key={orden.id} className="border-b border-slate-100 hover:bg-slate-50">
-                            <td className="px-4 py-3 font-medium">#{orden.id}</td>
-                            <td className="px-4 py-3 text-slate-500">{formatDate(orden.fecha)}</td>
-                            <td className="px-4 py-3 text-center">{pagosOrden.length}</td>
-                            <td className="px-4 py-3 text-right font-semibold mono text-emerald-600">{formatCurrency(totalOrden)}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                <div className="space-y-2">
+                  {ordenesPago.filter(o => o.estado === 'confirmada').slice(0, 20).map(orden => {
+                    const pagosOrden = pagos.filter(p => p.orden_pago_id === orden.id);
+                    const totalOrden = pagosOrden.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
+                    const isExpanded = ordenSeleccionada === orden.id;
+                    return (
+                      <div key={orden.id} className="glass rounded-xl overflow-hidden">
+                        <div
+                          className="flex justify-between items-center p-3 cursor-pointer hover:bg-slate-50 transition-colors"
+                          onClick={() => setOrdenSeleccionada(isExpanded ? null : orden.id)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className={`transform transition-transform ${isExpanded ? 'rotate-90' : ''}`}>
+                              <ChevronDown className="w-4 h-4 text-slate-400" />
+                            </span>
+                            <span className="font-medium">Orden #{orden.id}</span>
+                            <span className="text-xs text-slate-500">{formatDate(orden.fecha)}</span>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <span className="text-xs text-slate-500">{pagosOrden.length} pago(s)</span>
+                            <span className="font-semibold mono text-emerald-600">{formatCurrency(totalOrden)}</span>
+                          </div>
+                        </div>
+                        {isExpanded && (
+                          <div className="border-t border-slate-100 p-3 bg-slate-50/50">
+                            <div className="space-y-2">
+                              {pagosOrden.map(p => (
+                                <div key={p.id} className="flex justify-between items-center bg-white rounded-lg p-2 text-sm">
+                                  <div className="flex-1">
+                                    <p className="font-medium text-xs">{p.descripcion}</p>
+                                    <p className="text-xs text-slate-400">{p.metodo} - {formatDate(p.fecha)}</p>
+                                  </div>
+                                  <span className="font-semibold mono text-sm text-emerald-600">{formatCurrency(p.monto)}</span>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="mt-3 pt-2 border-t border-slate-200 flex justify-end">
+                              <span className="text-sm font-bold mono text-emerald-600">Total: {formatCurrency(totalOrden)}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
