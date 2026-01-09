@@ -1344,7 +1344,7 @@ function App() {
   const [filtroAnioFactura, setFiltroAnioFactura] = useState(new Date().getFullYear().toString());
 
   // Filtros Informes
-  const [informeActivo, setInformeActivo] = useState('anulaciones');
+  const [informeActivo, setInformeActivo] = useState('saldo-proveedor');
   const [filtroMesInforme, setFiltroMesInforme] = useState('todos');
   const [filtroAnioInforme, setFiltroAnioInforme] = useState(new Date().getFullYear().toString());
 
@@ -3093,6 +3093,7 @@ function App() {
             {/* Sub-tabs de informes */}
             <div className="flex flex-wrap gap-2">
               {[
+                { id: 'saldo-proveedor', label: 'Saldo por Proveedor', icon: Building2 },
                 { id: 'anulaciones', label: 'Anulaciones', icon: AlertCircle },
                 { id: 'compras-proveedor', label: 'Compras por Proveedor', icon: Building2 },
                 { id: 'compras-rubro', label: 'Compras por Rubro', icon: Truck },
@@ -3112,6 +3113,99 @@ function App() {
                 </button>
               ))}
             </div>
+
+            {/* INFORME: Saldo por Proveedor */}
+            {informeActivo === 'saldo-proveedor' && (
+              <div className="space-y-4">
+                {(() => {
+                  // Calcular saldo por proveedor
+                  const saldosPorProveedor = proveedores.map(prov => {
+                    // Facturas pendientes del proveedor
+                    const facturasProveedor = facturas.filter(f => f.proveedor_id === prov.id && f.estado !== 'pagada');
+                    const totalFacturas = facturasProveedor.reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0);
+
+                    // Pagos confirmados al proveedor
+                    const pagosProveedor = pagos
+                      .filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado' && p.descripcion)
+                      .filter(p => facturasProveedor.some(f => p.descripcion.includes(f.numero)))
+                      .reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
+
+                    // NC del proveedor aplicadas a facturas pendientes
+                    const ncProveedor = notasCredito
+                      .filter(nc => nc.proveedor_id === prov.id && facturasProveedor.some(f => f.id === nc.factura_id))
+                      .reduce((sum, nc) => sum + (parseFloat(nc.monto) || 0), 0);
+
+                    const saldo = totalFacturas - pagosProveedor - ncProveedor;
+
+                    return {
+                      ...prov,
+                      totalFacturas,
+                      pagado: pagosProveedor,
+                      nc: ncProveedor,
+                      saldo,
+                      cantidadFacturas: facturasProveedor.length
+                    };
+                  }).filter(p => p.saldo > 0).sort((a, b) => b.saldo - a.saldo);
+
+                  const totalGeneral = saldosPorProveedor.reduce((sum, p) => sum + p.saldo, 0);
+
+                  return (
+                    <>
+                      {/* Resumen total */}
+                      <div className="glass rounded-xl p-4 border-l-4 border-amber-400">
+                        <p className="text-xs text-slate-500">Total Adeudado a Proveedores</p>
+                        <p className="text-2xl font-bold text-amber-600 mono">{formatCurrency(totalGeneral)}</p>
+                        <p className="text-xs text-slate-400 mt-1">{saldosPorProveedor.length} proveedores con saldo pendiente</p>
+                      </div>
+
+                      {/* Tabla de saldos */}
+                      <div className="glass rounded-xl overflow-hidden">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="text-left text-slate-400 text-xs border-b border-slate-200">
+                              <th className="px-4 py-3 font-medium">Proveedor</th>
+                              <th className="px-4 py-3 font-medium text-center">Facturas</th>
+                              <th className="px-4 py-3 font-medium text-right">Total Fact.</th>
+                              <th className="px-4 py-3 font-medium text-right">Pagado</th>
+                              <th className="px-4 py-3 font-medium text-right">NC</th>
+                              <th className="px-4 py-3 font-medium text-right">Saldo</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {saldosPorProveedor.length === 0 ? (
+                              <tr><td colSpan="6" className="px-4 py-8 text-center text-slate-400 text-xs">No hay saldos pendientes</td></tr>
+                            ) : (
+                              saldosPorProveedor.map(p => (
+                                <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50">
+                                  <td className="px-4 py-3 font-medium">{p.nombre}</td>
+                                  <td className="px-4 py-3 text-center text-slate-500">{p.cantidadFacturas}</td>
+                                  <td className="px-4 py-3 text-right mono text-slate-600">{formatCurrency(p.totalFacturas)}</td>
+                                  <td className="px-4 py-3 text-right mono text-emerald-600">{formatCurrency(p.pagado)}</td>
+                                  <td className="px-4 py-3 text-right mono text-purple-600">{formatCurrency(p.nc)}</td>
+                                  <td className="px-4 py-3 text-right font-bold mono text-amber-600">{formatCurrency(p.saldo)}</td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                          {saldosPorProveedor.length > 0 && (
+                            <tfoot>
+                              <tr className="bg-slate-50 font-semibold">
+                                <td className="px-4 py-3">TOTAL</td>
+                                <td className="px-4 py-3 text-center">{saldosPorProveedor.reduce((sum, p) => sum + p.cantidadFacturas, 0)}</td>
+                                <td className="px-4 py-3 text-right mono">{formatCurrency(saldosPorProveedor.reduce((sum, p) => sum + p.totalFacturas, 0))}</td>
+                                <td className="px-4 py-3 text-right mono text-emerald-600">{formatCurrency(saldosPorProveedor.reduce((sum, p) => sum + p.pagado, 0))}</td>
+                                <td className="px-4 py-3 text-right mono text-purple-600">{formatCurrency(saldosPorProveedor.reduce((sum, p) => sum + p.nc, 0))}</td>
+                                <td className="px-4 py-3 text-right mono text-amber-600">{formatCurrency(totalGeneral)}</td>
+                              </tr>
+                            </tfoot>
+                          )}
+                        </table>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
 
             {/* INFORME: Anulaciones */}
             {informeActivo === 'anulaciones' && (
