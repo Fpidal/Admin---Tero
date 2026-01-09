@@ -52,6 +52,7 @@ const CONDICIONES_PAGO = [
   { value: 0, label: 'Contado' },
   { value: 7, label: '7 días' },
   { value: 15, label: '15 días' },
+  { value: 21, label: '21 días' },
   { value: 30, label: '30 días' },
   { value: 45, label: '45 días' },
   { value: 60, label: '60 días' }
