@@ -1562,6 +1562,12 @@ function App() {
   const [ordenesPago, setOrdenesPago] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Estados para Ingresos
+  const [clientes, setClientes] = useState([]);
+  const [facturasVenta, setFacturasVenta] = useState([]);
+  const [cobros, setCobros] = useState([]);
+  const [subTabIngresos, setSubTabIngresos] = useState('facturas'); // 'facturas' | 'cobros' | 'clientes'
+
   // Modales
   const [showModal, setShowModal] = useState(null); // 'proveedor', 'factura', 'empleado', 'pago'
   const [selectedItem, setSelectedItem] = useState(null);
@@ -1599,6 +1605,42 @@ function App() {
   const [filtroMesPagoProv, setFiltroMesPagoProv] = useState('todos');
   const [filtroAnioPagoProv, setFiltroAnioPagoProv] = useState(new Date().getFullYear().toString());
   const [subTabPagoProv, setSubTabPagoProv] = useState('pagos'); // 'pagos' | 'conciliacion'
+
+  // Autenticación para conciliación
+  const [conciliacionAuth, setConciliacionAuth] = useState(false);
+  const [conciliacionAuthTime, setConciliacionAuthTime] = useState(null);
+  const [claveConciliacion, setClaveConciliacion] = useState('');
+  const [errorClaveConciliacion, setErrorClaveConciliacion] = useState(false);
+
+  // Verificar si la sesión de conciliación expiró (5 minutos)
+  const isConciliacionAuthValid = () => {
+    if (!conciliacionAuth || !conciliacionAuthTime) return false;
+    const ahora = Date.now();
+    const cincominutos = 5 * 60 * 1000;
+    return (ahora - conciliacionAuthTime) < cincominutos;
+  };
+
+  // Resetear auth cuando se sale de la solapa conciliación
+  const handleSubTabChange = (tab) => {
+    if (tab !== 'conciliacion') {
+      setConciliacionAuth(false);
+      setConciliacionAuthTime(null);
+      setClaveConciliacion('');
+    }
+    setSubTabPagoProv(tab);
+  };
+
+  // Validar clave de conciliación
+  const validarClaveConciliacion = (e) => {
+    e.preventDefault();
+    if (claveConciliacion === '1970') {
+      setConciliacionAuth(true);
+      setConciliacionAuthTime(Date.now());
+      setErrorClaveConciliacion(false);
+    } else {
+      setErrorClaveConciliacion(true);
+    }
+  };
 
   // Cargar datos desde Supabase
   const fetchProveedores = async () => {
@@ -1704,9 +1746,50 @@ function App() {
     }
   };
 
+  // Fetch para Ingresos
+  const fetchClientes = async () => {
+    try {
+      const { data, error } = await supabase.from('clientes').select('*').order('nombre');
+      if (!error) setClientes(data || []);
+    } catch (e) {
+      setClientes([]);
+    }
+  };
+
+  const fetchFacturasVenta = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('facturas_venta')
+        .select('*, clientes(nombre)')
+        .order('vencimiento', { ascending: true });
+      if (!error) {
+        const facturasConCliente = (data || []).map(f => ({
+          ...f,
+          cliente: f.clientes?.nombre || 'Sin cliente'
+        }));
+        setFacturasVenta(facturasConCliente);
+      }
+    } catch (e) {
+      setFacturasVenta([]);
+    }
+  };
+
+  const fetchCobros = async () => {
+    try {
+      const { data, error } = await supabase.from('cobros').select('*').order('fecha', { ascending: false });
+      if (!error) setCobros(data || []);
+    } catch (e) {
+      setCobros([]);
+    }
+  };
+
   const fetchAllData = async () => {
     setLoading(true);
-    await Promise.all([fetchProveedores(), fetchFacturas(), fetchEmpleados(), fetchPagos(), fetchNotasCredito(), fetchAnulaciones(), fetchModificaciones(), fetchOrdenesPago()]);
+    await Promise.all([
+      fetchProveedores(), fetchFacturas(), fetchEmpleados(), fetchPagos(),
+      fetchNotasCredito(), fetchAnulaciones(), fetchModificaciones(), fetchOrdenesPago(),
+      fetchClientes(), fetchFacturasVenta(), fetchCobros()
+    ]);
     setLoading(false);
   };
 
@@ -1912,6 +1995,104 @@ function App() {
     };
     const { error } = await supabase.from('pagos').insert([pago]);
     if (!error) await fetchPagos();
+  };
+
+  // CRUD Clientes
+  const createCliente = async (cliente) => {
+    const { error } = await supabase.from('clientes').insert([cliente]);
+    if (!error) {
+      await fetchClientes();
+      setShowModal(null);
+      setSelectedItem(null);
+    }
+    return { error };
+  };
+
+  const updateCliente = async (id, cliente) => {
+    const { error } = await supabase.from('clientes').update(cliente).eq('id', id);
+    if (!error) {
+      await fetchClientes();
+      setShowModal(null);
+      setSelectedItem(null);
+    }
+    return { error };
+  };
+
+  const deleteCliente = async (id) => {
+    if (!confirm('¿Estás seguro de eliminar este cliente?')) return;
+    const { error } = await supabase.from('clientes').delete().eq('id', id);
+    if (!error) await fetchClientes();
+  };
+
+  // CRUD Facturas de Venta
+  const createFacturaVenta = async (factura) => {
+    const { error } = await supabase.from('facturas_venta').insert([factura]);
+    if (!error) {
+      await fetchFacturasVenta();
+      setShowModal(null);
+      setSelectedItem(null);
+    }
+    return { error };
+  };
+
+  const updateFacturaVenta = async (id, factura) => {
+    const { error } = await supabase.from('facturas_venta').update(factura).eq('id', id);
+    if (!error) {
+      await fetchFacturasVenta();
+      setShowModal(null);
+      setSelectedItem(null);
+    }
+    return { error };
+  };
+
+  const deleteFacturaVenta = async (id) => {
+    if (!confirm('¿Estás seguro de eliminar esta factura?')) return;
+    const { error } = await supabase.from('facturas_venta').delete().eq('id', id);
+    if (!error) await fetchFacturasVenta();
+  };
+
+  // CRUD Cobros
+  const createCobro = async (cobro) => {
+    const { error } = await supabase.from('cobros').insert([cobro]);
+    if (!error) {
+      await fetchCobros();
+      // Actualizar estado de factura si corresponde
+      if (cobro.factura_venta_id) {
+        await actualizarEstadoFacturaVenta(cobro.factura_venta_id);
+      }
+      setShowModal(null);
+      setSelectedItem(null);
+    }
+    return { error };
+  };
+
+  const updateCobro = async (id, cobro) => {
+    const { error } = await supabase.from('cobros').update(cobro).eq('id', id);
+    if (!error) {
+      await fetchCobros();
+      setShowModal(null);
+      setSelectedItem(null);
+    }
+    return { error };
+  };
+
+  const deleteCobro = async (id) => {
+    if (!confirm('¿Estás seguro de eliminar este cobro?')) return;
+    const { error } = await supabase.from('cobros').delete().eq('id', id);
+    if (!error) await fetchCobros();
+  };
+
+  // Actualizar estado de factura de venta según cobros
+  const actualizarEstadoFacturaVenta = async (facturaId) => {
+    const totalCobros = cobros
+      .filter(c => c.factura_venta_id === facturaId)
+      .reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0);
+    const factura = facturasVenta.find(f => f.id === facturaId);
+    if (factura) {
+      const nuevoEstado = totalCobros >= factura.monto ? 'cobrada' : 'pendiente';
+      await supabase.from('facturas_venta').update({ estado: nuevoEstado }).eq('id', facturaId);
+      await fetchFacturasVenta();
+    }
   };
 
   // CRUD Pagos
@@ -2497,6 +2678,7 @@ function App() {
         <div className="flex flex-wrap gap-1 p-1 glass rounded-xl">
           {[
             { id: 'dashboard', label: 'Dashboard', short: 'Dash', icon: BarChart3 },
+            { id: 'ingresos', label: 'Ingresos', short: 'Ing', icon: TrendingUp },
             { id: 'facturas', label: 'Facturas', short: 'Fact', icon: FileText },
             { id: 'proveedores', label: 'Proveedores', short: 'Prov', icon: Building2 },
             { id: 'pago-proveedores', label: 'Pago Prov.', short: 'PagProv', icon: DollarSign },
@@ -2819,6 +3001,217 @@ function App() {
                 </table>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* INGRESOS */}
+        {activeTab === 'ingresos' && (
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <h2 className="text-lg font-bold">Ingresos</h2>
+            </div>
+
+            {/* Solapas Facturas / Cobros / Clientes */}
+            <div className="flex gap-2 border-b border-slate-200">
+              <button
+                onClick={() => setSubTabIngresos('facturas')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  subTabIngresos === 'facturas'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                Facturas
+              </button>
+              <button
+                onClick={() => setSubTabIngresos('cobros')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  subTabIngresos === 'cobros'
+                    ? 'border-emerald-500 text-emerald-600'
+                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                Cobros
+              </button>
+              <button
+                onClick={() => setSubTabIngresos('clientes')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  subTabIngresos === 'clientes'
+                    ? 'border-purple-500 text-purple-600'
+                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                Clientes
+              </button>
+            </div>
+
+            {/* Subtab: Facturas de Venta */}
+            {subTabIngresos === 'facturas' && (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <div className="text-right">
+                    <p className="text-xs text-slate-500">Total Facturado</p>
+                    <p className="text-lg font-bold text-blue-500 mono">{formatCurrency(facturasVenta.reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0))}</p>
+                  </div>
+                  <button
+                    onClick={() => { setSelectedItem(null); setShowModal('factura-venta'); }}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all text-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Nueva Factura
+                  </button>
+                </div>
+
+                <div className="glass rounded-2xl glow overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left text-slate-400 text-xs border-b border-slate-200">
+                          <th className="px-3 py-3 font-medium">Fecha</th>
+                          <th className="px-3 py-3 font-medium">Número</th>
+                          <th className="px-3 py-3 font-medium">Cliente</th>
+                          <th className="px-3 py-3 font-medium">Vencimiento</th>
+                          <th className="px-3 py-3 font-medium">Estado</th>
+                          <th className="px-3 py-3 font-medium text-right">Monto</th>
+                          <th className="px-3 py-3 font-medium text-right">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {facturasVenta.length === 0 ? (
+                          <tr><td colSpan="7" className="px-3 py-8 text-center text-slate-400 text-xs">No hay facturas de venta registradas</td></tr>
+                        ) : (
+                          facturasVenta.map(f => (
+                            <tr key={f.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                              <td className="px-3 py-2.5 text-xs">{formatDate(f.fecha)}</td>
+                              <td className="px-3 py-2.5 text-xs font-medium">{f.numero}</td>
+                              <td className="px-3 py-2.5 text-xs">{f.cliente}</td>
+                              <td className="px-3 py-2.5 text-xs">{formatDate(f.vencimiento)}</td>
+                              <td className="px-3 py-2.5">
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                  f.estado === 'cobrada' ? 'bg-emerald-100 text-emerald-700' :
+                                  f.estado === 'vencida' ? 'bg-red-100 text-red-700' :
+                                  'bg-amber-100 text-amber-700'
+                                }`}>
+                                  {f.estado === 'cobrada' ? 'Cobrada' : f.estado === 'vencida' ? 'Vencida' : 'Pendiente'}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2.5 text-right font-semibold mono text-blue-500 text-xs">{formatCurrency(f.monto)}</td>
+                              <td className="px-3 py-2.5 text-right">
+                                <button onClick={() => { setSelectedItem(f); setShowModal('factura-venta'); }} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Editar">
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                </button>
+                                <button onClick={() => deleteFacturaVenta(f.id)} className="p-1.5 hover:bg-red-100 rounded-lg transition-colors text-red-500" title="Eliminar">
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Subtab: Cobros */}
+            {subTabIngresos === 'cobros' && (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <div className="text-right">
+                    <p className="text-xs text-slate-500">Total Cobrado</p>
+                    <p className="text-lg font-bold text-emerald-500 mono">{formatCurrency(cobros.reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0))}</p>
+                  </div>
+                  <button
+                    onClick={() => { setSelectedItem(null); setShowModal('cobro'); }}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all text-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Nuevo Cobro
+                  </button>
+                </div>
+
+                <div className="glass rounded-2xl glow overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left text-slate-400 text-xs border-b border-slate-200">
+                          <th className="px-3 py-3 font-medium">Fecha</th>
+                          <th className="px-3 py-3 font-medium">Cliente / Factura</th>
+                          <th className="px-3 py-3 font-medium">Método</th>
+                          <th className="px-3 py-3 font-medium text-right">Monto</th>
+                          <th className="px-3 py-3 font-medium text-right">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {cobros.length === 0 ? (
+                          <tr><td colSpan="5" className="px-3 py-8 text-center text-slate-400 text-xs">No hay cobros registrados</td></tr>
+                        ) : (
+                          cobros.map(c => (
+                            <tr key={c.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                              <td className="px-3 py-2.5 text-xs">{formatDate(c.fecha)}</td>
+                              <td className="px-3 py-2.5 text-xs">{c.descripcion}</td>
+                              <td className="px-3 py-2.5 text-xs text-slate-500">{c.metodo}</td>
+                              <td className="px-3 py-2.5 text-right font-semibold mono text-emerald-500 text-xs">{formatCurrency(c.monto)}</td>
+                              <td className="px-3 py-2.5 text-right">
+                                <button onClick={() => { setSelectedItem(c); setShowModal('cobro'); }} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Editar">
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                </button>
+                                <button onClick={() => deleteCobro(c.id)} className="p-1.5 hover:bg-red-100 rounded-lg transition-colors text-red-500" title="Eliminar">
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Subtab: Clientes */}
+            {subTabIngresos === 'clientes' && (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <p className="text-sm text-slate-500">{clientes.length} clientes registrados</p>
+                  <button
+                    onClick={() => { setSelectedItem(null); setShowModal('cliente'); }}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 text-white font-medium hover:from-purple-600 hover:to-purple-700 transition-all text-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Nuevo Cliente
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {clientes.length === 0 ? (
+                    <p className="text-slate-400 text-sm col-span-full text-center py-8">No hay clientes registrados</p>
+                  ) : (
+                    clientes.map(c => (
+                      <div key={c.id} className="glass rounded-xl p-4 hover:shadow-lg transition-all">
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="font-semibold text-slate-800">{c.nombre}</h3>
+                          <div className="flex gap-1">
+                            <button onClick={() => { setSelectedItem(c); setShowModal('cliente'); }} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button onClick={() => deleteCliente(c.id)} className="p-1.5 hover:bg-red-100 rounded-lg transition-colors text-red-500">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                        {c.cuit && <p className="text-xs text-slate-500">CUIT: {c.cuit}</p>}
+                        {c.telefono && <p className="text-xs text-slate-500">Tel: {c.telefono}</p>}
+                        {c.email && <p className="text-xs text-slate-500">{c.email}</p>}
+                        {c.condicion_iva && <p className="text-xs text-purple-600 mt-1">{c.condicion_iva}</p>}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -3226,9 +3619,11 @@ function App() {
               .eq('id', pagoId);
           };
 
-          // Contadores para conciliación
+          // Contadores y totales para conciliación
           const pagosConciliados = pagosFiltrados.filter(p => p.conciliado).length;
           const pagosPendientesConciliar = pagosFiltrados.filter(p => !p.conciliado).length;
+          const totalConciliado = pagosFiltrados.filter(p => p.conciliado).reduce((sum, p) => sum + p.monto, 0);
+          const totalPorConciliar = pagosFiltrados.filter(p => !p.conciliado).reduce((sum, p) => sum + p.monto, 0);
 
           return (
             <div className="space-y-4">
@@ -3267,7 +3662,7 @@ function App() {
               {/* Solapas Pagos / Conciliación */}
               <div className="flex gap-2 border-b border-slate-200">
                 <button
-                  onClick={() => setSubTabPagoProv('pagos')}
+                  onClick={() => handleSubTabChange('pagos')}
                   className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                     subTabPagoProv === 'pagos'
                       ? 'border-blue-500 text-blue-600'
@@ -3277,7 +3672,7 @@ function App() {
                   Pagos
                 </button>
                 <button
-                  onClick={() => setSubTabPagoProv('conciliacion')}
+                  onClick={() => handleSubTabChange('conciliacion')}
                   className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
                     subTabPagoProv === 'conciliacion'
                       ? 'border-emerald-500 text-emerald-600'
@@ -3346,29 +3741,61 @@ function App() {
 
               {subTabPagoProv === 'conciliacion' && (
                 <>
-                  {/* Resumen Conciliación */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="glass rounded-xl p-4">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="w-5 h-5 text-emerald-500" />
-                        <div>
-                          <p className="text-xs text-slate-500">Conciliados</p>
-                          <p className="text-lg font-bold text-emerald-500">{pagosConciliados}</p>
+                  {/* Pantalla de clave si no está autenticado */}
+                  {!isConciliacionAuthValid() ? (
+                    <div className="glass rounded-2xl p-8 max-w-sm mx-auto">
+                      <div className="text-center mb-6">
+                        <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <CheckCircle className="w-6 h-6 text-emerald-600" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-slate-800">Acceso a Conciliación</h3>
+                        <p className="text-sm text-slate-500 mt-1">Ingresá la clave para continuar</p>
+                      </div>
+                      <form onSubmit={validarClaveConciliacion}>
+                        <input
+                          type="password"
+                          value={claveConciliacion}
+                          onChange={(e) => { setClaveConciliacion(e.target.value); setErrorClaveConciliacion(false); }}
+                          placeholder="Clave"
+                          className={`w-full px-4 py-3 rounded-xl border ${errorClaveConciliacion ? 'border-red-400 bg-red-50' : 'border-slate-200'} focus:outline-none focus:border-emerald-500 text-center text-lg tracking-widest`}
+                          autoFocus
+                        />
+                        {errorClaveConciliacion && (
+                          <p className="text-red-500 text-xs text-center mt-2">Clave incorrecta</p>
+                        )}
+                        <button
+                          type="submit"
+                          className="w-full mt-4 px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all"
+                        >
+                          Ingresar
+                        </button>
+                      </form>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Resumen Conciliación */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="glass rounded-xl p-4">
+                          <div className="flex items-center gap-3">
+                            <CheckCircle className="w-6 h-6 text-emerald-500" />
+                            <div>
+                              <p className="text-xs text-slate-500">Conciliados ({pagosConciliados})</p>
+                              <p className="text-xl font-bold text-emerald-500 mono">{formatCurrency(totalConciliado)}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="glass rounded-xl p-4">
+                          <div className="flex items-center gap-3">
+                            <Clock className="w-6 h-6 text-amber-500" />
+                            <div>
+                              <p className="text-xs text-slate-500">Por conciliar ({pagosPendientesConciliar})</p>
+                              <p className="text-xl font-bold text-amber-500 mono">{formatCurrency(totalPorConciliar)}</p>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="glass rounded-xl p-4">
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-5 h-5 text-amber-500" />
-                        <div>
-                          <p className="text-xs text-slate-500">Pendientes</p>
-                          <p className="text-lg font-bold text-amber-500">{pagosPendientesConciliar}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
 
-                  <div className="glass rounded-2xl glow overflow-hidden">
+                      <div className="glass rounded-2xl glow overflow-hidden">
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
@@ -3424,6 +3851,8 @@ function App() {
                       </table>
                     </div>
                   </div>
+                    </>
+                  )}
                 </>
               )}
             </div>
@@ -4418,6 +4847,238 @@ function App() {
           onSave={updatePago}
           onDelete={deletePago}
         />
+      )}
+
+      {/* Modal Cliente */}
+      {showModal === 'cliente' && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-slate-800">{selectedItem ? 'Editar Cliente' : 'Nuevo Cliente'}</h2>
+                <button onClick={() => { setShowModal(null); setSelectedItem(null); }} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const data = {
+                  nombre: formData.get('nombre'),
+                  cuit: formData.get('cuit') || null,
+                  telefono: formData.get('telefono') || null,
+                  email: formData.get('email') || null,
+                  direccion: formData.get('direccion') || null,
+                  condicion_iva: formData.get('condicion_iva') || null
+                };
+                if (selectedItem) {
+                  await updateCliente(selectedItem.id, data);
+                } else {
+                  await createCliente(data);
+                }
+              }} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Nombre *</label>
+                  <input name="nombre" defaultValue={selectedItem?.nombre || ''} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">CUIT</label>
+                  <input name="cuit" defaultValue={selectedItem?.cuit || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Teléfono</label>
+                    <input name="telefono" defaultValue={selectedItem?.telefono || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                    <input name="email" type="email" defaultValue={selectedItem?.email || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Dirección</label>
+                  <input name="direccion" defaultValue={selectedItem?.direccion || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Condición IVA</label>
+                  <select name="condicion_iva" defaultValue={selectedItem?.condicion_iva || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500">
+                    <option value="">Seleccionar...</option>
+                    <option value="Responsable Inscripto">Responsable Inscripto</option>
+                    <option value="Monotributista">Monotributista</option>
+                    <option value="Consumidor Final">Consumidor Final</option>
+                    <option value="Exento">Exento</option>
+                  </select>
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <button type="submit" className="flex-1 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 text-white font-medium hover:from-purple-600 hover:to-purple-700 transition-all">
+                    {selectedItem ? 'Guardar' : 'Crear Cliente'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Factura de Venta */}
+      {showModal === 'factura-venta' && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-slate-800">{selectedItem ? 'Editar Factura' : 'Nueva Factura de Venta'}</h2>
+                <button onClick={() => { setShowModal(null); setSelectedItem(null); }} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const data = {
+                  numero: formData.get('numero'),
+                  cliente_id: parseInt(formData.get('cliente_id')) || null,
+                  monto: parseFloat(parseInputMonto(formData.get('monto'))),
+                  fecha: formData.get('fecha'),
+                  vencimiento: formData.get('vencimiento'),
+                  concepto: formData.get('concepto') || null,
+                  estado: formData.get('estado') || 'pendiente'
+                };
+                if (selectedItem) {
+                  await updateFacturaVenta(selectedItem.id, data);
+                } else {
+                  await createFacturaVenta(data);
+                }
+              }} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Número *</label>
+                    <input name="numero" defaultValue={selectedItem?.numero || ''} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Cliente</label>
+                    <select name="cliente_id" defaultValue={selectedItem?.cliente_id || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
+                      <option value="">Sin cliente</option>
+                      {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Monto *</label>
+                  <input name="monto" defaultValue={selectedItem ? formatInputMonto(selectedItem.monto) : ''} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500" onChange={(e) => e.target.value = formatInputMonto(e.target.value)} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Fecha *</label>
+                    <input name="fecha" type="date" defaultValue={selectedItem?.fecha || new Date().toISOString().split('T')[0]} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Vencimiento *</label>
+                    <input name="vencimiento" type="date" defaultValue={selectedItem?.vencimiento || ''} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Concepto</label>
+                  <input name="concepto" defaultValue={selectedItem?.concepto || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500" />
+                </div>
+                {selectedItem && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Estado</label>
+                    <select name="estado" defaultValue={selectedItem?.estado || 'pendiente'} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
+                      <option value="pendiente">Pendiente</option>
+                      <option value="cobrada">Cobrada</option>
+                      <option value="vencida">Vencida</option>
+                    </select>
+                  </div>
+                )}
+                <div className="flex gap-3 pt-4">
+                  <button type="submit" className="flex-1 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all">
+                    {selectedItem ? 'Guardar' : 'Crear Factura'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Cobro */}
+      {showModal === 'cobro' && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-slate-800">{selectedItem ? 'Editar Cobro' : 'Nuevo Cobro'}</h2>
+                <button onClick={() => { setShowModal(null); setSelectedItem(null); }} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const clienteId = formData.get('cliente_id');
+                const facturaId = formData.get('factura_venta_id');
+                const cliente = clientes.find(c => c.id === parseInt(clienteId));
+                const factura = facturasVenta.find(f => f.id === parseInt(facturaId));
+                const data = {
+                  cliente_id: parseInt(clienteId) || null,
+                  factura_venta_id: parseInt(facturaId) || null,
+                  descripcion: `${cliente?.nombre || 'Cliente'} - ${factura ? 'Fact. ' + factura.numero : formData.get('descripcion') || 'Cobro'}`,
+                  monto: parseFloat(parseInputMonto(formData.get('monto'))),
+                  fecha: formData.get('fecha'),
+                  metodo: formData.get('metodo')
+                };
+                if (selectedItem) {
+                  await updateCobro(selectedItem.id, data);
+                } else {
+                  await createCobro(data);
+                }
+              }} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Cliente</label>
+                  <select name="cliente_id" defaultValue={selectedItem?.cliente_id || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500">
+                    <option value="">Seleccionar cliente...</option>
+                    {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Factura (opcional)</label>
+                  <select name="factura_venta_id" defaultValue={selectedItem?.factura_venta_id || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500">
+                    <option value="">Sin factura asociada</option>
+                    {facturasVenta.filter(f => f.estado !== 'cobrada').map(f => <option key={f.id} value={f.id}>{f.numero} - {f.cliente} - {formatCurrency(f.monto)}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
+                  <input name="descripcion" defaultValue={selectedItem?.descripcion || ''} placeholder="Opcional si seleccionó cliente/factura" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Monto *</label>
+                  <input name="monto" defaultValue={selectedItem ? formatInputMonto(selectedItem.monto) : ''} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500" onChange={(e) => e.target.value = formatInputMonto(e.target.value)} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Fecha *</label>
+                    <input name="fecha" type="date" defaultValue={selectedItem?.fecha || new Date().toISOString().split('T')[0]} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Método *</label>
+                    <select name="metodo" defaultValue={selectedItem?.metodo || 'Transferencia'} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500">
+                      <option value="Efectivo">Efectivo</option>
+                      <option value="Transferencia">Transferencia</option>
+                      <option value="Mercado Pago">Mercado Pago</option>
+                      <option value="Tarjeta">Tarjeta</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <button type="submit" className="flex-1 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all">
+                    {selectedItem ? 'Guardar' : 'Registrar Cobro'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Loading overlay */}

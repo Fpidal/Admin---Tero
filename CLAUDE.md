@@ -132,6 +132,43 @@ CREATE TABLE modificaciones (
   fecha_modificacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   descripcion TEXT
 );
+
+-- Clientes (para ingresos/ventas)
+CREATE TABLE clientes (
+  id SERIAL PRIMARY KEY,
+  nombre TEXT NOT NULL,
+  cuit TEXT,
+  telefono TEXT,
+  email TEXT,
+  direccion TEXT,
+  condicion_iva TEXT, -- Responsable Inscripto, Monotributista, Consumidor Final, Exento
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Facturas de Venta
+CREATE TABLE facturas_venta (
+  id SERIAL PRIMARY KEY,
+  cliente_id INTEGER REFERENCES clientes(id),
+  numero TEXT NOT NULL,
+  monto NUMERIC NOT NULL,
+  fecha DATE NOT NULL,
+  vencimiento DATE NOT NULL,
+  estado TEXT DEFAULT 'pendiente' CHECK (estado IN ('pendiente', 'cobrada', 'vencida')),
+  concepto TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Cobros (pagos de clientes)
+CREATE TABLE cobros (
+  id SERIAL PRIMARY KEY,
+  cliente_id INTEGER REFERENCES clientes(id),
+  factura_venta_id INTEGER REFERENCES facturas_venta(id),
+  descripcion TEXT,
+  monto NUMERIC NOT NULL,
+  fecha DATE NOT NULL,
+  metodo TEXT, -- Efectivo, Transferencia, Mercado Pago, Tarjeta
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 ```
 
 ## Módulos del Dashboard
@@ -146,51 +183,56 @@ CREATE TABLE modificaciones (
    - Compras del mes (con filtros mes/año)
    - Últimos pagos
 
-2. **Facturas** - CRUD de facturas con:
+2. **Ingresos** - Gestión de ventas con 3 subsecciones:
+   - **Facturas**: CRUD de facturas de venta con cliente, vencimiento y estado
+   - **Cobros**: Registro de cobros asociados a facturas o clientes
+   - **Clientes**: CRUD completo (nombre, CUIT, teléfono, email, dirección, condición IVA)
+
+3. **Facturas** - CRUD de facturas de proveedores con:
    - Búsqueda y filtros por estado, proveedor, mes, año
    - Alerta de vencimientos
    - Detección de facturas duplicadas
    - Marcar como pagada
    - Totales de facturas filtradas
 
-3. **Proveedores** - CRUD de proveedores con:
+4. **Proveedores** - CRUD de proveedores con:
    - Categorías (Pescadería, Carnes, Bodega, Almacén, Verduras, Arreglos, Bebidas, Otros)
    - Condiciones de pago (Contado, 7, 15, 21, 30, 45, 60 días)
    - Datos de contacto (persona de contacto, celular)
    - Datos bancarios
    - Filtro por categoría
 
-4. **Pago Proveedores** - Registro de pagos con:
+5. **Pago Proveedores** - Registro de pagos con:
    - Pagos totales o parciales de facturas
    - Filtros por proveedor, mes, año
    - Vista de facturas pendientes con saldo
    - Solapa de Conciliación bancaria (marcar pagos como conciliados)
 
-5. **Órdenes de Pago** - Sistema de órdenes:
+6. **Órdenes de Pago** - Sistema de órdenes:
    - Generación de órdenes de pago
    - Agrupación de pagos por orden
    - Numeración automática
 
-6. **Notas de Crédito** - CRUD de NC con:
+7. **Notas de Crédito** - CRUD de NC con:
    - Asignación a factura específica (opcional)
    - Gestión por proveedor
 
-7. **Empleados** - CRUD de empleados con:
+8. **Empleados** - CRUD de empleados con:
    - Datos personales
    - Puesto y sueldo
    - Datos bancarios
 
-8. **Pago Empleados** - Pagos de sueldos con:
+9. **Pago Empleados** - Pagos de sueldos con:
    - Registro por mes
    - Diferentes conceptos (sueldo, aguinaldo, etc.)
    - Filtros por mes y concepto
 
-9. **Pagos** - Historial de pagos con:
-   - Todos los pagos registrados
-   - Filtro por mes, tipo y forma de pago
-   - Edición y anulación de pagos
+10. **Pagos** - Historial de pagos con:
+    - Todos los pagos registrados
+    - Filtro por mes, tipo y forma de pago
+    - Edición y anulación de pagos
 
-10. **Informes** - Reportes con:
+11. **Informes** - Reportes con:
     - Saldo por Proveedor
     - Anulaciones
     - Modificaciones (de montos en facturas y pagos)
@@ -217,6 +259,7 @@ CREATE TABLE modificaciones (
 - ✅ Separador de miles en inputs numéricos
 - ✅ Responsive design
 - ✅ Conciliación bancaria en Pago Proveedores
+- ✅ Módulo de Ingresos (Clientes, Facturas de Venta, Cobros)
 
 ## Deploy
 
