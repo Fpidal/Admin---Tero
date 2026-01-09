@@ -2678,30 +2678,29 @@ function App() {
 
       {/* Navigation */}
       <nav className="max-w-7xl mx-auto px-2 sm:px-6 py-3">
-        <div className="flex flex-wrap gap-1 p-1 glass rounded-xl">
+        <div className="flex gap-0.5 p-1 glass rounded-xl overflow-x-auto">
           {[
-            { id: 'dashboard', label: 'Dashboard', short: 'Dash', icon: BarChart3 },
-            { id: 'ingresos', label: 'Ingresos', short: 'Ing', icon: TrendingUp },
-            { id: 'facturas', label: 'Facturas', short: 'Fact', icon: FileText },
-            { id: 'proveedores', label: 'Proveedores', short: 'Prov', icon: Building2 },
-            { id: 'pago-proveedores', label: 'Pago Prov.', short: 'PagProv', icon: DollarSign },
-            { id: 'ordenes-pago', label: 'Órdenes', short: 'Ord', icon: CheckCircle },
-            { id: 'notas-credito', label: 'NC', short: 'NC', icon: FileText },
-            { id: 'empleados', label: 'Empleados', short: 'Empl', icon: Users },
-            { id: 'pago-empleados', label: 'Pago Empl.', short: 'PagEmpl', icon: DollarSign },
-            { id: 'pagos', label: 'Pagos', short: 'Pagos', icon: CreditCard },
-            { id: 'informes', label: 'Informes', short: 'Inf', icon: AlertCircle },
+            { id: 'dashboard', label: 'Dash', icon: BarChart3 },
+            { id: 'ingresos', label: 'Ing', icon: TrendingUp },
+            { id: 'facturas', label: 'Fact', icon: FileText },
+            { id: 'proveedores', label: 'Prov', icon: Building2 },
+            { id: 'pago-proveedores', label: 'PagPr', icon: DollarSign },
+            { id: 'ordenes-pago', label: 'Ord', icon: CheckCircle },
+            { id: 'notas-credito', label: 'NC', icon: FileText },
+            { id: 'empleados', label: 'Empl', icon: Users },
+            { id: 'pago-empleados', label: 'PagEm', icon: DollarSign },
+            { id: 'pagos', label: 'Pagos', icon: CreditCard },
+            { id: 'informes', label: 'Inf', icon: AlertCircle },
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-medium ${
+              className={`flex items-center gap-1 px-2 py-1.5 rounded-lg transition-all text-xs font-medium whitespace-nowrap ${
                 activeTab === tab.id ? 'tab-active text-white' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
               }`}
             >
-              <tab.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span className="hidden sm:inline">{tab.label}</span>
-              <span className="sm:hidden">{tab.short}</span>
+              <tab.icon className="w-3.5 h-3.5" />
+              <span>{tab.label}</span>
             </button>
           ))}
         </div>
@@ -3150,7 +3149,8 @@ function App() {
                       <thead>
                         <tr className="text-left text-slate-400 text-xs border-b border-slate-200">
                           <th className="px-3 py-3 font-medium">Fecha</th>
-                          <th className="px-3 py-3 font-medium">Cliente / Factura</th>
+                          <th className="px-3 py-3 font-medium">Cliente</th>
+                          <th className="px-3 py-3 font-medium">Factura</th>
                           <th className="px-3 py-3 font-medium">Método</th>
                           <th className="px-3 py-3 font-medium text-right">Monto</th>
                           <th className="px-3 py-3 font-medium text-right">Acciones</th>
@@ -3158,24 +3158,29 @@ function App() {
                       </thead>
                       <tbody>
                         {cobros.length === 0 ? (
-                          <tr><td colSpan="5" className="px-3 py-8 text-center text-slate-400 text-xs">No hay cobros registrados</td></tr>
+                          <tr><td colSpan="6" className="px-3 py-8 text-center text-slate-400 text-xs">No hay cobros registrados</td></tr>
                         ) : (
-                          cobros.map(c => (
-                            <tr key={c.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                              <td className="px-3 py-2.5 text-xs">{formatDate(c.fecha)}</td>
-                              <td className="px-3 py-2.5 text-xs">{c.descripcion}</td>
-                              <td className="px-3 py-2.5 text-xs text-slate-500">{c.metodo}</td>
-                              <td className="px-3 py-2.5 text-right font-semibold mono text-emerald-500 text-xs">{formatCurrency(c.monto)}</td>
-                              <td className="px-3 py-2.5 text-right">
-                                <button onClick={() => { setSelectedItem(c); setShowModal('cobro'); }} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Editar">
-                                  <Edit3 className="w-3.5 h-3.5" />
-                                </button>
-                                <button onClick={() => deleteCobro(c.id)} className="p-1.5 hover:bg-red-100 rounded-lg transition-colors text-red-500" title="Eliminar">
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </td>
-                            </tr>
-                          ))
+                          cobros.map(c => {
+                            const cliente = clientes.find(cl => cl.id === c.cliente_id);
+                            const factura = facturasVenta.find(f => f.id === c.factura_venta_id);
+                            return (
+                              <tr key={c.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                                <td className="px-3 py-2.5 text-xs">{formatDate(c.fecha)}</td>
+                                <td className="px-3 py-2.5 text-xs font-medium">{cliente?.nombre || '-'}</td>
+                                <td className="px-3 py-2.5 text-xs text-slate-500">{factura?.numero || '-'}</td>
+                                <td className="px-3 py-2.5 text-xs text-slate-500">{c.metodo}</td>
+                                <td className="px-3 py-2.5 text-right font-semibold mono text-emerald-500 text-xs">{formatCurrency(c.monto)}</td>
+                                <td className="px-3 py-2.5 text-right">
+                                  <button onClick={() => { setSelectedItem(c); setShowModal('cobro'); }} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Editar">
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button onClick={() => deleteCobro(c.id)} className="p-1.5 hover:bg-red-100 rounded-lg transition-colors text-red-500" title="Eliminar">
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })
                         )}
                       </tbody>
                     </table>
