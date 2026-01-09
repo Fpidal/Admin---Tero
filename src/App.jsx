@@ -1587,16 +1587,7 @@ function App() {
   const fetchProveedores = async () => {
     const { data, error } = await supabase.from('proveedores').select('*').order('nombre');
     if (!error) {
-      // Cargar extras desde localStorage (categoria, condicion_pago, contacto, celular)
-      const extras = JSON.parse(localStorage.getItem('proveedores_extras') || '{}');
-      const proveedoresConExtras = (data || []).map(p => ({
-        ...p,
-        categoria: extras[p.id]?.categoria || '',
-        condicion_pago: extras[p.id]?.condicion_pago || '',
-        contacto: extras[p.id]?.contacto || '',
-        celular: extras[p.id]?.celular || ''
-      }));
-      setProveedores(proveedoresConExtras);
+      setProveedores(data || []);
     }
   };
 
@@ -1756,19 +1747,11 @@ function App() {
   // CRUD Proveedores
   const createProveedor = async (proveedor) => {
     console.log('Creando proveedor:', proveedor);
-    // Excluir campos que no existen en Supabase (se guardan en localStorage)
-    const { categoria, condicion_pago, contacto, celular, ...proveedorDB } = proveedor;
-    const { data, error } = await supabase.from('proveedores').insert([proveedorDB]).select();
+    const { data, error } = await supabase.from('proveedores').insert([proveedor]).select();
     console.log('Respuesta Supabase:', { data, error });
     if (error) {
       console.error('Error completo:', JSON.stringify(error, null, 2));
     } else {
-      // Guardar extras en localStorage
-      if (data && data[0]) {
-        const extras = JSON.parse(localStorage.getItem('proveedores_extras') || '{}');
-        extras[data[0].id] = { categoria, condicion_pago, contacto, celular };
-        localStorage.setItem('proveedores_extras', JSON.stringify(extras));
-      }
       await fetchProveedores();
       setShowModal(null);
       setSelectedItem(null);
@@ -1778,17 +1761,11 @@ function App() {
 
   const updateProveedor = async (id, proveedor) => {
     console.log('Actualizando proveedor:', id, proveedor);
-    // Excluir campos que no existen en Supabase
-    const { categoria, condicion_pago, contacto, celular, ...proveedorDB } = proveedor;
-    const { data, error } = await supabase.from('proveedores').update(proveedorDB).eq('id', id).select();
+    const { data, error } = await supabase.from('proveedores').update(proveedor).eq('id', id).select();
     console.log('Respuesta Supabase:', { data, error });
     if (error) {
       console.error('Error completo:', JSON.stringify(error, null, 2));
     } else {
-      // Guardar extras en localStorage
-      const extras = JSON.parse(localStorage.getItem('proveedores_extras') || '{}');
-      extras[id] = { categoria, condicion_pago, contacto, celular };
-      localStorage.setItem('proveedores_extras', JSON.stringify(extras));
       await fetchProveedores();
       setShowModal(null);
       setSelectedItem(null);

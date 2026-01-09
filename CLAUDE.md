@@ -7,7 +7,8 @@ Dashboard de **gestión financiera/administrativa** para el restaurante Tero. Pe
 - Controlar vencimientos de pagos
 - Administrar empleados y sueldos
 - Registrar pagos realizados
-- Ver estadísticas financieras
+- Generar órdenes de pago
+- Ver estadísticas e informes financieros
 
 ## Archivos Principales
 
@@ -20,14 +21,16 @@ Dashboard de **gestión financiera/administrativa** para el restaurante Tero. Pe
 ## Tecnologías
 
 - React 18 + Hooks (useState, useEffect, useMemo)
+- Vite como bundler
 - Tailwind CSS para estilos
 - Supabase para base de datos (PostgreSQL)
 - Recharts para gráficos
 - Lucide React para iconos
+- jsPDF + jspdf-autotable para generación de PDFs
 
 ## Base de Datos - Supabase
 
-### Tablas necesarias:
+### Tablas:
 
 ```sql
 -- Proveedores
@@ -35,12 +38,14 @@ CREATE TABLE proveedores (
   id SERIAL PRIMARY KEY,
   nombre TEXT NOT NULL,
   categoria TEXT, -- pescaderia, carnes, bodega, almacen, verduras, arreglos, bebidas, otros
-  condicion_pago INTEGER DEFAULT 0, -- 0=contado, 7, 15, 30, 45, 60 días
+  condicion_pago INTEGER DEFAULT 0, -- 0=contado, 7, 15, 21, 30, 45, 60 días
   cuit TEXT,
   telefono TEXT,
   email TEXT,
   banco TEXT,
   cbu TEXT,
+  contacto TEXT, -- persona de contacto
+  celular TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -53,7 +58,7 @@ CREATE TABLE facturas (
   fecha DATE NOT NULL,
   vencimiento DATE NOT NULL,
   estado TEXT DEFAULT 'pendiente' CHECK (estado IN ('pendiente', 'pagada', 'vencida')),
-  concepto TEXT,
+  concepto TEXT, -- observaciones
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -79,6 +84,7 @@ CREATE TABLE pagos (
   monto NUMERIC NOT NULL,
   fecha DATE NOT NULL,
   metodo TEXT, -- Efectivo, Transferencia, Mercado Pago
+  estado TEXT DEFAULT 'confirmado', -- confirmado, anulado
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -86,12 +92,43 @@ CREATE TABLE pagos (
 CREATE TABLE notas_credito (
   id SERIAL PRIMARY KEY,
   proveedor_id INTEGER REFERENCES proveedores(id),
-  factura_id INTEGER REFERENCES facturas(id), -- opcional, para asignar a una factura
+  factura_id INTEGER REFERENCES facturas(id), -- opcional
   numero TEXT NOT NULL,
   monto NUMERIC NOT NULL,
   fecha DATE NOT NULL,
   concepto TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Órdenes de Pago
+CREATE TABLE ordenes_pago (
+  id SERIAL PRIMARY KEY,
+  numero INTEGER NOT NULL,
+  fecha DATE NOT NULL,
+  pagos JSONB, -- array de IDs de pagos incluidos
+  total NUMERIC NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Anulaciones (registro de pagos anulados)
+CREATE TABLE anulaciones (
+  id SERIAL PRIMARY KEY,
+  pago_id INTEGER,
+  descripcion TEXT,
+  monto NUMERIC,
+  fecha_anulacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  motivo TEXT
+);
+
+-- Modificaciones (historial de cambios de monto)
+CREATE TABLE modificaciones (
+  id SERIAL PRIMARY KEY,
+  tipo TEXT, -- 'factura' o 'pago'
+  referencia_id INTEGER,
+  monto_anterior NUMERIC,
+  monto_nuevo NUMERIC,
+  fecha_modificacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  descripcion TEXT
 );
 ```
 
@@ -103,46 +140,79 @@ CREATE TABLE notas_credito (
    - Sueldos del mes
    - Total pagado este mes
    - Próximos vencimientos
-   - Gráfico de gastos por proveedor
+   - Gráfico de gastos por proveedor (con filtro por categoría)
+   - Compras del mes (con filtros mes/año)
    - Últimos pagos
 
 2. **Facturas** - CRUD de facturas con:
-   - Búsqueda y filtros por estado
+   - Búsqueda y filtros por estado, proveedor, mes, año
    - Alerta de vencimientos
+   - Detección de facturas duplicadas
    - Marcar como pagada
+   - Totales de facturas filtradas
 
 3. **Proveedores** - CRUD de proveedores con:
    - Categorías (Pescadería, Carnes, Bodega, Almacén, Verduras, Arreglos, Bebidas, Otros)
-   - Condiciones de pago (Contado, 7, 15, 30, 45, 60 días)
-   - Datos de contacto y bancarios
+   - Condiciones de pago (Contado, 7, 15, 21, 30, 45, 60 días)
+   - Datos de contacto (persona de contacto, celular)
+   - Datos bancarios
    - Filtro por categoría
 
-4. **Notas de Crédito** - CRUD de notas de crédito con:
+4. **Pago Proveedores** - Registro de pagos con:
+   - Pagos totales o parciales de facturas
+   - Filtros por proveedor, mes, año
+   - Vista de facturas pendientes con saldo
+
+5. **Órdenes de Pago** - Sistema de órdenes:
+   - Generación de órdenes de pago
+   - Agrupación de pagos por orden
+   - Numeración automática
+
+6. **Notas de Crédito** - CRUD de NC con:
    - Asignación a factura específica (opcional)
    - Gestión por proveedor
 
-5. **Empleados** - CRUD de empleados con:
+7. **Empleados** - CRUD de empleados con:
    - Datos personales
    - Puesto y sueldo
    - Datos bancarios
-   - Seguimiento de pagos por mes
 
-6. **Pagos** - Historial de pagos con:
-   - Registro de pagos de facturas (total/parcial)
-   - Registro de pagos de sueldos
+8. **Pago Empleados** - Pagos de sueldos con:
+   - Registro por mes
+   - Diferentes conceptos (sueldo, aguinaldo, etc.)
+   - Filtros por mes y concepto
+
+9. **Pagos** - Historial de pagos con:
+   - Todos los pagos registrados
    - Filtro por mes, tipo y forma de pago
+   - Edición y anulación de pagos
+
+10. **Informes** - Reportes con:
+    - Saldo por Proveedor
+    - Anulaciones
+    - Modificaciones (de montos en facturas y pagos)
+    - Compras por Proveedor
+    - Compras por Rubro
+    - Pagos del Mes
+    - Generación de PDF por proveedor
 
 ## Estado Actual
 
 - ✅ Estructura base creada
-- ✅ Supabase conectado (tablas: proveedores, facturas, empleados, pagos, notas_credito)
-- ✅ Formularios de creación/edición (modales)
+- ✅ Supabase conectado
+- ✅ Autenticación con contraseña
 - ✅ CRUD completo para todas las entidades
-- ✅ Categorías y condiciones de pago en proveedores
+- ✅ Categorías y condiciones de pago en proveedores (incluyendo 21 días)
 - ✅ Auto-cálculo de vencimiento en facturas
+- ✅ Detección de facturas duplicadas
 - ✅ Notas de crédito con asignación a facturas
-- ✅ Filtros por forma de pago, categoría, mes
-- ⏳ Pendiente: Autenticación
+- ✅ Sistema de órdenes de pago
+- ✅ Registro de anulaciones y modificaciones
+- ✅ Múltiples informes y reportes
+- ✅ Generación de PDF
+- ✅ Filtros avanzados en todas las secciones
+- ✅ Separador de miles en inputs numéricos
+- ✅ Responsive design
 
 ## Deploy
 
