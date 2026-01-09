@@ -2489,8 +2489,7 @@ function App() {
                       <h3 className="font-semibold text-sm mb-1 truncate">{p.nombre}</h3>
                       {p.contacto && <p className="text-xs text-blue-600 truncate">{p.contacto}</p>}
                       {p.celular && <p className="text-xs text-slate-500 truncate">{p.celular}</p>}
-                      <p className="text-xs text-slate-400 truncate mt-1">{p.cuit || 'Sin CUIT'}</p>
-                      {condicionLabel !== 'Contado' && <p className="text-xs text-slate-500">{condicionLabel}</p>}
+                      {condicionLabel !== 'Contado' && <p className="text-xs text-slate-400 mt-1">{condicionLabel}</p>}
                     </div>
                   );
                 })}
