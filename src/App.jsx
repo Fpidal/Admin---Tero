@@ -1314,6 +1314,10 @@ function App() {
   const [filtroMetodoPago, setFiltroMetodoPago] = useState('todos');
   const [filtroProveedorFactura, setFiltroProveedorFactura] = useState('todos');
 
+  // Filtros Informes
+  const [informeActivo, setInformeActivo] = useState('anulaciones');
+  const [filtroMesInforme, setFiltroMesInforme] = useState('todos');
+
   // Cargar datos desde Supabase
   const fetchProveedores = async () => {
     const { data, error } = await supabase.from('proveedores').select('*').order('nombre');
@@ -2693,103 +2697,325 @@ function App() {
           </div>
         )}
 
-        {/* INFORMES - Auditoría de Anulaciones */}
+        {/* INFORMES */}
         {activeTab === 'informes' && (
           <div className="space-y-4">
+            {/* Header con filtro de mes */}
             <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
-              <h2 className="text-lg font-bold flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-red-500" />
-                Registro de Anulaciones
-              </h2>
-              <p className="text-xs text-slate-500">Este registro es de solo lectura</p>
+              <h2 className="text-lg font-bold">Informes</h2>
+              <select
+                value={filtroMesInforme}
+                onChange={(e) => setFiltroMesInforme(e.target.value)}
+                className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+              >
+                <option value="todos">Todos los meses</option>
+                {MESES.map((mes, index) => (
+                  <option key={index} value={index}>{mes}</option>
+                ))}
+              </select>
             </div>
 
-            {/* Resumen */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="glass rounded-xl p-4 border-l-4 border-red-400">
-                <p className="text-xs text-slate-500">Facturas Anuladas</p>
-                <p className="text-2xl font-bold text-red-500">
-                  {anulaciones.filter(a => a.tipo === 'factura').length}
-                </p>
-                <p className="text-xs text-slate-400 mt-1">
-                  Total: {formatCurrency(anulaciones.filter(a => a.tipo === 'factura').reduce((sum, a) => sum + (parseFloat(a.datos_originales?.monto) || 0), 0))}
-                </p>
-              </div>
-              <div className="glass rounded-xl p-4 border-l-4 border-orange-400">
-                <p className="text-xs text-slate-500">Pagos Anulados</p>
-                <p className="text-2xl font-bold text-orange-500">
-                  {anulaciones.filter(a => a.tipo === 'pago').length}
-                </p>
-                <p className="text-xs text-slate-400 mt-1">
-                  Total: {formatCurrency(anulaciones.filter(a => a.tipo === 'pago').reduce((sum, a) => sum + (parseFloat(a.datos_originales?.monto) || 0), 0))}
-                </p>
-              </div>
+            {/* Sub-tabs de informes */}
+            <div className="flex flex-wrap gap-2">
+              {[
+                { id: 'anulaciones', label: 'Anulaciones', icon: AlertCircle },
+                { id: 'compras-proveedor', label: 'Compras por Proveedor', icon: Building2 },
+                { id: 'compras-rubro', label: 'Compras por Rubro', icon: Truck },
+                { id: 'pagos-mes', label: 'Pagos del Mes', icon: DollarSign },
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setInformeActivo(tab.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    informeActivo === tab.id
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  <tab.icon className="w-3.5 h-3.5" />
+                  {tab.label}
+                </button>
+              ))}
             </div>
 
-            {/* Tabla de Anulaciones */}
-            <div className="glass rounded-2xl glow overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-slate-400 text-xs border-b border-slate-200 bg-slate-50">
-                      <th className="px-4 py-3 font-medium">Fecha Anulación</th>
-                      <th className="px-4 py-3 font-medium">Tipo</th>
-                      <th className="px-4 py-3 font-medium">Detalle Original</th>
-                      <th className="px-4 py-3 font-medium text-right">Monto</th>
-                      <th className="px-4 py-3 font-medium">Motivo</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {anulaciones.length === 0 ? (
-                      <tr>
-                        <td colSpan="5" className="px-4 py-8 text-center text-slate-400 text-sm">
-                          No hay anulaciones registradas
-                        </td>
-                      </tr>
-                    ) : (
-                      anulaciones.map(a => (
-                        <tr key={a.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                          <td className="px-4 py-3 text-xs">
-                            {new Date(a.fecha_anulacion).toLocaleString('es-AR', {
-                              day: '2-digit', month: '2-digit', year: 'numeric',
-                              hour: '2-digit', minute: '2-digit'
-                            })}
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              a.tipo === 'factura' ? 'bg-red-500/15 text-red-700' : 'bg-orange-500/15 text-orange-700'
-                            }`}>
-                              {a.tipo === 'factura' ? 'Factura' : 'Pago'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-xs">
-                            {a.tipo === 'factura' ? (
-                              <div>
-                                <p className="font-medium">{a.datos_originales?.proveedor || 'Sin proveedor'}</p>
-                                <p className="text-slate-500">Fact. {a.datos_originales?.numero} - {formatDate(a.datos_originales?.fecha)}</p>
-                              </div>
-                            ) : (
-                              <div>
-                                <p className="font-medium">{a.datos_originales?.descripcion || 'Sin descripción'}</p>
-                                <p className="text-slate-500">{formatDate(a.datos_originales?.fecha)} - {a.datos_originales?.metodo}</p>
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <span className="font-semibold mono text-red-500">
-                              {formatCurrency(a.datos_originales?.monto || 0)}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <p className="text-xs text-slate-600 max-w-xs">{a.motivo}</p>
-                          </td>
+            {/* INFORME: Anulaciones */}
+            {informeActivo === 'anulaciones' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="glass rounded-xl p-4 border-l-4 border-red-400">
+                    <p className="text-xs text-slate-500">Facturas Anuladas</p>
+                    <p className="text-2xl font-bold text-red-500">
+                      {anulaciones.filter(a => a.tipo === 'factura').filter(a => filtroMesInforme === 'todos' || new Date(a.fecha_anulacion).getMonth() === parseInt(filtroMesInforme)).length}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Total: {formatCurrency(anulaciones.filter(a => a.tipo === 'factura').filter(a => filtroMesInforme === 'todos' || new Date(a.fecha_anulacion).getMonth() === parseInt(filtroMesInforme)).reduce((sum, a) => sum + (parseFloat(a.datos_originales?.monto) || 0), 0))}
+                    </p>
+                  </div>
+                  <div className="glass rounded-xl p-4 border-l-4 border-orange-400">
+                    <p className="text-xs text-slate-500">Pagos Anulados</p>
+                    <p className="text-2xl font-bold text-orange-500">
+                      {anulaciones.filter(a => a.tipo === 'pago').filter(a => filtroMesInforme === 'todos' || new Date(a.fecha_anulacion).getMonth() === parseInt(filtroMesInforme)).length}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Total: {formatCurrency(anulaciones.filter(a => a.tipo === 'pago').filter(a => filtroMesInforme === 'todos' || new Date(a.fecha_anulacion).getMonth() === parseInt(filtroMesInforme)).reduce((sum, a) => sum + (parseFloat(a.datos_originales?.monto) || 0), 0))}
+                    </p>
+                  </div>
+                </div>
+                <div className="glass rounded-2xl glow overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left text-slate-400 text-xs border-b border-slate-200 bg-slate-50">
+                          <th className="px-4 py-3 font-medium">Fecha</th>
+                          <th className="px-4 py-3 font-medium">Tipo</th>
+                          <th className="px-4 py-3 font-medium">Detalle</th>
+                          <th className="px-4 py-3 font-medium text-right">Monto</th>
+                          <th className="px-4 py-3 font-medium">Motivo</th>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      </thead>
+                      <tbody>
+                        {anulaciones.filter(a => filtroMesInforme === 'todos' || new Date(a.fecha_anulacion).getMonth() === parseInt(filtroMesInforme)).length === 0 ? (
+                          <tr><td colSpan="5" className="px-4 py-8 text-center text-slate-400 text-sm">No hay anulaciones</td></tr>
+                        ) : (
+                          anulaciones.filter(a => filtroMesInforme === 'todos' || new Date(a.fecha_anulacion).getMonth() === parseInt(filtroMesInforme)).map(a => (
+                            <tr key={a.id} className="border-b border-slate-100 hover:bg-slate-50">
+                              <td className="px-4 py-3 text-xs">{new Date(a.fecha_anulacion).toLocaleDateString('es-AR')}</td>
+                              <td className="px-4 py-3">
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${a.tipo === 'factura' ? 'bg-red-500/15 text-red-700' : 'bg-orange-500/15 text-orange-700'}`}>
+                                  {a.tipo === 'factura' ? 'Factura' : 'Pago'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-xs">
+                                {a.tipo === 'factura' ? `${a.datos_originales?.proveedor} - Fact. ${a.datos_originales?.numero}` : a.datos_originales?.descripcion}
+                              </td>
+                              <td className="px-4 py-3 text-right font-semibold mono text-red-500">{formatCurrency(a.datos_originales?.monto || 0)}</td>
+                              <td className="px-4 py-3 text-xs text-slate-500">{a.motivo}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* INFORME: Compras por Proveedor */}
+            {informeActivo === 'compras-proveedor' && (() => {
+              const facturasFiltradas = facturas.filter(f => filtroMesInforme === 'todos' || new Date(f.fecha).getMonth() === parseInt(filtroMesInforme));
+              const comprasPorProveedor = proveedores.map(p => {
+                const facturasProveedor = facturasFiltradas.filter(f => f.proveedor_id === p.id);
+                const total = facturasProveedor.reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0);
+                return { ...p, facturas: facturasProveedor.length, total };
+              }).filter(p => p.total > 0).sort((a, b) => b.total - a.total);
+              const totalGeneral = comprasPorProveedor.reduce((sum, p) => sum + p.total, 0);
+
+              return (
+                <div className="space-y-4">
+                  <div className="glass rounded-xl p-4">
+                    <p className="text-xs text-slate-500">Total Compras</p>
+                    <p className="text-2xl font-bold text-blue-500 mono">{formatCurrency(totalGeneral)}</p>
+                    <p className="text-xs text-slate-400">{comprasPorProveedor.length} proveedores</p>
+                  </div>
+                  <div className="glass rounded-2xl glow overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="text-left text-slate-400 text-xs border-b border-slate-200 bg-slate-50">
+                            <th className="px-4 py-3 font-medium">Proveedor</th>
+                            <th className="px-4 py-3 font-medium">Categoría</th>
+                            <th className="px-4 py-3 font-medium text-center">Facturas</th>
+                            <th className="px-4 py-3 font-medium text-right">Total</th>
+                            <th className="px-4 py-3 font-medium text-right">%</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {comprasPorProveedor.length === 0 ? (
+                            <tr><td colSpan="5" className="px-4 py-8 text-center text-slate-400 text-sm">No hay compras en el período</td></tr>
+                          ) : (
+                            comprasPorProveedor.map(p => (
+                              <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50">
+                                <td className="px-4 py-3 font-medium">{p.nombre}</td>
+                                <td className="px-4 py-3 text-xs text-slate-500">{CATEGORIAS_PROVEEDOR.find(c => c.value === p.categoria)?.label || '-'}</td>
+                                <td className="px-4 py-3 text-center">{p.facturas}</td>
+                                <td className="px-4 py-3 text-right font-semibold mono text-blue-500">{formatCurrency(p.total)}</td>
+                                <td className="px-4 py-3 text-right text-xs text-slate-500">{((p.total / totalGeneral) * 100).toFixed(1)}%</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                        {comprasPorProveedor.length > 0 && (
+                          <tfoot>
+                            <tr className="bg-slate-50 font-bold">
+                              <td className="px-4 py-3" colSpan="3">TOTAL</td>
+                              <td className="px-4 py-3 text-right mono text-blue-600">{formatCurrency(totalGeneral)}</td>
+                              <td className="px-4 py-3 text-right">100%</td>
+                            </tr>
+                          </tfoot>
+                        )}
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* INFORME: Compras por Rubro */}
+            {informeActivo === 'compras-rubro' && (() => {
+              const facturasFiltradas = facturas.filter(f => filtroMesInforme === 'todos' || new Date(f.fecha).getMonth() === parseInt(filtroMesInforme));
+              const comprasPorRubro = CATEGORIAS_PROVEEDOR.map(cat => {
+                const proveedoresRubro = proveedores.filter(p => p.categoria === cat.value);
+                const facturasRubro = facturasFiltradas.filter(f => proveedoresRubro.some(p => p.id === f.proveedor_id));
+                const total = facturasRubro.reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0);
+                return { ...cat, facturas: facturasRubro.length, proveedores: proveedoresRubro.length, total };
+              }).filter(r => r.total > 0).sort((a, b) => b.total - a.total);
+              const totalGeneral = comprasPorRubro.reduce((sum, r) => sum + r.total, 0);
+
+              return (
+                <div className="space-y-4">
+                  <div className="glass rounded-xl p-4">
+                    <p className="text-xs text-slate-500">Total por Rubro</p>
+                    <p className="text-2xl font-bold text-purple-500 mono">{formatCurrency(totalGeneral)}</p>
+                    <p className="text-xs text-slate-400">{comprasPorRubro.length} rubros con movimiento</p>
+                  </div>
+                  <div className="glass rounded-2xl glow overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="text-left text-slate-400 text-xs border-b border-slate-200 bg-slate-50">
+                            <th className="px-4 py-3 font-medium">Rubro</th>
+                            <th className="px-4 py-3 font-medium text-center">Proveedores</th>
+                            <th className="px-4 py-3 font-medium text-center">Facturas</th>
+                            <th className="px-4 py-3 font-medium text-right">Total</th>
+                            <th className="px-4 py-3 font-medium text-right">%</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {comprasPorRubro.length === 0 ? (
+                            <tr><td colSpan="5" className="px-4 py-8 text-center text-slate-400 text-sm">No hay compras en el período</td></tr>
+                          ) : (
+                            comprasPorRubro.map(r => (
+                              <tr key={r.value} className="border-b border-slate-100 hover:bg-slate-50">
+                                <td className="px-4 py-3 font-medium">{r.label}</td>
+                                <td className="px-4 py-3 text-center text-slate-500">{r.proveedores}</td>
+                                <td className="px-4 py-3 text-center">{r.facturas}</td>
+                                <td className="px-4 py-3 text-right font-semibold mono text-purple-500">{formatCurrency(r.total)}</td>
+                                <td className="px-4 py-3 text-right text-xs text-slate-500">{((r.total / totalGeneral) * 100).toFixed(1)}%</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                        {comprasPorRubro.length > 0 && (
+                          <tfoot>
+                            <tr className="bg-slate-50 font-bold">
+                              <td className="px-4 py-3" colSpan="3">TOTAL</td>
+                              <td className="px-4 py-3 text-right mono text-purple-600">{formatCurrency(totalGeneral)}</td>
+                              <td className="px-4 py-3 text-right">100%</td>
+                            </tr>
+                          </tfoot>
+                        )}
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* INFORME: Pagos del Mes */}
+            {informeActivo === 'pagos-mes' && (() => {
+              const pagosFiltrados = pagos.filter(p => filtroMesInforme === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesInforme));
+              const pagosProveedores = pagosFiltrados.filter(p => p.tipo === 'factura');
+              const pagosEmpleados = pagosFiltrados.filter(p => p.tipo === 'sueldo');
+              const totalProveedores = pagosProveedores.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
+              const totalEmpleados = pagosEmpleados.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
+              const totalGeneral = totalProveedores + totalEmpleados;
+
+              // Agrupar por método de pago
+              const pagosPorMetodo = ['Efectivo', 'Transferencia', 'Cheque', 'Mercado Pago', 'Tarjeta'].map(metodo => {
+                const pagosMetodo = pagosFiltrados.filter(p => p.metodo === metodo);
+                return { metodo, cantidad: pagosMetodo.length, total: pagosMetodo.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0) };
+              }).filter(m => m.total > 0);
+
+              return (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="glass rounded-xl p-4 border-l-4 border-blue-400">
+                      <p className="text-xs text-slate-500">Pagos a Proveedores</p>
+                      <p className="text-xl font-bold text-blue-500 mono">{formatCurrency(totalProveedores)}</p>
+                      <p className="text-xs text-slate-400">{pagosProveedores.length} pagos</p>
+                    </div>
+                    <div className="glass rounded-xl p-4 border-l-4 border-cyan-400">
+                      <p className="text-xs text-slate-500">Pagos a Empleados</p>
+                      <p className="text-xl font-bold text-cyan-500 mono">{formatCurrency(totalEmpleados)}</p>
+                      <p className="text-xs text-slate-400">{pagosEmpleados.length} pagos</p>
+                    </div>
+                    <div className="glass rounded-xl p-4 border-l-4 border-emerald-400">
+                      <p className="text-xs text-slate-500">Total General</p>
+                      <p className="text-xl font-bold text-emerald-500 mono">{formatCurrency(totalGeneral)}</p>
+                      <p className="text-xs text-slate-400">{pagosFiltrados.length} pagos</p>
+                    </div>
+                  </div>
+
+                  {/* Por método de pago */}
+                  <div className="glass rounded-2xl p-4">
+                    <h3 className="text-sm font-semibold mb-3">Por Método de Pago</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                      {pagosPorMetodo.map(m => (
+                        <div key={m.metodo} className="bg-slate-50 rounded-lg p-3 text-center">
+                          <p className="text-xs text-slate-500">{m.metodo}</p>
+                          <p className="font-bold mono text-sm">{formatCurrency(m.total)}</p>
+                          <p className="text-xs text-slate-400">{m.cantidad} pagos</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Tabla de pagos */}
+                  <div className="glass rounded-2xl glow overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="text-left text-slate-400 text-xs border-b border-slate-200 bg-slate-50">
+                            <th className="px-4 py-3 font-medium">Fecha</th>
+                            <th className="px-4 py-3 font-medium">Tipo</th>
+                            <th className="px-4 py-3 font-medium">Descripción</th>
+                            <th className="px-4 py-3 font-medium">Método</th>
+                            <th className="px-4 py-3 font-medium text-right">Monto</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pagosFiltrados.length === 0 ? (
+                            <tr><td colSpan="5" className="px-4 py-8 text-center text-slate-400 text-sm">No hay pagos en el período</td></tr>
+                          ) : (
+                            pagosFiltrados.map(p => (
+                              <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50">
+                                <td className="px-4 py-3 text-xs">{formatDate(p.fecha)}</td>
+                                <td className="px-4 py-3">
+                                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${p.tipo === 'factura' ? 'bg-blue-500/15 text-blue-700' : 'bg-cyan-500/15 text-cyan-700'}`}>
+                                    {p.tipo === 'factura' ? 'Proveedor' : 'Empleado'}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-xs">{p.descripcion}</td>
+                                <td className="px-4 py-3 text-xs text-slate-500">{p.metodo}</td>
+                                <td className="px-4 py-3 text-right font-semibold mono text-emerald-500">{formatCurrency(p.monto)}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                        {pagosFiltrados.length > 0 && (
+                          <tfoot>
+                            <tr className="bg-slate-50 font-bold">
+                              <td className="px-4 py-3" colSpan="4">TOTAL</td>
+                              <td className="px-4 py-3 text-right mono text-emerald-600">{formatCurrency(totalGeneral)}</td>
+                            </tr>
+                          </tfoot>
+                        )}
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
       </main>
