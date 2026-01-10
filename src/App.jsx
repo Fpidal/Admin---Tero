@@ -920,40 +920,59 @@ function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, on
     dias_vencimiento: factura ? null : 0,
     vencimiento: factura?.vencimiento || '',
     estado: factura?.estado || 'pendiente',
-    concepto: factura?.concepto || ''
+    concepto: factura?.concepto || '',
+    // Segundo IVA (opcional)
+    bruto2: factura?.bruto2 || 0,
+    iva_porcentaje2: factura?.iva_porcentaje2 ?? 10.5
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [mostrarIva2, setMostrarIva2] = useState(factura?.bruto2 > 0 || false);
 
-  // Calcular neto (total) desde bruto + IVA + otras retenciones
-  const calcularNeto = (bruto, ivaPct, retenciones) => {
+  // Calcular neto (total) desde bruto + IVA + bruto2 + IVA2 + otras retenciones
+  const calcularNeto = (bruto, ivaPct, retenciones, bruto2 = 0, ivaPct2 = 10.5) => {
     const brutoNum = parseFloat(bruto) || 0;
     const iva = brutoNum * (ivaPct / 100);
+    const bruto2Num = parseFloat(bruto2) || 0;
+    const iva2 = bruto2Num * (ivaPct2 / 100);
     const ret = parseFloat(retenciones) || 0;
-    return Math.round((brutoNum + iva + ret) * 100) / 100; // Redondear a 2 decimales
+    return Math.round((brutoNum + iva + bruto2Num + iva2 + ret) * 100) / 100; // Redondear a 2 decimales
   };
 
   // Estado separado para los inputs de texto (permite escribir libremente)
   const [brutoInput, setBrutoInput] = useState(factura?.bruto ? formatInputMonto(factura.bruto) : '');
   const [retencionesInput, setRetencionesInput] = useState(factura?.otras_retenciones ? formatInputMonto(factura.otras_retenciones) : '');
+  const [bruto2Input, setBruto2Input] = useState(factura?.bruto2 ? formatInputMonto(factura.bruto2) : '');
 
   const handleBrutoChange = (valor) => {
     setBrutoInput(valor);
     const brutoNum = parseFloat(parseInputMonto(valor)) || 0;
-    const neto = calcularNeto(brutoNum, form.iva_porcentaje, form.otras_retenciones);
+    const neto = calcularNeto(brutoNum, form.iva_porcentaje, form.otras_retenciones, form.bruto2, form.iva_porcentaje2);
     setForm({ ...form, bruto: brutoNum, monto: neto });
   };
 
   const handleIvaChange = (ivaPct) => {
-    const neto = calcularNeto(form.bruto, ivaPct, form.otras_retenciones);
+    const neto = calcularNeto(form.bruto, ivaPct, form.otras_retenciones, form.bruto2, form.iva_porcentaje2);
     setForm({ ...form, iva_porcentaje: ivaPct, monto: neto });
   };
 
   const handleRetencionesChange = (valor) => {
     setRetencionesInput(valor);
     const ret = parseFloat(parseInputMonto(valor)) || 0;
-    const neto = calcularNeto(form.bruto, form.iva_porcentaje, ret);
+    const neto = calcularNeto(form.bruto, form.iva_porcentaje, ret, form.bruto2, form.iva_porcentaje2);
     setForm({ ...form, otras_retenciones: ret, monto: neto });
+  };
+
+  const handleBruto2Change = (valor) => {
+    setBruto2Input(valor);
+    const bruto2Num = parseFloat(parseInputMonto(valor)) || 0;
+    const neto = calcularNeto(form.bruto, form.iva_porcentaje, form.otras_retenciones, bruto2Num, form.iva_porcentaje2);
+    setForm({ ...form, bruto2: bruto2Num, monto: neto });
+  };
+
+  const handleIva2Change = (ivaPct2) => {
+    const neto = calcularNeto(form.bruto, form.iva_porcentaje, form.otras_retenciones, form.bruto2, ivaPct2);
+    setForm({ ...form, iva_porcentaje2: ivaPct2, monto: neto });
   };
 
   // Validar si ya existe una factura con el mismo número para el mismo proveedor
@@ -990,7 +1009,7 @@ function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, on
     const dias = proveedor?.condicion_pago || 0;
     const ivaPct = proveedor?.situacion_iva ?? 21;
     const vencimiento = calcularVencimiento(form.fecha, dias);
-    const neto = calcularNeto(form.bruto, ivaPct, form.otras_retenciones);
+    const neto = calcularNeto(form.bruto, ivaPct, form.otras_retenciones, form.bruto2, form.iva_porcentaje2);
     setForm({
       ...form,
       proveedor_id: parseInt(proveedorId),
@@ -1057,6 +1076,8 @@ function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, on
       bruto: parseFloat(form.bruto) || 0,
       iva_porcentaje: parseFloat(form.iva_porcentaje) || 0,
       otras_retenciones: parseFloat(form.otras_retenciones) || 0,
+      bruto2: mostrarIva2 ? (parseFloat(form.bruto2) || 0) : 0,
+      iva_porcentaje2: mostrarIva2 ? (parseFloat(form.iva_porcentaje2) || 10.5) : 10.5,
       monto: nuevoMonto
     }, factura ? { montoAnterior: montoOriginal, motivo: motivoModificacion } : null);
     setSaving(false);
@@ -1113,6 +1134,50 @@ function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, on
               </div>
             </div>
           </div>
+
+          {/* Botón para agregar segundo IVA */}
+          {!mostrarIva2 && (
+            <button
+              type="button"
+              onClick={() => setMostrarIva2(true)}
+              className="text-xs text-blue-500 hover:text-blue-700 flex items-center gap-1"
+            >
+              <Plus className="w-3 h-3" /> Agregar otro IVA
+            </button>
+          )}
+
+          {/* Segunda fila de IVA (opcional) */}
+          {mostrarIva2 && (
+            <div className="grid grid-cols-4 gap-2 bg-blue-50 p-2 rounded-lg">
+              <div>
+                <label className="block text-xs text-slate-400 mb-0.5">Sub Total 2</label>
+                <input type="text" value={bruto2Input} onChange={e => handleBruto2Change(e.target.value)} onBlur={e => setBruto2Input(formatInputMonto(form.bruto2))} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm text-right" placeholder="0" />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-0.5">IVA 2</label>
+                <select value={form.iva_porcentaje2} onChange={e => handleIva2Change(parseFloat(e.target.value))} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
+                  <option value={0}>0%</option>
+                  <option value={10.5}>10.5%</option>
+                  <option value={21}>21%</option>
+                </select>
+              </div>
+              <div></div>
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMostrarIva2(false);
+                    setBruto2Input('');
+                    const neto = calcularNeto(form.bruto, form.iva_porcentaje, form.otras_retenciones, 0, 10.5);
+                    setForm({ ...form, bruto2: 0, iva_porcentaje2: 10.5, monto: neto });
+                  }}
+                  className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1 pb-1.5"
+                >
+                  <X className="w-3 h-3" /> Quitar
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-3 gap-2">
             <div>
