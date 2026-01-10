@@ -64,6 +64,97 @@ const FORMAS_PAGO_PROVEEDOR = [
   { value: 'echeq', label: 'E-Cheq' }
 ];
 
+// ==================== DATOS DEMO ====================
+const DEMO_PROVEEDORES = [
+  { id: 1, nombre: 'Pescadería del Puerto', categoria: 'pescaderia', condicion_pago: 15, cuit: '30-71234567-9', telefono: '011-4555-1234', email: 'ventas@pescaderiapuerto.com', banco: 'Banco Nación', cbu: '0110012345678901234567', contacto: 'Juan Pérez', celular: '11-5555-1234', forma_pago: 'transferencia' },
+  { id: 2, nombre: 'Carnes Don Mario', categoria: 'carnes', condicion_pago: 7, cuit: '20-12345678-9', telefono: '011-4666-5678', email: 'pedidos@carnesdonmario.com', banco: 'Banco Galicia', cbu: '0070012345678901234568', contacto: 'Mario González', celular: '11-6666-5678', forma_pago: 'efectivo' },
+  { id: 3, nombre: 'Bodega Santa Julia', categoria: 'bodega', condicion_pago: 30, cuit: '30-98765432-1', telefono: '0261-555-9999', email: 'comercial@santajulia.com', banco: 'Banco Santander', cbu: '0720012345678901234569', contacto: 'Ana Martínez', celular: '261-555-8888', forma_pago: 'echeq' },
+  { id: 4, nombre: 'Distribuidora Central', categoria: 'almacen', condicion_pago: 21, cuit: '30-55566677-8', telefono: '011-4777-8888', email: 'ventas@distcentral.com', banco: 'Banco BBVA', cbu: '0170012345678901234570', contacto: 'Carlos Ruiz', celular: '11-7777-8888', forma_pago: 'transferencia' },
+  { id: 5, nombre: 'Verdulería La Huerta', categoria: 'verduras', condicion_pago: 0, cuit: '20-33344455-6', telefono: '011-4888-9999', email: 'lahuerta@gmail.com', banco: null, cbu: null, contacto: 'Pedro Sánchez', celular: '11-8888-9999', forma_pago: 'efectivo' },
+  { id: 6, nombre: 'Bebidas del Sur', categoria: 'bebidas', condicion_pago: 15, cuit: '30-77788899-0', telefono: '011-4999-0000', email: 'pedidos@bebidasdelsur.com', banco: 'Banco Macro', cbu: '2850012345678901234571', contacto: 'Laura Fernández', celular: '11-9999-0000', forma_pago: 'transferencia' },
+];
+
+const DEMO_EMPLEADOS = [
+  { id: 1, nombre: 'María García', documento: '28.456.789', puesto: 'Chef Principal', sueldo: 850000, fecha_ingreso: '2020-03-15', banco: 'Banco Nación', cbu: '0110099988877766655544' },
+  { id: 2, nombre: 'Roberto López', documento: '32.123.456', puesto: 'Ayudante de Cocina', sueldo: 520000, fecha_ingreso: '2021-06-01', banco: 'Banco Galicia', cbu: '0070099988877766655545' },
+  { id: 3, nombre: 'Lucía Martínez', documento: '35.789.012', puesto: 'Mozo', sueldo: 480000, fecha_ingreso: '2022-01-10', banco: 'Mercado Pago', cbu: '0000099988877766655546' },
+  { id: 4, nombre: 'Diego Fernández', documento: '30.567.890', puesto: 'Mozo', sueldo: 480000, fecha_ingreso: '2022-03-20', banco: 'Banco Santander', cbu: '0720099988877766655547' },
+  { id: 5, nombre: 'Carolina Ruiz', documento: '33.234.567', puesto: 'Cajera', sueldo: 450000, fecha_ingreso: '2023-02-01', banco: 'Banco BBVA', cbu: '0170099988877766655548' },
+];
+
+const DEMO_CLIENTES = [
+  { id: 1, nombre: 'Hotel Libertador', cuit: '30-11122233-4', telefono: '011-4321-1234', email: 'compras@hotellibertador.com', direccion: 'Av. Córdoba 690, CABA', condicion_iva: 'Responsable Inscripto' },
+  { id: 2, nombre: 'Catering Premium SA', cuit: '30-44455566-7', telefono: '011-4321-5678', email: 'pedidos@cateringpremium.com', direccion: 'Av. del Libertador 1234, CABA', condicion_iva: 'Responsable Inscripto' },
+  { id: 3, nombre: 'Eventos Corporativos SRL', cuit: '30-77788899-0', telefono: '011-4321-9012', email: 'admin@eventoscorp.com', direccion: 'Maipú 456, CABA', condicion_iva: 'Responsable Inscripto' },
+  { id: 4, nombre: 'Club Náutico San Isidro', cuit: '30-99900011-2', telefono: '011-4747-3456', email: 'gerencia@clubnautico.com', direccion: 'Av. del Libertador 16789, San Isidro', condicion_iva: 'Exento' },
+];
+
+// Generar fechas relativas al día actual
+const hoy = new Date();
+const hace = (dias) => {
+  const d = new Date(hoy);
+  d.setDate(d.getDate() - dias);
+  return d.toISOString().split('T')[0];
+};
+const dentro = (dias) => {
+  const d = new Date(hoy);
+  d.setDate(d.getDate() + dias);
+  return d.toISOString().split('T')[0];
+};
+
+const DEMO_FACTURAS = [
+  { id: 1, proveedor_id: 1, numero: 'A-0001-00012345', monto: 185000, fecha: hace(25), vencimiento: hace(10), estado: 'vencida', concepto: 'Pescados varios', proveedor: 'Pescadería del Puerto' },
+  { id: 2, proveedor_id: 2, numero: 'A-0003-00098765', monto: 320000, fecha: hace(20), vencimiento: hace(13), estado: 'vencida', concepto: 'Cortes de carne', proveedor: 'Carnes Don Mario' },
+  { id: 3, proveedor_id: 3, numero: 'A-0002-00054321', monto: 245000, fecha: hace(15), vencimiento: dentro(15), estado: 'pendiente', concepto: 'Vinos selección', proveedor: 'Bodega Santa Julia' },
+  { id: 4, proveedor_id: 4, numero: 'B-0001-00011111', monto: 89500, fecha: hace(10), vencimiento: dentro(11), estado: 'pendiente', concepto: 'Productos secos', proveedor: 'Distribuidora Central' },
+  { id: 5, proveedor_id: 5, numero: 'C-0001-00022222', monto: 45000, fecha: hace(5), vencimiento: hace(5), estado: 'pagada', concepto: 'Verduras frescas', proveedor: 'Verdulería La Huerta' },
+  { id: 6, proveedor_id: 6, numero: 'A-0005-00033333', monto: 156000, fecha: hace(3), vencimiento: dentro(12), estado: 'pendiente', concepto: 'Bebidas gaseosas y aguas', proveedor: 'Bebidas del Sur' },
+  { id: 7, proveedor_id: 1, numero: 'A-0001-00012346', monto: 210000, fecha: hace(2), vencimiento: dentro(13), estado: 'pendiente', concepto: 'Mariscos premium', proveedor: 'Pescadería del Puerto' },
+  { id: 8, proveedor_id: 2, numero: 'A-0003-00098766', monto: 275000, fecha: hace(1), vencimiento: dentro(6), estado: 'pendiente', concepto: 'Carne vacuna', proveedor: 'Carnes Don Mario' },
+];
+
+const DEMO_PAGOS = [
+  { id: 1, tipo: 'factura', referencia_id: 5, descripcion: 'Verdulería La Huerta - Fact. C-0001-00022222', monto: 45000, fecha: hace(5), metodo: 'Efectivo', estado: 'confirmado', conciliado: true, conciliado_nota: 'Pago en efectivo' },
+  { id: 2, tipo: 'factura', referencia_id: 1, descripcion: 'Pescadería del Puerto - Fact. A-0001-00012345 (parcial)', monto: 100000, fecha: hace(8), metodo: 'Transferencia', estado: 'confirmado', conciliado: true, conciliado_nota: 'Banco orden 45678' },
+  { id: 3, tipo: 'sueldo', referencia_id: 1, descripcion: 'Sueldo Diciembre - María García', monto: 850000, fecha: hace(15), metodo: 'Transferencia', estado: 'confirmado', conciliado: false },
+  { id: 4, tipo: 'sueldo', referencia_id: 2, descripcion: 'Sueldo Diciembre - Roberto López', monto: 520000, fecha: hace(15), metodo: 'Transferencia', estado: 'confirmado', conciliado: false },
+  { id: 5, tipo: 'sueldo', referencia_id: 3, descripcion: 'Sueldo Diciembre - Lucía Martínez', monto: 480000, fecha: hace(15), metodo: 'Mercado Pago', estado: 'confirmado', conciliado: true, conciliado_nota: 'MP confirmado' },
+  { id: 6, tipo: 'factura', referencia_id: 2, descripcion: 'Carnes Don Mario - Fact. A-0003-00098765', monto: 320000, fecha: hace(5), metodo: 'Transferencia', estado: 'confirmado', conciliado: false },
+];
+
+const DEMO_NOTAS_CREDITO = [
+  { id: 1, proveedor_id: 1, factura_id: 1, numero: 'NC-0001-00000123', monto: 15000, fecha: hace(12), concepto: 'Devolución mercadería en mal estado', proveedor: 'Pescadería del Puerto', factura_numero: 'A-0001-00012345' },
+];
+
+const DEMO_FACTURAS_VENTA = [
+  { id: 1, cliente_id: 1, numero: 'A-0001-00000101', monto: 450000, subtotal: 371900, iva_porcentaje: 21, iva_monto: 78100, fecha: hace(20), vencimiento: dentro(10), estado: 'pendiente', concepto: 'Servicio catering evento', cliente: 'Hotel Libertador' },
+  { id: 2, cliente_id: 2, numero: 'A-0001-00000102', monto: 280000, subtotal: 231405, iva_porcentaje: 21, iva_monto: 48595, fecha: hace(15), vencimiento: hace(5), estado: 'cobrada', concepto: 'Almuerzo corporativo 50 personas', cliente: 'Catering Premium SA' },
+  { id: 3, cliente_id: 3, numero: 'A-0001-00000103', monto: 620000, subtotal: 512397, iva_porcentaje: 21, iva_monto: 107603, fecha: hace(10), vencimiento: dentro(20), estado: 'pendiente', concepto: 'Evento fin de año', cliente: 'Eventos Corporativos SRL' },
+  { id: 4, cliente_id: 4, numero: 'A-0001-00000104', monto: 180000, subtotal: 180000, iva_porcentaje: 0, iva_monto: 0, fecha: hace(5), vencimiento: dentro(25), estado: 'pendiente', concepto: 'Almuerzo socios', cliente: 'Club Náutico San Isidro' },
+];
+
+const DEMO_COBROS = [
+  { id: 1, cliente_id: 2, factura_venta_id: 2, descripcion: 'Catering Premium SA - Fact. A-0001-00000102 (Transferencia)', monto: 250000, fecha: hace(3), metodo: 'Transferencia' },
+  { id: 2, cliente_id: 2, factura_venta_id: 2, descripcion: 'Catering Premium SA - Fact. A-0001-00000102 (Retención)', monto: 30000, fecha: hace(3), metodo: 'Retención' },
+  { id: 3, cliente_id: 1, factura_venta_id: 1, descripcion: 'Hotel Libertador - Fact. A-0001-00000101 (Transferencia)', monto: 200000, fecha: hace(1), metodo: 'Transferencia' },
+];
+
+const DEMO_ORDENES_PAGO = [
+  { id: 1, numero: 1, fecha: hace(5), pagos: [6], total: 320000, created_at: hace(5) },
+];
+
+const DEMO_ANULACIONES = [];
+const DEMO_MODIFICACIONES = [];
+
+// Función para detectar modo demo
+const isDemoMode = () => {
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('demo') === 'true';
+  }
+  return false;
+};
+
 // Modal Informe Proveedor
 function ModalInformeProveedor({ onClose, proveedores, facturas, pagos, notasCredito }) {
   const [proveedorId, setProveedorId] = useState('');
@@ -1813,7 +1904,12 @@ function LoginScreen({ onLogin }) {
 }
 
 function App() {
+  // Detectar modo demo
+  const [demoMode] = useState(() => isDemoMode());
+
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    // En modo demo, siempre autenticado
+    if (isDemoMode()) return true;
     return localStorage.getItem('tero_auth') === 'true';
   });
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -2053,6 +2149,24 @@ function App() {
 
   const fetchAllData = async () => {
     setLoading(true);
+
+    // Si está en modo demo, cargar datos de ejemplo
+    if (demoMode) {
+      setProveedores(DEMO_PROVEEDORES);
+      setFacturas(DEMO_FACTURAS);
+      setEmpleados(DEMO_EMPLEADOS);
+      setPagos(DEMO_PAGOS);
+      setNotasCredito(DEMO_NOTAS_CREDITO);
+      setAnulaciones(DEMO_ANULACIONES);
+      setModificaciones(DEMO_MODIFICACIONES);
+      setOrdenesPago(DEMO_ORDENES_PAGO);
+      setClientes(DEMO_CLIENTES);
+      setFacturasVenta(DEMO_FACTURAS_VENTA);
+      setCobros(DEMO_COBROS);
+      setLoading(false);
+      return;
+    }
+
     await Promise.all([
       fetchProveedores(), fetchFacturas(), fetchEmpleados(), fetchPagos(),
       fetchNotasCredito(), fetchAnulaciones(), fetchModificaciones(), fetchOrdenesPago(),
@@ -2917,6 +3031,16 @@ function App() {
 
   return (
     <div className="min-h-screen">
+      {/* Banner Modo Demo */}
+      {demoMode && (
+        <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-center py-2 text-sm font-medium sticky top-0 z-50 shadow-md">
+          <span className="inline-flex items-center gap-2">
+            <span className="animate-pulse">●</span>
+            Modo Demo - Los datos mostrados son ficticios
+            <span className="animate-pulse">●</span>
+          </span>
+        </div>
+      )}
       {/* Header */}
       <header className="glass border-b border-slate-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
