@@ -11,8 +11,8 @@ import { supabase } from './supabase';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-const formatCurrency = (value) => {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+const formatCurrency = (value, decimals = true) => {
+  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: decimals ? 2 : 0, maximumFractionDigits: decimals ? 2 : 0 }).format(value);
 };
 
 // Formatear número con separador de miles para inputs (permite 2 decimales)
@@ -3130,13 +3130,26 @@ function App() {
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
             {/* Stats Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="stat-card glass rounded-2xl p-4 sm:p-5 glow">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-slate-400 text-xs sm:text-sm mb-1">Por Pagar</p>
-                    <p className="text-lg sm:text-2xl font-bold mono text-amber-400">{formatCurrency(stats.totalPendiente)}</p>
-                    <p className="text-xs text-slate-500 mt-1">{stats.facturasPendientes} facturas</p>
+                    <p className="text-slate-400 text-xs sm:text-sm mb-1">Total Deuda</p>
+                    <p className="text-lg sm:text-2xl font-bold mono text-blue-400">{formatCurrency(stats.totalPendiente + stats.totalVencido, false)}</p>
+                    <p className="text-xs text-slate-500 mt-1">{stats.facturasPendientes + stats.facturasVencidas} facturas</p>
+                  </div>
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                    <DollarSign className="w-5 h-5" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="stat-card glass rounded-2xl p-4 sm:p-5 glow">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-slate-400 text-xs sm:text-sm mb-1">A pagar 7 días</p>
+                    <p className="text-lg sm:text-2xl font-bold mono text-amber-400">{formatCurrency(facturasProximas.reduce((sum, f) => sum + f.saldo, 0), false)}</p>
+                    <p className="text-xs text-slate-500 mt-1">{facturasProximas.length} facturas</p>
                   </div>
                   <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
                     <Clock className="w-5 h-5" />
@@ -3147,38 +3160,12 @@ function App() {
               <div className="stat-card glass rounded-2xl p-4 sm:p-5 glow">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-slate-400 text-xs sm:text-sm mb-1">Vencido</p>
-                    <p className="text-lg sm:text-2xl font-bold mono text-red-400">{formatCurrency(stats.totalVencido)}</p>
+                    <p className="text-slate-400 text-xs sm:text-sm mb-1">Vencidas</p>
+                    <p className="text-lg sm:text-2xl font-bold mono text-red-400">{formatCurrency(stats.totalVencido, false)}</p>
                     <p className="text-xs text-slate-500 mt-1">{stats.facturasVencidas} facturas</p>
                   </div>
                   <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center">
                     <AlertTriangle className="w-5 h-5" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="stat-card glass rounded-2xl p-4 sm:p-5 glow">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-slate-400 text-xs sm:text-sm mb-1">Sueldos Mes</p>
-                    <p className="text-lg sm:text-2xl font-bold mono">{formatCurrency(stats.totalSueldosPagados)}</p>
-                    <p className="text-xs text-slate-500 mt-1">pagados este mes</p>
-                  </div>
-                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
-                    <Users className="w-5 h-5" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="stat-card glass rounded-2xl p-4 sm:p-5 glow">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-slate-400 text-xs sm:text-sm mb-1">Pago Proveedores</p>
-                    <p className="text-lg sm:text-2xl font-bold mono text-emerald-400">{formatCurrency(stats.totalPagadoProveedoresMes)}</p>
-                    <p className="text-xs text-slate-500 mt-1">{stats.cantidadPagosProveedoresMes} pagos este mes</p>
-                  </div>
-                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-                    <CheckCircle className="w-5 h-5" />
                   </div>
                 </div>
               </div>
