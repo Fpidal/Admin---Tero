@@ -2321,6 +2321,43 @@ function App() {
     fetchAllData();
   }, []);
 
+  // Auto-logout por inactividad (10 minutos)
+  useEffect(() => {
+    // No aplicar en modo demo
+    if (demoMode) return;
+
+    let inactivityTimer;
+    const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutos en milisegundos
+
+    const resetTimer = () => {
+      if (inactivityTimer) clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(() => {
+        // Cerrar sesión por inactividad
+        localStorage.removeItem('tero_auth');
+        setIsAuthenticated(false);
+      }, INACTIVITY_TIMEOUT);
+    };
+
+    // Eventos que indican actividad del usuario
+    const activityEvents = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
+
+    // Agregar listeners
+    activityEvents.forEach(event => {
+      document.addEventListener(event, resetTimer, { passive: true });
+    });
+
+    // Iniciar el timer
+    resetTimer();
+
+    // Limpiar al desmontar
+    return () => {
+      if (inactivityTimer) clearTimeout(inactivityTimer);
+      activityEvents.forEach(event => {
+        document.removeEventListener(event, resetTimer);
+      });
+    };
+  }, [demoMode]);
+
   // CRUD Proveedores
   const createProveedor = async (proveedor) => {
     console.log('Creando proveedor:', proveedor);
