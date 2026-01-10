@@ -12,21 +12,45 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 const formatCurrency = (value) => {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(value);
+  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
 };
 
-// Formatear número con separador de miles para inputs
+// Formatear número con separador de miles para inputs (permite 2 decimales)
 const formatInputMonto = (value) => {
   if (!value && value !== 0) return '';
-  const num = typeof value === 'string' ? value.replace(/\D/g, '') : value.toString();
-  if (!num) return '';
-  return new Intl.NumberFormat('es-AR').format(parseInt(num));
+  let str = typeof value === 'string' ? value : value.toString();
+
+  // Si es número, convertir punto decimal a coma
+  if (typeof value === 'number') {
+    return new Intl.NumberFormat('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(value);
+  }
+
+  // Permitir solo dígitos, puntos (miles) y coma (decimal)
+  str = str.replace(/[^\d.,]/g, '');
+
+  // Separar parte entera y decimal
+  const parts = str.split(',');
+  let intPart = parts[0].replace(/\./g, ''); // quitar puntos de miles
+  let decPart = parts[1] !== undefined ? parts[1].slice(0, 2) : null; // máximo 2 decimales
+
+  if (!intPart && !decPart) return '';
+
+  // Formatear parte entera con separador de miles
+  intPart = intPart ? new Intl.NumberFormat('es-AR').format(parseInt(intPart)) : '0';
+
+  // Retornar con o sin decimales
+  if (decPart !== null) {
+    return `${intPart},${decPart}`;
+  }
+  return intPart;
 };
 
-// Parsear monto formateado a número
+// Parsear monto formateado a número (soporta decimales con coma)
 const parseInputMonto = (value) => {
   if (!value) return '';
-  return value.replace(/\D/g, '');
+  // Quitar puntos de miles, reemplazar coma decimal por punto
+  const cleaned = value.toString().replace(/\./g, '').replace(',', '.');
+  return cleaned;
 };
 
 const formatDate = (dateStr) => {
@@ -906,11 +930,16 @@ function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, on
     const brutoNum = parseFloat(bruto) || 0;
     const iva = brutoNum * (ivaPct / 100);
     const ret = parseFloat(retenciones) || 0;
-    return Math.round(brutoNum + iva + ret);
+    return Math.round((brutoNum + iva + ret) * 100) / 100; // Redondear a 2 decimales
   };
 
+  // Estado separado para los inputs de texto (permite escribir libremente)
+  const [brutoInput, setBrutoInput] = useState(factura?.bruto ? formatInputMonto(factura.bruto) : '');
+  const [retencionesInput, setRetencionesInput] = useState(factura?.otras_retenciones ? formatInputMonto(factura.otras_retenciones) : '');
+
   const handleBrutoChange = (valor) => {
-    const brutoNum = parseInputMonto(valor);
+    setBrutoInput(valor);
+    const brutoNum = parseFloat(parseInputMonto(valor)) || 0;
     const neto = calcularNeto(brutoNum, form.iva_porcentaje, form.otras_retenciones);
     setForm({ ...form, bruto: brutoNum, monto: neto });
   };
@@ -921,7 +950,8 @@ function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, on
   };
 
   const handleRetencionesChange = (valor) => {
-    const ret = parseInputMonto(valor);
+    setRetencionesInput(valor);
+    const ret = parseFloat(parseInputMonto(valor)) || 0;
     const neto = calcularNeto(form.bruto, form.iva_porcentaje, ret);
     setForm({ ...form, otras_retenciones: ret, monto: neto });
   };
@@ -1062,7 +1092,7 @@ function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, on
           <div className="grid grid-cols-4 gap-2">
             <div>
               <label className="block text-xs text-slate-400 mb-0.5">Sub Total *</label>
-              <input type="text" required value={formatInputMonto(form.bruto)} onChange={e => handleBrutoChange(e.target.value)} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm text-right" placeholder="0" />
+              <input type="text" required value={brutoInput} onChange={e => handleBrutoChange(e.target.value)} onBlur={e => setBrutoInput(formatInputMonto(form.bruto))} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm text-right" placeholder="0" />
             </div>
             <div>
               <label className="block text-xs text-slate-400 mb-0.5">IVA</label>
@@ -1074,7 +1104,7 @@ function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, on
             </div>
             <div>
               <label className="block text-xs text-slate-400 mb-0.5">Retenciones</label>
-              <input type="text" value={formatInputMonto(form.otras_retenciones)} onChange={e => handleRetencionesChange(e.target.value)} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm text-right" placeholder="0" />
+              <input type="text" value={retencionesInput} onChange={e => handleRetencionesChange(e.target.value)} onBlur={e => setRetencionesInput(formatInputMonto(form.otras_retenciones))} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm text-right" placeholder="0" />
             </div>
             <div>
               <label className="block text-xs text-slate-400 mb-0.5">Total</label>
