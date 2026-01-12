@@ -2692,12 +2692,21 @@ function App() {
 
   // Actualizar estado de factura de venta según cobros
   const actualizarEstadoFacturaVenta = async (facturaId) => {
-    const totalCobros = cobros
-      .filter(c => c.factura_venta_id === facturaId)
-      .reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0);
-    const factura = facturasVenta.find(f => f.id === facturaId);
-    if (factura) {
-      const nuevoEstado = totalCobros >= factura.monto ? 'cobrada' : 'pendiente';
+    // Obtener cobros directamente de la base para evitar problemas de timing
+    const { data: cobrosDB } = await supabase.from('cobros').select('*').eq('factura_venta_id', facturaId);
+    const totalCobros = (cobrosDB || []).reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0);
+
+    // Obtener NC de esta factura
+    const { data: ncDB } = await supabase.from('notas_credito_venta').select('*').eq('factura_venta_id', facturaId);
+    const totalNC = (ncDB || []).reduce((sum, nc) => sum + (parseFloat(nc.monto) || 0), 0);
+
+    // Obtener la factura
+    const { data: facturaDB } = await supabase.from('facturas_venta').select('*').eq('id', facturaId).single();
+
+    if (facturaDB) {
+      const montoFactura = parseFloat(facturaDB.monto) || 0;
+      const saldoPendiente = montoFactura - totalNC - totalCobros;
+      const nuevoEstado = saldoPendiente <= 0 ? 'cobrada' : 'pendiente';
       await supabase.from('facturas_venta').update({ estado: nuevoEstado }).eq('id', facturaId);
       await fetchFacturasVenta();
     }
