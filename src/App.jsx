@@ -3792,11 +3792,9 @@ function App() {
 
             {/* Subtab: Facturas de Venta */}
             {subTabIngresos === 'facturas' && (() => {
-              // Filtrar facturas de venta (solo las que tienen monto > 0)
+              // Filtrar facturas de venta
               const facturasVentaFiltradas = facturasVenta.filter(f => {
-                const monto = parseFloat(f.monto) || 0;
-                if (monto <= 0) return false; // Solo mostrar facturas con monto cargado
-                const matchCliente = filtroClienteFacturaVenta === 'todos' || f.cliente_id === parseInt(filtroClienteFacturaVenta);
+                const matchCliente = filtroClienteFacturaVenta === 'todos' || parseInt(f.cliente_id) === parseInt(filtroClienteFacturaVenta);
                 const fechaFactura = new Date(f.fecha + 'T12:00:00');
                 const matchMes = filtroMesFacturaVenta === 'todos' || fechaFactura.getMonth() === parseInt(filtroMesFacturaVenta);
                 return matchCliente && matchMes;
