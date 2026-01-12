@@ -3791,10 +3791,11 @@ function App() {
                         .filter(nc => idsFacturasFiltradas.includes(nc.factura_venta_id) ||
                           (filtroClienteFacturaVenta !== 'todos' && nc.cliente_id === parseInt(filtroClienteFacturaVenta)))
                         .reduce((sum, nc) => sum + (parseFloat(nc.monto) || 0), 0);
+                      const saldoNeto = totalFacturado - totalNC;
                       const totalCobrado = cobros
                         .filter(c => idsFacturasFiltradas.includes(c.factura_venta_id))
                         .reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0);
-                      const saldo = totalFacturado - totalNC - totalCobrado;
+                      const pendiente = saldoNeto - totalCobrado;
                       return (
                         <>
                           <div className="text-right">
@@ -3803,15 +3804,19 @@ function App() {
                           </div>
                           <div className="text-right">
                             <p className="text-xs text-slate-500">NC</p>
-                            <p className="text-base font-bold text-red-500 mono">{formatCurrency(totalNC, false)}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-xs text-slate-500">Cobrado</p>
-                            <p className="text-base font-bold text-emerald-500 mono">{formatCurrency(totalCobrado, false)}</p>
+                            <p className="text-base font-bold text-red-500 mono">-{formatCurrency(totalNC, false)}</p>
                           </div>
                           <div className="text-right">
                             <p className="text-xs text-slate-500">Saldo</p>
-                            <p className="text-base font-bold text-amber-600 mono">{formatCurrency(saldo, false)}</p>
+                            <p className="text-base font-bold text-slate-700 mono">{formatCurrency(saldoNeto, false)}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-slate-500">Cobrado</p>
+                            <p className="text-base font-bold text-emerald-500 mono">-{formatCurrency(totalCobrado, false)}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-slate-500">Pendiente</p>
+                            <p className="text-base font-bold text-amber-600 mono">{formatCurrency(pendiente, false)}</p>
                           </div>
                         </>
                       );
@@ -3834,29 +3839,34 @@ function App() {
                           <th className="px-3 py-3 font-medium">Fecha</th>
                           <th className="px-3 py-3 font-medium">Número</th>
                           <th className="px-3 py-3 font-medium">Cliente</th>
-                          <th className="px-3 py-3 font-medium">Vencimiento</th>
+                          <th className="px-3 py-3 font-medium">Venc.</th>
                           <th className="px-3 py-3 font-medium">Estado</th>
                           <th className="px-3 py-3 font-medium text-right">Total</th>
                           <th className="px-3 py-3 font-medium text-right">NC</th>
-                          <th className="px-3 py-3 font-medium text-right">Cobrado</th>
                           <th className="px-3 py-3 font-medium text-right">Saldo</th>
-                          <th className="px-3 py-3 font-medium text-right">Acciones</th>
+                          <th className="px-3 py-3 font-medium text-right">Cobrado</th>
+                          <th className="px-3 py-3 font-medium text-right">Pendiente</th>
+                          <th className="px-3 py-3 font-medium text-right">Acc.</th>
                         </tr>
                       </thead>
                       <tbody>
                         {facturasVentaFiltradas.length === 0 ? (
-                          <tr><td colSpan="10" className="px-3 py-8 text-center text-slate-400 text-xs">No hay facturas de venta registradas</td></tr>
+                          <tr><td colSpan="11" className="px-3 py-8 text-center text-slate-400 text-xs">No hay facturas de venta registradas</td></tr>
                         ) : (
                           facturasVentaFiltradas.map(f => {
+                            const total = parseFloat(f.monto) || 0;
                             // Calcular NC aplicadas a esta factura
                             const ncFactura = notasCreditoVenta
                               .filter(nc => nc.factura_venta_id === f.id)
                               .reduce((sum, nc) => sum + (parseFloat(nc.monto) || 0), 0);
+                            // Saldo = Total - NC
+                            const saldoFactura = total - ncFactura;
                             // Calcular cobros de esta factura
                             const cobradoFactura = cobros
                               .filter(c => c.factura_venta_id === f.id)
                               .reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0);
-                            const saldoFactura = (parseFloat(f.monto) || 0) - ncFactura - cobradoFactura;
+                            // Pendiente = Saldo - Cobrado
+                            const pendienteFactura = saldoFactura - cobradoFactura;
                             return (
                               <tr key={f.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                                 <td className="px-3 py-2.5 text-xs">{formatDate(f.fecha)}</td>
@@ -3872,15 +3882,16 @@ function App() {
                                     {f.estado === 'cobrada' ? 'Cobrada' : f.estado === 'vencida' ? 'Vencida' : 'Pendiente'}
                                   </span>
                                 </td>
-                                <td className="px-3 py-2.5 text-right font-semibold mono text-blue-500 text-xs">{formatCurrency(f.monto, false)}</td>
+                                <td className="px-3 py-2.5 text-right font-semibold mono text-blue-500 text-xs">{formatCurrency(total, false)}</td>
                                 <td className="px-3 py-2.5 text-right font-semibold mono text-red-500 text-xs">
                                   {ncFactura > 0 ? `-${formatCurrency(ncFactura, false)}` : '-'}
                                 </td>
+                                <td className="px-3 py-2.5 text-right font-semibold mono text-slate-700 text-xs">{formatCurrency(saldoFactura, false)}</td>
                                 <td className="px-3 py-2.5 text-right font-semibold mono text-emerald-500 text-xs">
-                                  {cobradoFactura > 0 ? formatCurrency(cobradoFactura, false) : '-'}
+                                  {cobradoFactura > 0 ? `-${formatCurrency(cobradoFactura, false)}` : '-'}
                                 </td>
                                 <td className="px-3 py-2.5 text-right font-bold mono text-xs">
-                                  <span className={saldoFactura > 0 ? 'text-amber-600' : 'text-slate-400'}>{formatCurrency(saldoFactura, false)}</span>
+                                  <span className={pendienteFactura > 0 ? 'text-amber-600' : 'text-slate-400'}>{formatCurrency(pendienteFactura, false)}</span>
                                 </td>
                                 <td className="px-3 py-2.5 text-right">
                                   <button onClick={() => { setSelectedItem(f); setShowModal('factura-venta'); }} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Editar">
@@ -4006,12 +4017,16 @@ function App() {
 
                     return facturasConCobros.map(f => {
                       const cliente = clientes.find(c => c.id === f.cliente_id);
+                      const total = parseFloat(f.monto) || 0;
                       const cobrosFactura = cobros.filter(c => c.factura_venta_id === f.id);
                       const totalCobrado = cobrosFactura.reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0);
                       const ncFactura = notasCreditoVenta
                         .filter(nc => nc.factura_venta_id === f.id)
                         .reduce((sum, nc) => sum + (parseFloat(nc.monto) || 0), 0);
-                      const saldo = (parseFloat(f.monto) || 0) - ncFactura - totalCobrado;
+                      // Saldo = Total - NC
+                      const saldo = total - ncFactura;
+                      // Pendiente = Saldo - Cobrado
+                      const pendiente = saldo - totalCobrado;
                       const expandido = cobrosExpandidos.includes(f.id);
 
                       return (
@@ -4030,7 +4045,7 @@ function App() {
                             <div className="flex items-center gap-4 text-xs">
                               <div className="text-center">
                                 <span className="text-slate-400 text-[10px] block">Total</span>
-                                <span className="text-blue-600 font-medium">{formatCurrency(f.monto, false)}</span>
+                                <span className="text-blue-600 font-medium">{formatCurrency(total, false)}</span>
                               </div>
                               {ncFactura > 0 && (
                                 <div className="text-center">
@@ -4039,12 +4054,16 @@ function App() {
                                 </div>
                               )}
                               <div className="text-center">
-                                <span className="text-slate-400 text-[10px] block">Cobrado</span>
-                                <span className="text-emerald-600 font-medium">{formatCurrency(totalCobrado, false)}</span>
+                                <span className="text-slate-400 text-[10px] block">Saldo</span>
+                                <span className="text-slate-700 font-medium">{formatCurrency(saldo, false)}</span>
                               </div>
                               <div className="text-center">
-                                <span className="text-slate-400 text-[10px] block">Saldo</span>
-                                <span className={`font-bold ${saldo > 0 ? 'text-amber-600' : 'text-slate-400'}`}>{formatCurrency(saldo, false)}</span>
+                                <span className="text-slate-400 text-[10px] block">Cobrado</span>
+                                <span className="text-emerald-600 font-medium">-{formatCurrency(totalCobrado, false)}</span>
+                              </div>
+                              <div className="text-center">
+                                <span className="text-slate-400 text-[10px] block">Pendiente</span>
+                                <span className={`font-bold ${pendiente > 0 ? 'text-amber-600' : 'text-slate-400'}`}>{formatCurrency(pendiente, false)}</span>
                               </div>
                             </div>
                           </div>
