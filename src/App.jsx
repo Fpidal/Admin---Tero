@@ -2022,7 +2022,8 @@ function App() {
   const [clientes, setClientes] = useState([]);
   const [facturasVenta, setFacturasVenta] = useState([]);
   const [cobros, setCobros] = useState([]);
-  const [subTabIngresos, setSubTabIngresos] = useState('facturas'); // 'facturas' | 'cobros' | 'clientes'
+  const [notasCreditoVenta, setNotasCreditoVenta] = useState([]);
+  const [subTabIngresos, setSubTabIngresos] = useState('facturas'); // 'facturas' | 'cobros' | 'clientes' | 'nc'
 
   // Modales
   const [showModal, setShowModal] = useState(null); // 'proveedor', 'factura', 'empleado', 'pago'
@@ -2242,6 +2243,15 @@ function App() {
     }
   };
 
+  const fetchNotasCreditoVenta = async () => {
+    try {
+      const { data, error } = await supabase.from('notas_credito_venta').select('*').order('fecha', { ascending: false });
+      if (!error) setNotasCreditoVenta(data || []);
+    } catch (e) {
+      setNotasCreditoVenta([]);
+    }
+  };
+
   const fetchAllData = async () => {
     setLoading(true);
 
@@ -2265,7 +2275,7 @@ function App() {
     await Promise.all([
       fetchProveedores(), fetchFacturas(), fetchEmpleados(), fetchPagos(),
       fetchNotasCredito(), fetchAnulaciones(), fetchModificaciones(), fetchOrdenesPago(),
-      fetchClientes(), fetchFacturasVenta(), fetchCobros()
+      fetchClientes(), fetchFacturasVenta(), fetchCobros(), fetchNotasCreditoVenta()
     ]);
     setLoading(false);
   };
@@ -2594,6 +2604,33 @@ function App() {
     if (!confirm('¿Estás seguro de eliminar este cobro?')) return;
     const { error } = await supabase.from('cobros').delete().eq('id', id);
     if (!error) await fetchCobros();
+  };
+
+  // CRUD Notas de Crédito de Venta
+  const createNotaCreditoVenta = async (nc) => {
+    const { error } = await supabase.from('notas_credito_venta').insert([nc]);
+    if (!error) {
+      await fetchNotasCreditoVenta();
+      setShowModal(null);
+      setSelectedItem(null);
+    }
+    return { error };
+  };
+
+  const updateNotaCreditoVenta = async (id, nc) => {
+    const { error } = await supabase.from('notas_credito_venta').update(nc).eq('id', id);
+    if (!error) {
+      await fetchNotasCreditoVenta();
+      setShowModal(null);
+      setSelectedItem(null);
+    }
+    return { error };
+  };
+
+  const deleteNotaCreditoVenta = async (id) => {
+    if (!confirm('¿Estás seguro de eliminar esta nota de crédito?')) return;
+    const { error } = await supabase.from('notas_credito_venta').delete().eq('id', id);
+    if (!error) await fetchNotasCreditoVenta();
   };
 
   // Actualizar estado de factura de venta según cobros
@@ -3527,7 +3564,7 @@ function App() {
               <h2 className="text-lg font-bold">Ingresos</h2>
             </div>
 
-            {/* Solapas Facturas / Cobros / Clientes / Cta Cte */}
+            {/* Solapas Facturas / NC / Cobros / Clientes / Cta Cte */}
             <div className="flex gap-2 border-b border-slate-200 overflow-x-auto">
               <button
                 onClick={() => setSubTabIngresos('facturas')}
@@ -3538,6 +3575,16 @@ function App() {
                 }`}
               >
                 Facturas
+              </button>
+              <button
+                onClick={() => setSubTabIngresos('nc')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                  subTabIngresos === 'nc'
+                    ? 'border-red-500 text-red-600'
+                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                NC
               </button>
               <button
                 onClick={() => setSubTabIngresos('cobros')}
@@ -3632,6 +3679,71 @@ function App() {
                               </td>
                             </tr>
                           ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Subtab: Notas de Crédito */}
+            {subTabIngresos === 'nc' && (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <div className="text-right">
+                    <p className="text-xs text-slate-500">Total NC</p>
+                    <p className="text-lg font-bold text-red-500 mono">{formatCurrency(notasCreditoVenta.reduce((sum, nc) => sum + (parseFloat(nc.monto) || 0), 0))}</p>
+                  </div>
+                  <button
+                    onClick={() => { setSelectedItem(null); setShowModal('nc-venta'); }}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-medium hover:from-red-600 hover:to-red-700 transition-all text-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Nueva NC
+                  </button>
+                </div>
+
+                <div className="glass rounded-2xl overflow-hidden glow">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-50/80">
+                        <tr>
+                          <th className="px-3 py-2 text-left font-semibold text-slate-600">Fecha</th>
+                          <th className="px-3 py-2 text-left font-semibold text-slate-600">Cliente</th>
+                          <th className="px-3 py-2 text-left font-semibold text-slate-600">Número</th>
+                          <th className="px-3 py-2 text-left font-semibold text-slate-600">Factura</th>
+                          <th className="px-3 py-2 text-right font-semibold text-slate-600">Monto</th>
+                          <th className="px-3 py-2 text-center font-semibold text-slate-600">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {notasCreditoVenta.length === 0 ? (
+                          <tr><td colSpan="6" className="px-3 py-8 text-center text-slate-400">No hay notas de crédito</td></tr>
+                        ) : (
+                          notasCreditoVenta.map(nc => {
+                            const cliente = clientes.find(c => c.id === nc.cliente_id);
+                            const factura = facturasVenta.find(f => f.id === nc.factura_venta_id);
+                            return (
+                              <tr key={nc.id} className="hover:bg-slate-50/50">
+                                <td className="px-3 py-2.5 text-xs">{formatDate(nc.fecha)}</td>
+                                <td className="px-3 py-2.5 font-medium text-xs">{cliente?.nombre || '-'}</td>
+                                <td className="px-3 py-2.5 text-xs">{nc.numero}</td>
+                                <td className="px-3 py-2.5 text-xs">{factura?.numero || '-'}</td>
+                                <td className="px-3 py-2.5 text-right font-semibold mono text-red-500 text-xs">{formatCurrency(nc.monto)}</td>
+                                <td className="px-3 py-2.5">
+                                  <div className="flex justify-center gap-1">
+                                    <button onClick={() => { setSelectedItem(nc); setShowModal('nc-venta'); }} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Editar">
+                                      <Edit3 className="w-3.5 h-3.5 text-slate-400" />
+                                    </button>
+                                    <button onClick={() => deleteNotaCreditoVenta(nc.id)} className="p-1.5 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar">
+                                      <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
                         )}
                       </tbody>
                     </table>
@@ -5852,6 +5964,95 @@ function App() {
                   </form>
                 );
               })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Nota de Crédito de Venta */}
+      {showModal === 'nc-venta' && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-slate-800">{selectedItem ? 'Editar NC' : 'Nueva Nota de Crédito'}</h2>
+                <button onClick={() => { setShowModal(null); setSelectedItem(null); }} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const data = {
+                  cliente_id: parseInt(formData.get('cliente_id')) || null,
+                  factura_venta_id: parseInt(formData.get('factura_venta_id')) || null,
+                  numero: formData.get('numero'),
+                  monto: parseFloat(parseInputMonto(formData.get('monto'))),
+                  fecha: formData.get('fecha'),
+                  concepto: formData.get('concepto') || ''
+                };
+
+                if (selectedItem) {
+                  await updateNotaCreditoVenta(selectedItem.id, data);
+                } else {
+                  await createNotaCreditoVenta(data);
+                }
+              }} className="space-y-4">
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Cliente *</label>
+                  <select name="cliente_id" defaultValue={selectedItem?.cliente_id || ''} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-red-500">
+                    <option value="">Seleccionar cliente...</option>
+                    {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Factura asociada</label>
+                  <select name="factura_venta_id" defaultValue={selectedItem?.factura_venta_id || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-red-500">
+                    <option value="">Sin factura asociada</option>
+                    {facturasVenta.map(f => {
+                      const cliente = clientes.find(c => c.id === f.cliente_id);
+                      return (
+                        <option key={f.id} value={f.id}>
+                          {f.numero} - {cliente?.nombre} - {formatCurrency(f.monto)}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Número NC *</label>
+                    <input name="numero" defaultValue={selectedItem?.numero || ''} required placeholder="NC-0001" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-red-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Fecha *</label>
+                    <input name="fecha" type="date" defaultValue={selectedItem?.fecha || new Date().toISOString().split('T')[0]} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-red-500" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Monto *</label>
+                  <input name="monto" defaultValue={selectedItem ? formatInputMonto(selectedItem.monto) : ''} required placeholder="0" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-red-500 text-right" onChange={(e) => e.target.value = formatInputMonto(e.target.value)} />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Concepto</label>
+                  <input name="concepto" defaultValue={selectedItem?.concepto || ''} placeholder="Descripción opcional" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-red-500" />
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button type="button" onClick={() => { setShowModal(null); setSelectedItem(null); }} className="flex-1 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-medium hover:bg-slate-50 transition-all">
+                    Cancelar
+                  </button>
+                  <button type="submit" className="flex-1 px-4 py-2 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-medium hover:from-red-600 hover:to-red-700 transition-all">
+                    {selectedItem ? 'Guardar' : 'Crear NC'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
