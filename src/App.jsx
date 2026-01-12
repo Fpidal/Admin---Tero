@@ -3118,6 +3118,7 @@ function App() {
         const diasHastaVenc = Math.ceil((venc - hoy) / (1000 * 60 * 60 * 24));
         const venceEstaSemana = diasHastaVenc >= 0 && diasHastaVenc <= 7 && f.estado !== 'pagada';
         // Para filtro de estado
+        const estaVencida = venc < hoy && f.estado !== 'pagada' && f.saldo > 0;
         let matchEstado = false;
         if (filtroEstado === 'todos') {
           matchEstado = true;
@@ -3127,6 +3128,11 @@ function App() {
           matchEstado = f.estadoDisplay === 'parcial';
         } else if (filtroEstado === 'vence_semana') {
           matchEstado = venceEstaSemana;
+        } else if (filtroEstado === 'vencida') {
+          matchEstado = estaVencida;
+        } else if (filtroEstado === 'pendiente') {
+          // Pendientes que NO están vencidas
+          matchEstado = f.estado === 'pendiente' && !estaVencida && f.saldo > 0;
         } else {
           matchEstado = f.estado === filtroEstado;
         }
