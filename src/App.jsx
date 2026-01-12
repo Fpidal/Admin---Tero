@@ -2636,7 +2636,7 @@ function App() {
 
   // Sincronizar cobros antiguos con facturas (por descripción o cliente)
   const sincronizarCobrosConFacturas = async () => {
-    const cobrosSinFactura = cobros.filter(c => !c.factura_venta_id);
+    const cobrosSinFactura = cobros.filter(c => !c.factura_venta_id || c.factura_venta_id === 0 || c.factura_venta_id === '0' || c.factura_venta_id === '');
     if (cobrosSinFactura.length === 0) {
       alert('Todos los cobros ya están asociados a facturas');
       return;
@@ -4011,7 +4011,7 @@ function App() {
                     <p className="text-lg font-bold text-emerald-500 mono">{formatCurrency(cobros.reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0), false)}</p>
                   </div>
                   <div className="flex gap-2">
-                    {cobros.some(c => !c.factura_venta_id) && (
+                    {cobros.some(c => !c.factura_venta_id || c.factura_venta_id === 0 || c.factura_venta_id === '0' || c.factura_venta_id === '') && (
                       <button
                         onClick={sincronizarCobrosConFacturas}
                         className="flex items-center gap-2 px-3 py-2 rounded-xl border border-amber-300 bg-amber-50 text-amber-700 font-medium hover:bg-amber-100 transition-all text-sm"
