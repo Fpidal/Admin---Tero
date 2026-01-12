@@ -4008,16 +4008,8 @@ function App() {
 
                     return facturasConCobros.map(f => {
                       const cliente = clientes.find(c => c.id === f.cliente_id);
-                      const total = parseFloat(f.monto) || 0;
                       const cobrosFactura = cobros.filter(c => c.factura_venta_id === f.id);
                       const totalCobrado = cobrosFactura.reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0);
-                      const ncFactura = notasCreditoVenta
-                        .filter(nc => nc.factura_venta_id === f.id)
-                        .reduce((sum, nc) => sum + (parseFloat(nc.monto) || 0), 0);
-                      // Saldo = Total - NC
-                      const saldo = total - ncFactura;
-                      // Pendiente = Saldo - Cobrado
-                      const pendiente = saldo - totalCobrado;
                       const expandido = cobrosExpandidos.includes(f.id);
 
                       return (
@@ -4033,30 +4025,7 @@ function App() {
                               <span className="text-xs text-slate-400">{cliente?.nombre}</span>
                               <span className="text-xs text-slate-400">({cobrosFactura.length} cobros)</span>
                             </div>
-                            <div className="flex items-center gap-4 text-xs">
-                              <div className="text-center">
-                                <span className="text-slate-400 text-[10px] block">Total</span>
-                                <span className="text-blue-600 font-medium">{formatCurrency(total, false)}</span>
-                              </div>
-                              {ncFactura > 0 && (
-                                <div className="text-center">
-                                  <span className="text-slate-400 text-[10px] block">NC</span>
-                                  <span className="text-red-500">-{formatCurrency(ncFactura, false)}</span>
-                                </div>
-                              )}
-                              <div className="text-center">
-                                <span className="text-slate-400 text-[10px] block">Saldo</span>
-                                <span className="text-slate-700 font-medium">{formatCurrency(saldo, false)}</span>
-                              </div>
-                              <div className="text-center">
-                                <span className="text-slate-400 text-[10px] block">Cobrado</span>
-                                <span className="text-emerald-600 font-medium">-{formatCurrency(totalCobrado, false)}</span>
-                              </div>
-                              <div className="text-center">
-                                <span className="text-slate-400 text-[10px] block">Pendiente</span>
-                                <span className={`font-bold ${pendiente > 0 ? 'text-amber-600' : 'text-slate-400'}`}>{formatCurrency(pendiente, false)}</span>
-                              </div>
-                            </div>
+                            <span className="text-emerald-600 font-bold text-sm mono">{formatCurrency(totalCobrado, false)}</span>
                           </div>
                           {/* Detalle de cobros (expandible) */}
                           {expandido && (
