@@ -2663,6 +2663,34 @@ function App() {
     alert(`Se actualizaron ${actualizados} de ${cobrosSinFactura.length} cobros`);
   };
 
+  // Corregir facturas con monto = 0 usando el monto de cobros
+  const corregirFacturasSinMonto = async () => {
+    const facturasSinMonto = facturasVenta.filter(f => !f.monto || parseFloat(f.monto) === 0);
+    if (facturasSinMonto.length === 0) {
+      alert('No hay facturas con monto = 0 para corregir');
+      return;
+    }
+
+    let corregidas = 0;
+    for (const factura of facturasSinMonto) {
+      // Buscar cobros de esta factura
+      const cobrosFactura = cobros.filter(c => parseInt(c.factura_venta_id) === parseInt(factura.id));
+      const totalCobros = cobrosFactura.reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0);
+
+      if (totalCobros > 0) {
+        // Actualizar el monto de la factura con el total de cobros
+        const { error } = await supabase
+          .from('facturas_venta')
+          .update({ monto: totalCobros, subtotal: totalCobros })
+          .eq('id', factura.id);
+        if (!error) corregidas++;
+      }
+    }
+
+    await fetchFacturasVenta();
+    alert(`Se corrigieron ${corregidas} de ${facturasSinMonto.length} facturas`);
+  };
+
   // CRUD Notas de Crédito de Venta
   const createNotaCreditoVenta = async (nc) => {
     const { error } = await supabase.from('notas_credito_venta').insert([nc]);
@@ -3854,6 +3882,16 @@ function App() {
                         </>
                       );
                     })()}
+                    {facturasVenta.some(f => !f.monto || parseFloat(f.monto) === 0) && (
+                      <button
+                        onClick={corregirFacturasSinMonto}
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl border border-amber-300 bg-amber-50 text-amber-700 font-medium hover:bg-amber-100 transition-all text-sm"
+                        title="Corregir facturas con Total = $0"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        Corregir Montos
+                      </button>
+                    )}
                     <button
                       onClick={() => { setSelectedItem(null); setShowModal('factura-venta'); }}
                       className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all text-sm"
