@@ -6029,8 +6029,8 @@ function App() {
                 <form onSubmit={async (e) => {
                   e.preventDefault();
                   const formData = new FormData(e.target);
-                  const subtotal = parseFloat(parseInputMonto(modalSubtotal)) || 0;
-                  const ivaPercent = parseFloat(modalIva) || 0;
+                  const subtotal = parseFloat(parseInputMonto(modalSubtotal || (selectedItem?.subtotal || selectedItem?.monto || 0))) || 0;
+                  const ivaPercent = parseFloat(modalIva || selectedItem?.iva_porcentaje || 21) || 0;
                   const ivaAmount = subtotal * (ivaPercent / 100);
                   const total = subtotal + ivaAmount;
 
