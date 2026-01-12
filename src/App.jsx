@@ -3995,7 +3995,7 @@ function App() {
                   {(() => {
                     // Agrupar cobros por factura
                     const facturasConCobros = facturasVenta.filter(f =>
-                      cobros.some(c => c.factura_venta_id === f.id)
+                      cobros.some(c => parseInt(c.factura_venta_id) === parseInt(f.id))
                     );
 
                     if (facturasConCobros.length === 0) {
@@ -4009,8 +4009,8 @@ function App() {
                     };
 
                     return facturasConCobros.map(f => {
-                      const cliente = clientes.find(c => c.id === f.cliente_id);
-                      const cobrosFactura = cobros.filter(c => c.factura_venta_id === f.id);
+                      const cliente = clientes.find(c => parseInt(c.id) === parseInt(f.cliente_id));
+                      const cobrosFactura = cobros.filter(c => parseInt(c.factura_venta_id) === parseInt(f.id));
                       const totalCobrado = cobrosFactura.reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0);
                       const expandido = cobrosExpandidos.includes(f.id);
 
@@ -6119,7 +6119,8 @@ function App() {
                 const ncPorFacturaVenta = {};
                 notasCreditoVenta.forEach(nc => {
                   if (nc.factura_venta_id) {
-                    ncPorFacturaVenta[nc.factura_venta_id] = (ncPorFacturaVenta[nc.factura_venta_id] || 0) + (parseFloat(nc.monto) || 0);
+                    const key = parseInt(nc.factura_venta_id);
+                    ncPorFacturaVenta[key] = (ncPorFacturaVenta[key] || 0) + (parseFloat(nc.monto) || 0);
                   }
                 });
 
@@ -6127,15 +6128,17 @@ function App() {
                 const cobrosPorFactura = {};
                 cobros.forEach(c => {
                   if (c.factura_venta_id) {
-                    cobrosPorFactura[c.factura_venta_id] = (cobrosPorFactura[c.factura_venta_id] || 0) + (parseFloat(c.monto) || 0);
+                    const key = parseInt(c.factura_venta_id);
+                    cobrosPorFactura[key] = (cobrosPorFactura[key] || 0) + (parseFloat(c.monto) || 0);
                   }
                 });
 
                 const facturasPendientesCliente = facturasVenta
-                  .filter(f => f.cliente_id === clienteSeleccionado && f.estado !== 'cobrada')
+                  .filter(f => parseInt(f.cliente_id) === parseInt(clienteSeleccionado) && f.estado !== 'cobrada')
                   .map(f => {
-                    const nc = ncPorFacturaVenta[f.id] || 0;
-                    const cobrado = cobrosPorFactura[f.id] || 0;
+                    const fid = parseInt(f.id);
+                    const nc = ncPorFacturaVenta[fid] || 0;
+                    const cobrado = cobrosPorFactura[fid] || 0;
                     const saldo = (parseFloat(f.monto) || 0) - nc - cobrado;
                     return { ...f, nc, cobrado, saldo };
                   });
