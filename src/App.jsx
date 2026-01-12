@@ -3923,7 +3923,7 @@ function App() {
                                   <span className={saldoFactura > 0 ? 'text-amber-600' : 'text-slate-400'}>{formatCurrency(saldoFactura, false)}</span>
                                 </td>
                                 <td className="px-3 py-2.5 text-right">
-                                  <button onClick={() => { setSelectedItem(f); setShowModal('factura-venta'); }} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Editar">
+                                  <button onClick={() => { setSelectedItem(f); setModalSubtotal(formatInputMonto(f.subtotal || f.monto || 0)); setModalIva(f.iva_porcentaje?.toString() || '21'); setShowModal('factura-venta'); }} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Editar">
                                     <Edit3 className="w-3.5 h-3.5" />
                                   </button>
                                   <button onClick={() => deleteFacturaVenta(f.id)} className="p-1.5 hover:bg-red-100 rounded-lg transition-colors text-red-500" title="Eliminar">
