@@ -3791,7 +3791,10 @@ function App() {
                         .filter(nc => idsFacturasFiltradas.includes(nc.factura_venta_id) ||
                           (filtroClienteFacturaVenta !== 'todos' && nc.cliente_id === parseInt(filtroClienteFacturaVenta)))
                         .reduce((sum, nc) => sum + (parseFloat(nc.monto) || 0), 0);
-                      const saldo = totalFacturado - totalNC;
+                      const totalCobrado = cobros
+                        .filter(c => idsFacturasFiltradas.includes(c.factura_venta_id))
+                        .reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0);
+                      const saldo = totalFacturado - totalNC - totalCobrado;
                       return (
                         <>
                           <div className="text-right">
@@ -3801,6 +3804,10 @@ function App() {
                           <div className="text-right">
                             <p className="text-xs text-slate-500">NC</p>
                             <p className="text-base font-bold text-red-500 mono">{formatCurrency(totalNC, false)}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-slate-500">Cobrado</p>
+                            <p className="text-base font-bold text-emerald-500 mono">{formatCurrency(totalCobrado, false)}</p>
                           </div>
                           <div className="text-right">
                             <p className="text-xs text-slate-500">Saldo</p>
@@ -3831,13 +3838,14 @@ function App() {
                           <th className="px-3 py-3 font-medium">Estado</th>
                           <th className="px-3 py-3 font-medium text-right">Total</th>
                           <th className="px-3 py-3 font-medium text-right">NC</th>
+                          <th className="px-3 py-3 font-medium text-right">Cobrado</th>
                           <th className="px-3 py-3 font-medium text-right">Saldo</th>
                           <th className="px-3 py-3 font-medium text-right">Acc.</th>
                         </tr>
                       </thead>
                       <tbody>
                         {facturasVentaFiltradas.length === 0 ? (
-                          <tr><td colSpan="9" className="px-3 py-8 text-center text-slate-400 text-xs">No hay facturas de venta registradas</td></tr>
+                          <tr><td colSpan="10" className="px-3 py-8 text-center text-slate-400 text-xs">No hay facturas de venta registradas</td></tr>
                         ) : (
                           facturasVentaFiltradas.map(f => {
                             const total = parseFloat(f.monto) || 0;
@@ -3845,8 +3853,12 @@ function App() {
                             const ncFactura = notasCreditoVenta
                               .filter(nc => nc.factura_venta_id === f.id)
                               .reduce((sum, nc) => sum + (parseFloat(nc.monto) || 0), 0);
-                            // Saldo = Total - NC
-                            const saldoFactura = total - ncFactura;
+                            // Cobros de esta factura (suma)
+                            const cobradoFactura = cobros
+                              .filter(c => c.factura_venta_id === f.id)
+                              .reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0);
+                            // Saldo = Total - NC - Cobrado
+                            const saldoFactura = total - ncFactura - cobradoFactura;
                             return (
                               <tr key={f.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                                 <td className="px-3 py-2.5 text-xs">{formatDate(f.fecha)}</td>
@@ -3865,6 +3877,9 @@ function App() {
                                 <td className="px-3 py-2.5 text-right font-semibold mono text-blue-500 text-xs">{formatCurrency(total, false)}</td>
                                 <td className="px-3 py-2.5 text-right font-semibold mono text-red-500 text-xs">
                                   {ncFactura > 0 ? formatCurrency(ncFactura, false) : '-'}
+                                </td>
+                                <td className="px-3 py-2.5 text-right font-semibold mono text-emerald-500 text-xs">
+                                  {cobradoFactura > 0 ? formatCurrency(cobradoFactura, false) : '-'}
                                 </td>
                                 <td className="px-3 py-2.5 text-right font-bold mono text-xs">
                                   <span className={saldoFactura > 0 ? 'text-amber-600' : 'text-slate-400'}>{formatCurrency(saldoFactura, false)}</span>
