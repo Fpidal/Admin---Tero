@@ -62,13 +62,26 @@ const formatDate = (dateStr) => {
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
 const CATEGORIAS_PROVEEDOR = [
-  { value: 'pescaderia', label: 'Pescadería' },
-  { value: 'carnes', label: 'Carnes' },
-  { value: 'bodega', label: 'Bodega' },
   { value: 'almacen', label: 'Almacén' },
-  { value: 'verduras', label: 'Verduras' },
+  { value: 'alquiler', label: 'Alquiler' },
   { value: 'arreglos', label: 'Arreglos de local' },
   { value: 'bebidas', label: 'Bebidas' },
+  { value: 'bodega', label: 'Bodega' },
+  { value: 'carnes', label: 'Carnes' },
+  { value: 'contabilidad', label: 'Contabilidad' },
+  { value: 'dj_eventos', label: 'DJ Eventos' },
+  { value: 'limpieza', label: 'Elementos de limpieza' },
+  { value: 'impuestos_municipales', label: 'Impuestos municipales' },
+  { value: 'iva', label: 'IVA' },
+  { value: 'mariscos', label: 'Mariscos' },
+  { value: 'panaderia', label: 'Panadería' },
+  { value: 'pescaderia', label: 'Pescadería' },
+  { value: 'planes_afip_arba', label: 'Planes AFIP/ARBA' },
+  { value: 'quesos_fiambres', label: 'Quesos y fiambres' },
+  { value: 'servicio_gas', label: 'Servicio de gas' },
+  { value: 'servicio_luz', label: 'Servicio de luz' },
+  { value: 'tecnica_eventos', label: 'Técnica eventos' },
+  { value: 'verduras', label: 'Verduras' },
   { value: 'otros', label: 'Otros' }
 ];
 
@@ -2029,6 +2042,8 @@ function App() {
   const [showModal, setShowModal] = useState(null); // 'proveedor', 'factura', 'empleado', 'pago'
   const [selectedItem, setSelectedItem] = useState(null);
   const [modalClienteId, setModalClienteId] = useState(null); // Cliente seleccionado en modal
+  const [modalFacturaId, setModalFacturaId] = useState(null); // Factura seleccionada en modal NC
+  const [modalFacturaCobroId, setModalFacturaCobroId] = useState(null); // Factura seleccionada en modal Cobro
   const [modalSubtotal, setModalSubtotal] = useState('');
   const [modalIva, setModalIva] = useState('21'); // 21, 10.5, 0 (exento)
 
@@ -2057,8 +2072,20 @@ function App() {
   const [filtroMesComprasDash, setFiltroMesComprasDash] = useState(new Date().getMonth().toString());
   const [filtroAnioComprasDash, setFiltroAnioComprasDash] = useState(new Date().getFullYear().toString());
 
+  // Filtro sueldos del mes en dashboard
+  const [filtroMesSueldosDash, setFiltroMesSueldosDash] = useState(new Date().getMonth().toString());
+  const [filtroAnioSueldosDash, setFiltroAnioSueldosDash] = useState(new Date().getFullYear().toString());
+
+  // Filtro eventos en dashboard
+  const [filtroMesEventosDash, setFiltroMesEventosDash] = useState(new Date().getMonth().toString());
+  const [filtroAnioEventosDash, setFiltroAnioEventosDash] = useState(new Date().getFullYear().toString());
+
   // Filtro categoría para gráfico de gastos
   const [filtroCategoriaGrafico, setFiltroCategoriaGrafico] = useState('todos');
+
+  // Filtros para Facturas de Venta (Ingresos)
+  const [filtroClienteFacturaVenta, setFiltroClienteFacturaVenta] = useState('todos');
+  const [filtroMesFacturaVenta, setFiltroMesFacturaVenta] = useState('todos');
 
   // Filtros para Pago Proveedores
   const [filtroProveedorPagoProv, setFiltroProveedorPagoProv] = useState('todos');
@@ -3385,6 +3412,111 @@ function App() {
               })()}
             </div>
 
+            {/* Sueldos y Eventos en grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Sueldos del Mes */}
+              <div className="glass rounded-2xl p-4 glow">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <Users className="w-5 h-5 text-emerald-500" />
+                    Sueldos del Mes
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={filtroMesSueldosDash}
+                      onChange={(e) => setFiltroMesSueldosDash(e.target.value)}
+                      className="px-2 py-1 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-emerald-500/50 text-xs"
+                    >
+                      {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                    </select>
+                    <select
+                      value={filtroAnioSueldosDash}
+                      onChange={(e) => setFiltroAnioSueldosDash(e.target.value)}
+                      className="px-2 py-1 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-emerald-500/50 text-xs"
+                    >
+                      {[2024, 2025, 2026].map(a => (
+                        <option key={a} value={a}>{a}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                {(() => {
+                  const sueldosDelMes = pagos.filter(p => {
+                    if (p.tipo !== 'sueldo' || p.estado === 'anulado') return false;
+                    const fechaPago = new Date(p.fecha + 'T12:00:00');
+                    return fechaPago.getMonth() === parseInt(filtroMesSueldosDash) &&
+                           fechaPago.getFullYear() === parseInt(filtroAnioSueldosDash);
+                  });
+                  const totalSueldos = sueldosDelMes.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
+                  const empleadosPagados = new Set(sueldosDelMes.map(p => p.referencia_id)).size;
+                  return (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-emerald-50 rounded-xl p-3">
+                        <p className="text-xs text-slate-500">Total Pagado</p>
+                        <p className="text-lg font-bold text-emerald-600 mono">{formatCurrency(totalSueldos, false)}</p>
+                        <p className="text-xs text-slate-400">{sueldosDelMes.length} pagos</p>
+                      </div>
+                      <div className="bg-blue-50 rounded-xl p-3">
+                        <p className="text-xs text-slate-500">Empleados</p>
+                        <p className="text-lg font-bold text-blue-600">{empleadosPagados}</p>
+                        <p className="text-xs text-slate-400">con pagos</p>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Eventos del Mes */}
+              <div className="glass rounded-2xl p-4 glow">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-purple-500" />
+                    Eventos del Mes
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={filtroMesEventosDash}
+                      onChange={(e) => setFiltroMesEventosDash(e.target.value)}
+                      className="px-2 py-1 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-purple-500/50 text-xs"
+                    >
+                      {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                    </select>
+                    <select
+                      value={filtroAnioEventosDash}
+                      onChange={(e) => setFiltroAnioEventosDash(e.target.value)}
+                      className="px-2 py-1 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-purple-500/50 text-xs"
+                    >
+                      {[2024, 2025, 2026].map(a => (
+                        <option key={a} value={a}>{a}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                {(() => {
+                  const eventosDelMes = pagos.filter(p => {
+                    if (p.tipo !== 'evento' || p.estado === 'anulado') return false;
+                    const fechaPago = new Date(p.fecha + 'T12:00:00');
+                    return fechaPago.getMonth() === parseInt(filtroMesEventosDash) &&
+                           fechaPago.getFullYear() === parseInt(filtroAnioEventosDash);
+                  });
+                  const totalEventos = eventosDelMes.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
+                  const cantidadPagos = eventosDelMes.length;
+                  return (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-purple-50 rounded-xl p-3">
+                        <p className="text-xs text-slate-500">Total Pagado</p>
+                        <p className="text-lg font-bold text-purple-600 mono">{formatCurrency(totalEventos, false)}</p>
+                      </div>
+                      <div className="bg-indigo-50 rounded-xl p-3">
+                        <p className="text-xs text-slate-500">Empleados</p>
+                        <p className="text-lg font-bold text-indigo-600">{cantidadPagos}</p>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+
             {/* Alertas de Vencimientos */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Facturas Vencidas */}
@@ -3619,20 +3751,70 @@ function App() {
             </div>
 
             {/* Subtab: Facturas de Venta */}
-            {subTabIngresos === 'facturas' && (
+            {subTabIngresos === 'facturas' && (() => {
+              // Filtrar facturas de venta
+              const facturasVentaFiltradas = facturasVenta.filter(f => {
+                const matchCliente = filtroClienteFacturaVenta === 'todos' || f.cliente_id === parseInt(filtroClienteFacturaVenta);
+                const fechaFactura = new Date(f.fecha + 'T12:00:00');
+                const matchMes = filtroMesFacturaVenta === 'todos' || fechaFactura.getMonth() === parseInt(filtroMesFacturaVenta);
+                return matchCliente && matchMes;
+              });
+
+              return (
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div className="text-right">
-                    <p className="text-xs text-slate-500">Total Facturado</p>
-                    <p className="text-lg font-bold text-blue-500 mono">{formatCurrency(facturasVenta.reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0))}</p>
+                <div className="flex flex-wrap justify-between items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={filtroClienteFacturaVenta}
+                      onChange={(e) => setFiltroClienteFacturaVenta(e.target.value)}
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                    >
+                      <option value="todos">Todos los clientes</option>
+                      {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                    </select>
+                    <select
+                      value={filtroMesFacturaVenta}
+                      onChange={(e) => setFiltroMesFacturaVenta(e.target.value)}
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                    >
+                      <option value="todos">Todos los meses</option>
+                      {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                    </select>
                   </div>
-                  <button
-                    onClick={() => { setSelectedItem(null); setShowModal('factura-venta'); }}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all text-sm"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Nueva Factura
-                  </button>
+                  <div className="flex items-center gap-3">
+                    {(() => {
+                      const totalFacturado = facturasVentaFiltradas.reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0);
+                      const idsFacturasFiltradas = facturasVentaFiltradas.map(f => f.id);
+                      const totalNC = notasCreditoVenta
+                        .filter(nc => idsFacturasFiltradas.includes(nc.factura_venta_id) ||
+                          (filtroClienteFacturaVenta !== 'todos' && nc.cliente_id === parseInt(filtroClienteFacturaVenta)))
+                        .reduce((sum, nc) => sum + (parseFloat(nc.monto) || 0), 0);
+                      const saldo = totalFacturado - totalNC;
+                      return (
+                        <>
+                          <div className="text-right">
+                            <p className="text-xs text-slate-500">Facturado</p>
+                            <p className="text-base font-bold text-blue-500 mono">{formatCurrency(totalFacturado, false)}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-slate-500">NC</p>
+                            <p className="text-base font-bold text-red-500 mono">{formatCurrency(totalNC, false)}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-slate-500">Saldo</p>
+                            <p className="text-base font-bold text-amber-600 mono">{formatCurrency(saldo, false)}</p>
+                          </div>
+                        </>
+                      );
+                    })()}
+                    <button
+                      onClick={() => { setSelectedItem(null); setShowModal('factura-venta'); }}
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all text-sm"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Nueva Factura
+                    </button>
+                  </div>
                 </div>
 
                 <div className="glass rounded-2xl glow overflow-hidden">
@@ -3646,46 +3828,57 @@ function App() {
                           <th className="px-3 py-3 font-medium">Vencimiento</th>
                           <th className="px-3 py-3 font-medium">Estado</th>
                           <th className="px-3 py-3 font-medium text-right">Monto</th>
+                          <th className="px-3 py-3 font-medium text-right">NC</th>
                           <th className="px-3 py-3 font-medium text-right">Acciones</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {facturasVenta.length === 0 ? (
-                          <tr><td colSpan="7" className="px-3 py-8 text-center text-slate-400 text-xs">No hay facturas de venta registradas</td></tr>
+                        {facturasVentaFiltradas.length === 0 ? (
+                          <tr><td colSpan="8" className="px-3 py-8 text-center text-slate-400 text-xs">No hay facturas de venta registradas</td></tr>
                         ) : (
-                          facturasVenta.map(f => (
-                            <tr key={f.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                              <td className="px-3 py-2.5 text-xs">{formatDate(f.fecha)}</td>
-                              <td className="px-3 py-2.5 text-xs font-medium">{f.numero}</td>
-                              <td className="px-3 py-2.5 text-xs">{f.cliente}</td>
-                              <td className="px-3 py-2.5 text-xs">{formatDate(f.vencimiento)}</td>
-                              <td className="px-3 py-2.5">
-                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                  f.estado === 'cobrada' ? 'bg-emerald-100 text-emerald-700' :
-                                  f.estado === 'vencida' ? 'bg-red-100 text-red-700' :
-                                  'bg-amber-100 text-amber-700'
-                                }`}>
-                                  {f.estado === 'cobrada' ? 'Cobrada' : f.estado === 'vencida' ? 'Vencida' : 'Pendiente'}
-                                </span>
-                              </td>
-                              <td className="px-3 py-2.5 text-right font-semibold mono text-blue-500 text-xs">{formatCurrency(f.monto)}</td>
-                              <td className="px-3 py-2.5 text-right">
-                                <button onClick={() => { setSelectedItem(f); setShowModal('factura-venta'); }} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Editar">
-                                  <Edit3 className="w-3.5 h-3.5" />
-                                </button>
-                                <button onClick={() => deleteFacturaVenta(f.id)} className="p-1.5 hover:bg-red-100 rounded-lg transition-colors text-red-500" title="Eliminar">
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </td>
-                            </tr>
-                          ))
+                          facturasVentaFiltradas.map(f => {
+                            // Calcular NC aplicadas a esta factura
+                            const ncFactura = notasCreditoVenta
+                              .filter(nc => nc.factura_venta_id === f.id)
+                              .reduce((sum, nc) => sum + (parseFloat(nc.monto) || 0), 0);
+                            return (
+                              <tr key={f.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                                <td className="px-3 py-2.5 text-xs">{formatDate(f.fecha)}</td>
+                                <td className="px-3 py-2.5 text-xs font-medium">{f.numero}</td>
+                                <td className="px-3 py-2.5 text-xs">{f.cliente}</td>
+                                <td className="px-3 py-2.5 text-xs">{formatDate(f.vencimiento)}</td>
+                                <td className="px-3 py-2.5">
+                                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                    f.estado === 'cobrada' ? 'bg-emerald-100 text-emerald-700' :
+                                    f.estado === 'vencida' ? 'bg-red-100 text-red-700' :
+                                    'bg-amber-100 text-amber-700'
+                                  }`}>
+                                    {f.estado === 'cobrada' ? 'Cobrada' : f.estado === 'vencida' ? 'Vencida' : 'Pendiente'}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2.5 text-right font-semibold mono text-blue-500 text-xs">{formatCurrency(f.monto)}</td>
+                                <td className="px-3 py-2.5 text-right font-semibold mono text-red-500 text-xs">
+                                  {ncFactura > 0 ? formatCurrency(ncFactura) : '-'}
+                                </td>
+                                <td className="px-3 py-2.5 text-right">
+                                  <button onClick={() => { setSelectedItem(f); setShowModal('factura-venta'); }} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Editar">
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button onClick={() => deleteFacturaVenta(f.id)} className="p-1.5 hover:bg-red-100 rounded-lg transition-colors text-red-500" title="Eliminar">
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })
                         )}
                       </tbody>
                     </table>
                   </div>
                 </div>
               </div>
-            )}
+            );
+            })()}
 
             {/* Subtab: Notas de Crédito */}
             {subTabIngresos === 'nc' && (
@@ -3713,13 +3906,14 @@ function App() {
                           <th className="px-3 py-2 text-left font-semibold text-slate-600">Cliente</th>
                           <th className="px-3 py-2 text-left font-semibold text-slate-600">Número</th>
                           <th className="px-3 py-2 text-left font-semibold text-slate-600">Factura</th>
+                          <th className="px-3 py-2 text-left font-semibold text-slate-600">Concepto</th>
                           <th className="px-3 py-2 text-right font-semibold text-slate-600">Monto</th>
                           <th className="px-3 py-2 text-center font-semibold text-slate-600">Acciones</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {notasCreditoVenta.length === 0 ? (
-                          <tr><td colSpan="6" className="px-3 py-8 text-center text-slate-400">No hay notas de crédito</td></tr>
+                          <tr><td colSpan="7" className="px-3 py-8 text-center text-slate-400">No hay notas de crédito</td></tr>
                         ) : (
                           notasCreditoVenta.map(nc => {
                             const cliente = clientes.find(c => c.id === nc.cliente_id);
@@ -3730,6 +3924,7 @@ function App() {
                                 <td className="px-3 py-2.5 font-medium text-xs">{cliente?.nombre || '-'}</td>
                                 <td className="px-3 py-2.5 text-xs">{nc.numero}</td>
                                 <td className="px-3 py-2.5 text-xs">{factura?.numero || '-'}</td>
+                                <td className="px-3 py-2.5 text-xs text-slate-500">{nc.concepto || '-'}</td>
                                 <td className="px-3 py-2.5 text-right font-semibold mono text-red-500 text-xs">{formatCurrency(nc.monto)}</td>
                                 <td className="px-3 py-2.5">
                                   <div className="flex justify-center gap-1">
@@ -3877,11 +4072,14 @@ function App() {
                         const facturado = facturasVenta
                           .filter(f => f.cliente_id === cliente.id)
                           .reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0);
+                        const ncCliente = notasCreditoVenta
+                          .filter(nc => nc.cliente_id === cliente.id)
+                          .reduce((sum, nc) => sum + (parseFloat(nc.monto) || 0), 0);
                         const cobrado = cobros
                           .filter(c => c.cliente_id === cliente.id)
                           .reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0);
-                        return total + (facturado - cobrado);
-                      }, 0)
+                        return total + (facturado - ncCliente - cobrado);
+                      }, 0), false
                     )}
                   </p>
                 </div>
@@ -3893,6 +4091,7 @@ function App() {
                         <tr className="text-left text-slate-400 text-xs border-b border-slate-200">
                           <th className="px-3 py-3 font-medium">Cliente</th>
                           <th className="px-3 py-3 font-medium text-right">Facturado</th>
+                          <th className="px-3 py-3 font-medium text-right">NC</th>
                           <th className="px-3 py-3 font-medium text-right">Cobros</th>
                           <th className="px-3 py-3 font-medium text-right">Retenciones</th>
                           <th className="px-3 py-3 font-medium text-right">Saldo</th>
@@ -3900,12 +4099,15 @@ function App() {
                       </thead>
                       <tbody>
                         {clientes.length === 0 ? (
-                          <tr><td colSpan="5" className="px-3 py-8 text-center text-slate-400 text-xs">No hay clientes registrados</td></tr>
+                          <tr><td colSpan="6" className="px-3 py-8 text-center text-slate-400 text-xs">No hay clientes registrados</td></tr>
                         ) : (
                           clientes.map(cliente => {
                             const facturado = facturasVenta
                               .filter(f => f.cliente_id === cliente.id)
                               .reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0);
+                            const ncCliente = notasCreditoVenta
+                              .filter(nc => nc.cliente_id === cliente.id)
+                              .reduce((sum, nc) => sum + (parseFloat(nc.monto) || 0), 0);
                             const cobrosCliente = cobros.filter(c => c.cliente_id === cliente.id);
                             const totalCobros = cobrosCliente
                               .filter(c => c.metodo !== 'Retención')
@@ -3913,16 +4115,17 @@ function App() {
                             const totalRetenciones = cobrosCliente
                               .filter(c => c.metodo === 'Retención')
                               .reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0);
-                            const saldo = facturado - totalCobros - totalRetenciones;
+                            const saldo = facturado - ncCliente - totalCobros - totalRetenciones;
 
                             return (
                               <tr key={cliente.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                                 <td className="px-3 py-2.5 text-xs font-medium">{cliente.nombre}</td>
-                                <td className="px-3 py-2.5 text-right font-semibold mono text-blue-500 text-xs">{formatCurrency(facturado)}</td>
-                                <td className="px-3 py-2.5 text-right font-semibold mono text-emerald-500 text-xs">{formatCurrency(totalCobros)}</td>
-                                <td className="px-3 py-2.5 text-right font-semibold mono text-purple-500 text-xs">{formatCurrency(totalRetenciones)}</td>
+                                <td className="px-3 py-2.5 text-right font-semibold mono text-blue-500 text-xs">{formatCurrency(facturado, false)}</td>
+                                <td className="px-3 py-2.5 text-right font-semibold mono text-red-500 text-xs">{ncCliente > 0 ? formatCurrency(ncCliente, false) : '-'}</td>
+                                <td className="px-3 py-2.5 text-right font-semibold mono text-emerald-500 text-xs">{formatCurrency(totalCobros, false)}</td>
+                                <td className="px-3 py-2.5 text-right font-semibold mono text-purple-500 text-xs">{formatCurrency(totalRetenciones, false)}</td>
                                 <td className={`px-3 py-2.5 text-right font-bold mono text-xs ${saldo > 0 ? 'text-amber-600' : saldo < 0 ? 'text-red-500' : 'text-slate-400'}`}>
-                                  {formatCurrency(saldo)}
+                                  {formatCurrency(saldo, false)}
                                 </td>
                               </tr>
                             );
@@ -3933,18 +4136,22 @@ function App() {
                         <tr className="border-t-2 border-slate-300 bg-slate-50 font-bold">
                           <td className="px-3 py-3 text-xs">TOTALES</td>
                           <td className="px-3 py-3 text-right mono text-blue-600 text-xs">
-                            {formatCurrency(facturasVenta.reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0))}
+                            {formatCurrency(facturasVenta.reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0), false)}
+                          </td>
+                          <td className="px-3 py-3 text-right mono text-red-600 text-xs">
+                            {formatCurrency(notasCreditoVenta.reduce((sum, nc) => sum + (parseFloat(nc.monto) || 0), 0), false)}
                           </td>
                           <td className="px-3 py-3 text-right mono text-emerald-600 text-xs">
-                            {formatCurrency(cobros.filter(c => c.metodo !== 'Retención').reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0))}
+                            {formatCurrency(cobros.filter(c => c.metodo !== 'Retención').reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0), false)}
                           </td>
                           <td className="px-3 py-3 text-right mono text-purple-600 text-xs">
-                            {formatCurrency(cobros.filter(c => c.metodo === 'Retención').reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0))}
+                            {formatCurrency(cobros.filter(c => c.metodo === 'Retención').reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0), false)}
                           </td>
                           <td className="px-3 py-3 text-right mono text-amber-600 text-xs">
                             {formatCurrency(
                               facturasVenta.reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0) -
-                              cobros.reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0)
+                              notasCreditoVenta.reduce((sum, nc) => sum + (parseFloat(nc.monto) || 0), 0) -
+                              cobros.reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0), false
                             )}
                           </td>
                         </tr>
@@ -4768,6 +4975,8 @@ function App() {
                   <option value="todos">Todos los tipos</option>
                   <option value="factura">Proveedores</option>
                   <option value="sueldo">Empleados</option>
+                  <option value="evento">Evento</option>
+                  <option value="evento_parcial">Evento Parcial</option>
                   <option value="nc">Notas de Crédito</option>
                 </select>
                 <select
@@ -4785,7 +4994,7 @@ function App() {
             </div>
 
             {/* Resumen */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="glass rounded-xl p-3">
                 <p className="text-xs text-slate-500">Total Proveedores</p>
                 <p className="text-lg font-bold text-blue-500 mono">
@@ -4793,7 +5002,7 @@ function App() {
                     .filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado')
                     .filter(p => filtroMesPago === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesPago))
                     .filter(p => filtroMetodoPago === 'todos' || p.metodo === filtroMetodoPago)
-                    .reduce((sum, p) => sum + p.monto, 0))}
+                    .reduce((sum, p) => sum + p.monto, 0), false)}
                 </p>
               </div>
               <div className="glass rounded-xl p-3">
@@ -4803,7 +5012,17 @@ function App() {
                     .filter(p => p.tipo === 'sueldo' && p.estado_pago === 'confirmado')
                     .filter(p => filtroMesPago === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesPago))
                     .filter(p => filtroMetodoPago === 'todos' || p.metodo === filtroMetodoPago)
-                    .reduce((sum, p) => sum + p.monto, 0))}
+                    .reduce((sum, p) => sum + p.monto, 0), false)}
+                </p>
+              </div>
+              <div className="glass rounded-xl p-3">
+                <p className="text-xs text-slate-500">Total Eventos</p>
+                <p className="text-lg font-bold text-purple-500 mono">
+                  {formatCurrency(pagos
+                    .filter(p => (p.tipo === 'evento' || p.tipo === 'evento_parcial') && p.estado_pago === 'confirmado')
+                    .filter(p => filtroMesPago === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesPago))
+                    .filter(p => filtroMetodoPago === 'todos' || p.metodo === filtroMetodoPago)
+                    .reduce((sum, p) => sum + p.monto, 0), false)}
                 </p>
               </div>
               <div className="glass rounded-xl p-3">
@@ -4814,9 +5033,20 @@ function App() {
                     .filter(p => filtroTipoPago === 'todos' || p.tipo === filtroTipoPago)
                     .filter(p => filtroMesPago === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesPago))
                     .filter(p => filtroMetodoPago === 'todos' || p.metodo === filtroMetodoPago)
-                    .reduce((sum, p) => sum + p.monto, 0))}
+                    .reduce((sum, p) => sum + p.monto, 0), false)}
                 </p>
               </div>
+            </div>
+
+            {/* Botón Nuevo Pago Evento */}
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowModal('pago-evento')}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 text-white font-medium hover:from-purple-600 hover:to-purple-700 transition-all text-sm"
+              >
+                <Plus className="w-4 h-4" />
+                Nuevo Pago Evento
+              </button>
             </div>
 
             <div className="glass rounded-2xl glow overflow-hidden">
@@ -5810,22 +6040,22 @@ function App() {
       {/* Modal Cobro */}
       {showModal === 'cobro' && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-slate-800">{selectedItem ? 'Editar Cobro' : 'Nuevo Cobro'}</h2>
-                <button onClick={() => { setShowModal(null); setSelectedItem(null); setModalClienteId(null); }} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-                  <X className="w-5 h-5" />
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+            <div className="p-4">
+              <div className="flex justify-between items-center mb-3">
+                <h2 className="text-lg font-bold text-slate-800">{selectedItem ? 'Editar Cobro' : 'Nuevo Cobro'}</h2>
+                <button onClick={() => { setShowModal(null); setSelectedItem(null); setModalClienteId(null); setModalFacturaCobroId(null); }} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
               {/* Paso 1: Seleccionar Cliente */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Cliente *</label>
+              <div className="mb-3">
+                <label className="block text-xs font-medium text-slate-700 mb-1">Cliente *</label>
                 <select
                   value={selectedItem?.cliente_id || modalClienteId || ''}
-                  onChange={(e) => setModalClienteId(e.target.value ? parseInt(e.target.value) : null)}
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500"
+                  onChange={(e) => { setModalClienteId(e.target.value ? parseInt(e.target.value) : null); setModalFacturaCobroId(null); }}
+                  className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm"
                 >
                   <option value="">Seleccionar cliente...</option>
                   {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
@@ -5835,9 +6065,31 @@ function App() {
               {/* Paso 2: Resto del formulario (solo si hay cliente) */}
               {(modalClienteId || selectedItem?.cliente_id) && (() => {
                 const clienteSeleccionado = selectedItem?.cliente_id || modalClienteId;
-                const facturasPendientesCliente = facturasVenta.filter(f =>
-                  f.cliente_id === clienteSeleccionado && f.estado !== 'cobrada'
-                );
+
+                // Calcular NC por factura
+                const ncPorFacturaVenta = {};
+                notasCreditoVenta.forEach(nc => {
+                  if (nc.factura_venta_id) {
+                    ncPorFacturaVenta[nc.factura_venta_id] = (ncPorFacturaVenta[nc.factura_venta_id] || 0) + (parseFloat(nc.monto) || 0);
+                  }
+                });
+
+                // Calcular cobros por factura
+                const cobrosPorFactura = {};
+                cobros.forEach(c => {
+                  if (c.factura_venta_id) {
+                    cobrosPorFactura[c.factura_venta_id] = (cobrosPorFactura[c.factura_venta_id] || 0) + (parseFloat(c.monto) || 0);
+                  }
+                });
+
+                const facturasPendientesCliente = facturasVenta
+                  .filter(f => f.cliente_id === clienteSeleccionado && f.estado !== 'cobrada')
+                  .map(f => {
+                    const nc = ncPorFacturaVenta[f.id] || 0;
+                    const cobrado = cobrosPorFactura[f.id] || 0;
+                    const saldo = (parseFloat(f.monto) || 0) - nc - cobrado;
+                    return { ...f, nc, cobrado, saldo };
+                  });
 
                 return (
                   <form onSubmit={async (e) => {
@@ -5883,36 +6135,58 @@ function App() {
                     setShowModal(null);
                     setSelectedItem(null);
                     setModalClienteId(null);
-                  }} className="space-y-4">
+                    setModalFacturaCobroId(null);
+                  }} className="space-y-2">
 
-                    {/* Facturas pendientes del cliente */}
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Factura pendiente</label>
-                      {facturasPendientesCliente.length === 0 ? (
-                        <p className="text-sm text-slate-500 italic py-2">Este cliente no tiene facturas pendientes</p>
-                      ) : (
-                        <select name="factura_venta_id" defaultValue={selectedItem?.factura_venta_id || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500">
-                          <option value="">Sin factura asociada</option>
-                          {facturasPendientesCliente.map(f => (
-                            <option key={f.id} value={f.id}>
-                              {f.numero} - {formatCurrency(f.monto)} - Vence: {formatDate(f.vencimiento)}
-                            </option>
-                          ))}
-                        </select>
-                      )}
+                    {/* Factura y Fecha en una fila */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">Factura</label>
+                        {facturasPendientesCliente.length === 0 ? (
+                          <p className="text-xs text-slate-500 italic py-1">Sin facturas pendientes</p>
+                        ) : (
+                          <select
+                            name="factura_venta_id"
+                            value={modalFacturaCobroId || selectedItem?.factura_venta_id || ''}
+                            onChange={(e) => setModalFacturaCobroId(e.target.value ? parseInt(e.target.value) : null)}
+                            className="w-full px-2 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm"
+                          >
+                            <option value="">Sin factura</option>
+                            {facturasPendientesCliente.map(f => (
+                              <option key={f.id} value={f.id}>{f.numero}</option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">Fecha *</label>
+                        <input name="fecha" type="date" defaultValue={selectedItem?.fecha || new Date().toISOString().split('T')[0]} required className="w-full px-2 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm" />
+                      </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Fecha *</label>
-                      <input name="fecha" type="date" defaultValue={selectedItem?.fecha || new Date().toISOString().split('T')[0]} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500" />
-                    </div>
+                    {/* Info de factura seleccionada con NC - compacto */}
+                    {(() => {
+                      const facturaIdSeleccionada = modalFacturaCobroId || selectedItem?.factura_venta_id;
+                      const facturaInfo = facturasPendientesCliente.find(f => f.id === facturaIdSeleccionada);
+                      if (!facturaInfo) return null;
+                      return (
+                        <div className="p-2 bg-blue-50 rounded-lg border border-blue-200 text-xs">
+                          <div className="flex flex-wrap gap-x-4 gap-y-1">
+                            <span><span className="text-slate-600">Total:</span> <span className="font-semibold text-blue-600">{formatCurrency(facturaInfo.monto, false)}</span></span>
+                            {facturaInfo.nc > 0 && <span><span className="text-slate-600">NC:</span> <span className="font-semibold text-red-500">-{formatCurrency(facturaInfo.nc, false)}</span></span>}
+                            {facturaInfo.cobrado > 0 && <span><span className="text-slate-600">Cobrado:</span> <span className="font-semibold text-emerald-500">-{formatCurrency(facturaInfo.cobrado, false)}</span></span>}
+                            <span className="font-medium"><span className="text-slate-700">Saldo:</span> <span className="font-bold text-amber-600">{formatCurrency(facturaInfo.saldo, false)}</span></span>
+                          </div>
+                        </div>
+                      );
+                    })()}
 
-                    {/* Monto 1 */}
-                    <div className="p-3 bg-slate-50 rounded-xl space-y-2">
-                      <p className="text-xs font-medium text-slate-500">Pago 1</p>
-                      <div className="grid grid-cols-2 gap-3">
-                        <input name="monto1" defaultValue={selectedItem ? formatInputMonto(selectedItem.monto) : ''} placeholder="Monto" required className="px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm" onChange={(e) => e.target.value = formatInputMonto(e.target.value)} />
-                        <select name="metodo1" defaultValue={selectedItem?.metodo || 'Transferencia'} className="px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm">
+                    {/* Pagos compactos */}
+                    <div className="space-y-2">
+                      <div className="flex gap-2 items-center">
+                        <span className="text-xs text-slate-500 w-12">Pago 1</span>
+                        <input name="monto1" defaultValue={selectedItem ? formatInputMonto(selectedItem.monto) : ''} placeholder="Monto" required className="flex-1 px-2 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm" onChange={(e) => e.target.value = formatInputMonto(e.target.value)} />
+                        <select name="metodo1" defaultValue={selectedItem?.metodo || 'Transferencia'} className="px-2 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm">
                           <option value="Transferencia">Transferencia</option>
                           <option value="Efectivo">Efectivo</option>
                           <option value="Mercado Pago">Mercado Pago</option>
@@ -5920,15 +6194,11 @@ function App() {
                           <option value="Tarjeta">Tarjeta</option>
                         </select>
                       </div>
-                    </div>
-
-                    {/* Monto 2 */}
-                    {!selectedItem && (
-                      <div className="p-3 bg-slate-50 rounded-xl space-y-2">
-                        <p className="text-xs font-medium text-slate-500">Pago 2 (opcional)</p>
-                        <div className="grid grid-cols-2 gap-3">
-                          <input name="monto2" placeholder="Monto" className="px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm" onChange={(e) => e.target.value = formatInputMonto(e.target.value)} />
-                          <select name="metodo2" defaultValue="Efectivo" className="px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm">
+                      {!selectedItem && (
+                        <div className="flex gap-2 items-center">
+                          <span className="text-xs text-slate-400 w-12">Pago 2</span>
+                          <input name="monto2" placeholder="Monto" className="flex-1 px-2 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm" onChange={(e) => e.target.value = formatInputMonto(e.target.value)} />
+                          <select name="metodo2" defaultValue="Efectivo" className="px-2 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm">
                             <option value="Transferencia">Transferencia</option>
                             <option value="Efectivo">Efectivo</option>
                             <option value="Mercado Pago">Mercado Pago</option>
@@ -5936,16 +6206,12 @@ function App() {
                             <option value="Tarjeta">Tarjeta</option>
                           </select>
                         </div>
-                      </div>
-                    )}
-
-                    {/* Monto 3 */}
-                    {!selectedItem && (
-                      <div className="p-3 bg-slate-50 rounded-xl space-y-2">
-                        <p className="text-xs font-medium text-slate-500">Pago 3 (opcional)</p>
-                        <div className="grid grid-cols-2 gap-3">
-                          <input name="monto3" placeholder="Monto" className="px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm" onChange={(e) => e.target.value = formatInputMonto(e.target.value)} />
-                          <select name="metodo3" defaultValue="Retención" className="px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm">
+                      )}
+                      {!selectedItem && (
+                        <div className="flex gap-2 items-center">
+                          <span className="text-xs text-slate-400 w-12">Pago 3</span>
+                          <input name="monto3" placeholder="Monto" className="flex-1 px-2 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm" onChange={(e) => e.target.value = formatInputMonto(e.target.value)} />
+                          <select name="metodo3" defaultValue="Retención" className="px-2 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm">
                             <option value="Transferencia">Transferencia</option>
                             <option value="Efectivo">Efectivo</option>
                             <option value="Mercado Pago">Mercado Pago</option>
@@ -5953,14 +6219,12 @@ function App() {
                             <option value="Tarjeta">Tarjeta</option>
                           </select>
                         </div>
-                      </div>
-                    )}
-
-                    <div className="flex gap-3 pt-4">
-                      <button type="submit" className="flex-1 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all">
-                        {selectedItem ? 'Guardar' : 'Registrar Cobro(s)'}
-                      </button>
+                      )}
                     </div>
+
+                    <button type="submit" className="w-full px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all text-sm">
+                      {selectedItem ? 'Guardar' : 'Registrar Cobro(s)'}
+                    </button>
                   </form>
                 );
               })()}
@@ -5970,14 +6234,136 @@ function App() {
       )}
 
       {/* Modal Nota de Crédito de Venta */}
-      {showModal === 'nc-venta' && (
+      {showModal === 'nc-venta' && (() => {
+        const clienteNCId = selectedItem?.cliente_id || modalClienteId || '';
+        const facturaNCId = selectedItem?.factura_venta_id || modalFacturaId || '';
+
+        // Filtrar facturas del cliente seleccionado
+        const facturasDelCliente = facturasVenta.filter(f => f.cliente_id === parseInt(clienteNCId));
+
+        // Calcular NC por factura
+        const ncPorFacturaVenta = {};
+        notasCreditoVenta.forEach(nc => {
+          if (nc.factura_venta_id) {
+            ncPorFacturaVenta[nc.factura_venta_id] = (ncPorFacturaVenta[nc.factura_venta_id] || 0) + nc.monto;
+          }
+        });
+
+        return (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-bold text-slate-800">{selectedItem ? 'Editar NC' : 'Nueva Nota de Crédito'}</h2>
+                  <button onClick={() => { setShowModal(null); setSelectedItem(null); setModalClienteId(null); setModalFacturaId(null); }} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.target);
+                  const data = {
+                    cliente_id: parseInt(clienteNCId) || null,
+                    factura_venta_id: parseInt(facturaNCId) || null,
+                    numero: formData.get('numero'),
+                    monto: parseFloat(parseInputMonto(formData.get('monto'))),
+                    fecha: formData.get('fecha'),
+                    concepto: formData.get('concepto') || ''
+                  };
+
+                  if (selectedItem) {
+                    await updateNotaCreditoVenta(selectedItem.id, data);
+                  } else {
+                    await createNotaCreditoVenta(data);
+                  }
+                  setModalClienteId(null);
+                  setModalFacturaId(null);
+                }} className="space-y-4">
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Cliente *</label>
+                    <select
+                      value={clienteNCId}
+                      onChange={(e) => { setModalClienteId(e.target.value ? parseInt(e.target.value) : null); setModalFacturaId(null); }}
+                      required
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-red-500"
+                    >
+                      <option value="">Seleccionar cliente...</option>
+                      {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                    </select>
+                  </div>
+
+                  {clienteNCId && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Factura asociada</label>
+                      {facturasDelCliente.length === 0 ? (
+                        <p className="text-sm text-slate-500 italic py-2">Este cliente no tiene facturas</p>
+                      ) : (
+                        <select
+                          value={facturaNCId}
+                          onChange={(e) => setModalFacturaId(e.target.value ? parseInt(e.target.value) : null)}
+                          className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-red-500"
+                        >
+                          <option value="">Sin factura asociada</option>
+                          {facturasDelCliente.map(f => {
+                            const tieneNC = ncPorFacturaVenta[f.id] > 0;
+                            return (
+                              <option key={f.id} value={f.id}>
+                                {f.numero} {tieneNC ? `[NC: ${formatCurrency(ncPorFacturaVenta[f.id])}]` : ''} - {formatCurrency(f.monto)}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Número NC *</label>
+                      <input name="numero" defaultValue={selectedItem?.numero || ''} required placeholder="NC-0001" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-red-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Fecha *</label>
+                      <input name="fecha" type="date" defaultValue={selectedItem?.fecha || new Date().toISOString().split('T')[0]} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-red-500" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Monto *</label>
+                    <input name="monto" defaultValue={selectedItem ? formatInputMonto(selectedItem.monto) : ''} required placeholder="0" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-red-500 text-right" onChange={(e) => e.target.value = formatInputMonto(e.target.value)} />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Concepto</label>
+                    <input name="concepto" defaultValue={selectedItem?.concepto || ''} placeholder="Descripción opcional" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-red-500" />
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <button type="button" onClick={() => { setShowModal(null); setSelectedItem(null); setModalClienteId(null); setModalFacturaId(null); }} className="flex-1 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-medium hover:bg-slate-50 transition-all">
+                      Cancelar
+                    </button>
+                    <button type="submit" className="flex-1 px-4 py-2 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-medium hover:from-red-600 hover:to-red-700 transition-all">
+                      {selectedItem ? 'Guardar' : 'Crear NC'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Modal Pago Evento */}
+      {showModal === 'pago-evento' && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-slate-800">{selectedItem ? 'Editar NC' : 'Nueva Nota de Crédito'}</h2>
-                <button onClick={() => { setShowModal(null); setSelectedItem(null); }} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-                  <X className="w-5 h-5" />
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+            <div className="p-4">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-bold text-slate-800">Nuevo Pago Evento</h2>
+                <button onClick={() => setShowModal(null)} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
@@ -5985,73 +6371,56 @@ function App() {
                 e.preventDefault();
                 const formData = new FormData(e.target);
                 const data = {
-                  cliente_id: parseInt(formData.get('cliente_id')) || null,
-                  factura_venta_id: parseInt(formData.get('factura_venta_id')) || null,
-                  numero: formData.get('numero'),
+                  tipo: formData.get('tipo_evento'),
+                  descripcion: formData.get('descripcion'),
                   monto: parseFloat(parseInputMonto(formData.get('monto'))),
                   fecha: formData.get('fecha'),
-                  concepto: formData.get('concepto') || ''
+                  metodo: formData.get('metodo'),
+                  estado: 'confirmado'
                 };
-
-                if (selectedItem) {
-                  await updateNotaCreditoVenta(selectedItem.id, data);
-                } else {
-                  await createNotaCreditoVenta(data);
+                const { error } = await supabase.from('pagos').insert([data]);
+                if (!error) {
+                  await fetchPagos();
+                  setShowModal(null);
                 }
-              }} className="space-y-4">
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Cliente *</label>
-                  <select name="cliente_id" defaultValue={selectedItem?.cliente_id || ''} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-red-500">
-                    <option value="">Seleccionar cliente...</option>
-                    {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Factura asociada</label>
-                  <select name="factura_venta_id" defaultValue={selectedItem?.factura_venta_id || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-red-500">
-                    <option value="">Sin factura asociada</option>
-                    {facturasVenta.map(f => {
-                      const cliente = clientes.find(c => c.id === f.cliente_id);
-                      return (
-                        <option key={f.id} value={f.id}>
-                          {f.numero} - {cliente?.nombre} - {formatCurrency(f.monto)}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
+              }} className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Número NC *</label>
-                    <input name="numero" defaultValue={selectedItem?.numero || ''} required placeholder="NC-0001" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-red-500" />
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Tipo *</label>
+                    <select name="tipo_evento" required className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-purple-500 text-sm">
+                      <option value="evento">Evento Completo</option>
+                      <option value="evento_parcial">Evento Parcial</option>
+                    </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Fecha *</label>
-                    <input name="fecha" type="date" defaultValue={selectedItem?.fecha || new Date().toISOString().split('T')[0]} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-red-500" />
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Fecha *</label>
+                    <input name="fecha" type="date" defaultValue={new Date().toISOString().split('T')[0]} required className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-purple-500 text-sm" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Monto *</label>
-                  <input name="monto" defaultValue={selectedItem ? formatInputMonto(selectedItem.monto) : ''} required placeholder="0" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-red-500 text-right" onChange={(e) => e.target.value = formatInputMonto(e.target.value)} />
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Descripción *</label>
+                  <input name="descripcion" required placeholder="Ej: DJ Fiesta 15/01, Técnica Evento Corporativo" className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-purple-500 text-sm" />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Concepto</label>
-                  <input name="concepto" defaultValue={selectedItem?.concepto || ''} placeholder="Descripción opcional" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-red-500" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Monto *</label>
+                    <input name="monto" required placeholder="0" className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-purple-500 text-sm text-right" onChange={(e) => e.target.value = formatInputMonto(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Método *</label>
+                    <select name="metodo" required className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-purple-500 text-sm">
+                      <option value="Transferencia">Transferencia</option>
+                      <option value="Efectivo">Efectivo</option>
+                      <option value="Mercado Pago">Mercado Pago</option>
+                    </select>
+                  </div>
                 </div>
 
-                <div className="flex gap-3 pt-4">
-                  <button type="button" onClick={() => { setShowModal(null); setSelectedItem(null); }} className="flex-1 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-medium hover:bg-slate-50 transition-all">
-                    Cancelar
-                  </button>
-                  <button type="submit" className="flex-1 px-4 py-2 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-medium hover:from-red-600 hover:to-red-700 transition-all">
-                    {selectedItem ? 'Guardar' : 'Crear NC'}
-                  </button>
-                </div>
+                <button type="submit" className="w-full px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 text-white font-medium hover:from-purple-600 hover:to-purple-700 transition-all text-sm">
+                  Registrar Pago
+                </button>
               </form>
             </div>
           </div>
