@@ -6040,22 +6040,22 @@ function App() {
       {/* Modal Factura de Venta */}
       {showModal === 'factura-venta' && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-slate-800">{selectedItem ? 'Editar Factura' : 'Nueva Factura de Venta'}</h2>
-                <button onClick={() => { setShowModal(null); setSelectedItem(null); setModalClienteId(null); setModalSubtotal(''); setModalIva('21'); }} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-                  <X className="w-5 h-5" />
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+            <div className="p-4">
+              <div className="flex justify-between items-center mb-3">
+                <h2 className="text-lg font-bold text-slate-800">{selectedItem ? 'Editar Factura' : 'Nueva Factura de Venta'}</h2>
+                <button onClick={() => { setShowModal(null); setSelectedItem(null); setModalClienteId(null); setModalSubtotal(''); setModalIva('21'); }} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
               {/* Paso 1: Seleccionar Cliente */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Cliente *</label>
+              <div className="mb-3">
+                <label className="block text-xs font-medium text-slate-700 mb-1">Cliente *</label>
                 <select
                   value={selectedItem?.cliente_id || modalClienteId || ''}
                   onChange={(e) => setModalClienteId(e.target.value ? parseInt(e.target.value) : null)}
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500 text-sm"
                 >
                   <option value="">Seleccionar cliente...</option>
                   {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
@@ -6092,41 +6092,43 @@ function App() {
                   setModalClienteId(null);
                   setModalSubtotal('');
                   setModalIva('21');
-                }} className="space-y-4">
+                }} className="space-y-3">
                   <input type="hidden" name="cliente_id" value={selectedItem?.cliente_id || modalClienteId} />
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Número de Factura *</label>
-                    <input name="numero" defaultValue={selectedItem?.numero || ''} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500" />
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Número de Factura *</label>
+                    <input name="numero" defaultValue={selectedItem?.numero || ''} required className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500 text-sm" />
                   </div>
 
                   {/* Subtotal, IVA y Total */}
-                  <div className="p-4 bg-slate-50 rounded-xl space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Subtotal *</label>
-                      <input
-                        value={modalSubtotal || (selectedItem ? formatInputMonto(selectedItem.subtotal || selectedItem.monto) : '')}
-                        onChange={(e) => setModalSubtotal(formatInputMonto(e.target.value))}
-                        required
-                        className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">IVA</label>
-                      <select
-                        value={modalIva || (selectedItem?.iva_porcentaje?.toString() || '21')}
-                        onChange={(e) => setModalIva(e.target.value)}
-                        className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500"
-                      >
-                        <option value="21">21%</option>
-                        <option value="10.5">10,5%</option>
-                        <option value="0">Exento</option>
-                      </select>
+                  <div className="p-3 bg-slate-50 rounded-lg space-y-2">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">Subtotal *</label>
+                        <input
+                          value={modalSubtotal || (selectedItem ? formatInputMonto(selectedItem.subtotal || selectedItem.monto) : '')}
+                          onChange={(e) => setModalSubtotal(formatInputMonto(e.target.value))}
+                          required
+                          className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">IVA</label>
+                        <select
+                          value={modalIva || (selectedItem?.iva_porcentaje?.toString() || '21')}
+                          onChange={(e) => setModalIva(e.target.value)}
+                          className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500 text-sm"
+                        >
+                          <option value="21">21%</option>
+                          <option value="10.5">10,5%</option>
+                          <option value="0">Exento</option>
+                        </select>
+                      </div>
                     </div>
                     <div className="pt-2 border-t border-slate-200">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-slate-700">Total:</span>
-                        <span className="text-lg font-bold text-blue-600 mono">
+                        <span className="text-xs font-medium text-slate-700">Total:</span>
+                        <span className="text-base font-bold text-blue-600 mono">
                           {formatCurrency(
                             (parseFloat(parseInputMonto(modalSubtotal || (selectedItem?.subtotal || selectedItem?.monto || 0))) || 0) *
                             (1 + (parseFloat(modalIva || selectedItem?.iva_porcentaje || 21) / 100))
@@ -6136,22 +6138,22 @@ function App() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Fecha *</label>
-                      <input name="fecha" type="date" defaultValue={selectedItem?.fecha || new Date().toISOString().split('T')[0]} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500" />
+                      <label className="block text-xs font-medium text-slate-700 mb-1">Fecha *</label>
+                      <input name="fecha" type="date" defaultValue={selectedItem?.fecha || new Date().toISOString().split('T')[0]} required className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500 text-sm" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Vencimiento *</label>
-                      <input name="vencimiento" type="date" defaultValue={selectedItem?.vencimiento || ''} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500" />
+                      <label className="block text-xs font-medium text-slate-700 mb-1">Vencimiento *</label>
+                      <input name="vencimiento" type="date" defaultValue={selectedItem?.vencimiento || ''} required className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500 text-sm" />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Concepto</label>
-                    <input name="concepto" defaultValue={selectedItem?.concepto || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500" />
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Concepto</label>
+                    <input name="concepto" defaultValue={selectedItem?.concepto || ''} className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500 text-sm" />
                   </div>
-                  <div className="flex gap-3 pt-4">
-                    <button type="submit" className="flex-1 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all">
+                  <div className="flex gap-3 pt-2">
+                    <button type="submit" className="flex-1 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all text-sm">
                       {selectedItem ? 'Guardar' : 'Crear Factura'}
                     </button>
                   </div>
