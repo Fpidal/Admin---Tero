@@ -3788,13 +3788,13 @@ function App() {
                   <div className="flex items-center gap-3">
                     {(() => {
                       const totalFacturado = facturasVentaFiltradas.reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0);
-                      const idsFacturasFiltradas = facturasVentaFiltradas.map(f => f.id);
+                      const idsFacturasFiltradas = facturasVentaFiltradas.map(f => parseInt(f.id));
                       const totalNC = notasCreditoVenta
-                        .filter(nc => idsFacturasFiltradas.includes(nc.factura_venta_id) ||
-                          (filtroClienteFacturaVenta !== 'todos' && nc.cliente_id === parseInt(filtroClienteFacturaVenta)))
+                        .filter(nc => idsFacturasFiltradas.includes(parseInt(nc.factura_venta_id)) ||
+                          (filtroClienteFacturaVenta !== 'todos' && parseInt(nc.cliente_id) === parseInt(filtroClienteFacturaVenta)))
                         .reduce((sum, nc) => sum + (parseFloat(nc.monto) || 0), 0);
                       const totalCobrado = cobros
-                        .filter(c => idsFacturasFiltradas.includes(c.factura_venta_id))
+                        .filter(c => idsFacturasFiltradas.includes(parseInt(c.factura_venta_id)))
                         .reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0);
                       const saldo = totalFacturado - totalNC - totalCobrado;
                       return (
@@ -3853,11 +3853,11 @@ function App() {
                             const total = parseFloat(f.monto) || 0;
                             // NC aplicadas a esta factura
                             const ncFactura = notasCreditoVenta
-                              .filter(nc => nc.factura_venta_id === f.id)
+                              .filter(nc => parseInt(nc.factura_venta_id) === parseInt(f.id))
                               .reduce((sum, nc) => sum + (parseFloat(nc.monto) || 0), 0);
                             // Cobros de esta factura (suma)
                             const cobradoFactura = cobros
-                              .filter(c => c.factura_venta_id === f.id)
+                              .filter(c => parseInt(c.factura_venta_id) === parseInt(f.id))
                               .reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0);
                             // Saldo = Total - NC - Cobrado
                             const saldoFactura = total - ncFactura - cobradoFactura;
