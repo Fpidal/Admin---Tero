@@ -2037,6 +2037,7 @@ function App() {
   const [cobros, setCobros] = useState([]);
   const [notasCreditoVenta, setNotasCreditoVenta] = useState([]);
   const [subTabIngresos, setSubTabIngresos] = useState('facturas'); // 'facturas' | 'cobros' | 'clientes' | 'nc'
+  const [cobrosExpandidos, setCobrosExpandidos] = useState([]); // IDs de facturas expandidas en cobros
 
   // Modales
   const [showModal, setShowModal] = useState(null); // 'proveedor', 'factura', 'empleado', 'pago'
@@ -3966,7 +3967,7 @@ function App() {
                 </div>
 
                 {/* Cobros agrupados por factura */}
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {(() => {
                     // Agrupar cobros por factura
                     const facturasConCobros = facturasVenta.filter(f =>
@@ -3977,6 +3978,12 @@ function App() {
                       return <p className="text-slate-400 text-sm text-center py-8">No hay cobros registrados</p>;
                     }
 
+                    const toggleExpandido = (id) => {
+                      setCobrosExpandidos(prev =>
+                        prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+                      );
+                    };
+
                     return facturasConCobros.map(f => {
                       const cliente = clientes.find(c => c.id === f.cliente_id);
                       const cobrosFactura = cobros.filter(c => c.factura_venta_id === f.id);
@@ -3985,42 +3992,50 @@ function App() {
                         .filter(nc => nc.factura_venta_id === f.id)
                         .reduce((sum, nc) => sum + (parseFloat(nc.monto) || 0), 0);
                       const saldo = (parseFloat(f.monto) || 0) - ncFactura - totalCobrado;
+                      const expandido = cobrosExpandidos.includes(f.id);
 
                       return (
-                        <div key={f.id} className="glass rounded-xl overflow-hidden">
-                          {/* Header de la factura */}
-                          <div className="bg-slate-50 px-4 py-2 flex flex-wrap items-center justify-between gap-2 border-b border-slate-200">
-                            <div className="flex items-center gap-3">
-                              <span className="font-semibold text-sm">{f.numero}</span>
-                              <span className="text-xs text-slate-500">{cliente?.nombre}</span>
+                        <div key={f.id} className="glass rounded-lg overflow-hidden">
+                          {/* Header colapsable */}
+                          <div
+                            onClick={() => toggleExpandido(f.id)}
+                            className="px-3 py-2 flex items-center justify-between gap-2 cursor-pointer hover:bg-slate-50 transition-colors"
+                          >
+                            <div className="flex items-center gap-2">
+                              <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${expandido ? 'rotate-90' : ''}`} />
+                              <span className="font-medium text-sm">{f.numero}</span>
+                              <span className="text-xs text-slate-400">{cliente?.nombre}</span>
+                              <span className="text-xs text-slate-400">({cobrosFactura.length} cobros)</span>
                             </div>
-                            <div className="flex items-center gap-4 text-xs">
-                              <span>Total: <span className="font-semibold text-blue-600">{formatCurrency(f.monto, false)}</span></span>
-                              {ncFactura > 0 && <span>NC: <span className="font-semibold text-red-500">-{formatCurrency(ncFactura, false)}</span></span>}
-                              <span>Cobrado: <span className="font-semibold text-emerald-600">{formatCurrency(totalCobrado, false)}</span></span>
-                              <span>Saldo: <span className={`font-bold ${saldo > 0 ? 'text-amber-600' : 'text-slate-400'}`}>{formatCurrency(saldo, false)}</span></span>
+                            <div className="flex items-center gap-3 text-xs">
+                              <span className="text-blue-600 font-medium">{formatCurrency(f.monto, false)}</span>
+                              {ncFactura > 0 && <span className="text-red-500">-{formatCurrency(ncFactura, false)}</span>}
+                              <span className="text-emerald-600 font-medium">{formatCurrency(totalCobrado, false)}</span>
+                              <span className={`font-bold ${saldo > 0 ? 'text-amber-600' : 'text-slate-400'}`}>{formatCurrency(saldo, false)}</span>
                             </div>
                           </div>
-                          {/* Detalle de cobros */}
-                          <div className="divide-y divide-slate-100">
-                            {cobrosFactura.map(c => (
-                              <div key={c.id} className="px-4 py-2 flex items-center justify-between hover:bg-slate-50">
-                                <div className="flex items-center gap-4 text-xs">
-                                  <span className="text-slate-500">{formatDate(c.fecha)}</span>
-                                  <span className="px-2 py-0.5 bg-slate-100 rounded text-slate-600">{c.metodo}</span>
+                          {/* Detalle de cobros (expandible) */}
+                          {expandido && (
+                            <div className="border-t border-slate-100 bg-slate-50/50 divide-y divide-slate-100">
+                              {cobrosFactura.map(c => (
+                                <div key={c.id} className="px-4 py-1.5 flex items-center justify-between">
+                                  <div className="flex items-center gap-3 text-xs">
+                                    <span className="text-slate-500">{formatDate(c.fecha)}</span>
+                                    <span className="px-1.5 py-0.5 bg-slate-200 rounded text-slate-600 text-[10px]">{c.metodo}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-semibold text-emerald-600 text-xs mono">{formatCurrency(c.monto, false)}</span>
+                                    <button onClick={(e) => { e.stopPropagation(); setSelectedItem(c); setShowModal('cobro'); }} className="p-1 hover:bg-slate-200 rounded transition-colors" title="Editar">
+                                      <Edit3 className="w-3 h-3 text-slate-400" />
+                                    </button>
+                                    <button onClick={(e) => { e.stopPropagation(); deleteCobro(c.id); }} className="p-1 hover:bg-red-100 rounded transition-colors" title="Eliminar">
+                                      <Trash2 className="w-3 h-3 text-red-400" />
+                                    </button>
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-semibold text-emerald-600 text-sm mono">{formatCurrency(c.monto, false)}</span>
-                                  <button onClick={() => { setSelectedItem(c); setShowModal('cobro'); }} className="p-1 hover:bg-slate-100 rounded transition-colors" title="Editar">
-                                    <Edit3 className="w-3 h-3 text-slate-400" />
-                                  </button>
-                                  <button onClick={() => deleteCobro(c.id)} className="p-1 hover:bg-red-50 rounded transition-colors" title="Eliminar">
-                                    <Trash2 className="w-3 h-3 text-red-400" />
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       );
                     });
