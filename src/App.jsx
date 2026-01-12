@@ -3494,13 +3494,14 @@ function App() {
                 </div>
                 {(() => {
                   const eventosDelMes = pagos.filter(p => {
-                    if (p.tipo !== 'evento' || p.estado_pago === 'anulado') return false;
+                    if (p.tipo !== 'sueldo' || p.estado_pago === 'anulado') return false;
+                    if (!p.descripcion || !p.descripcion.startsWith('Evento Completo')) return false;
                     const fechaPago = new Date(p.fecha + 'T12:00:00');
                     return fechaPago.getMonth() === parseInt(filtroMesEventosDash) &&
                            fechaPago.getFullYear() === parseInt(filtroAnioEventosDash);
                   });
                   const totalEventos = eventosDelMes.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
-                  const cantidadPagos = eventosDelMes.length;
+                  const cantidadEmpleados = new Set(eventosDelMes.map(p => p.referencia_id)).size;
                   return (
                     <div className="grid grid-cols-2 gap-3">
                       <div className="bg-purple-50 rounded-xl p-3">
@@ -3509,7 +3510,7 @@ function App() {
                       </div>
                       <div className="bg-indigo-50 rounded-xl p-3">
                         <p className="text-xs text-slate-500">Empleados</p>
-                        <p className="text-lg font-bold text-indigo-600">{cantidadPagos}</p>
+                        <p className="text-lg font-bold text-indigo-600">{cantidadEmpleados}</p>
                       </div>
                     </div>
                   );
