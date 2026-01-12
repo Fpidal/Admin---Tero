@@ -3442,7 +3442,7 @@ function App() {
                 </div>
                 {(() => {
                   const sueldosDelMes = pagos.filter(p => {
-                    if (p.tipo !== 'sueldo' || p.estado === 'anulado') return false;
+                    if (p.tipo !== 'sueldo' || p.estado_pago === 'anulado') return false;
                     const fechaPago = new Date(p.fecha + 'T12:00:00');
                     return fechaPago.getMonth() === parseInt(filtroMesSueldosDash) &&
                            fechaPago.getFullYear() === parseInt(filtroAnioSueldosDash);
@@ -3494,7 +3494,7 @@ function App() {
                 </div>
                 {(() => {
                   const eventosDelMes = pagos.filter(p => {
-                    if (p.tipo !== 'evento' || p.estado === 'anulado') return false;
+                    if (p.tipo !== 'evento' || p.estado_pago === 'anulado') return false;
                     const fechaPago = new Date(p.fecha + 'T12:00:00');
                     return fechaPago.getMonth() === parseInt(filtroMesEventosDash) &&
                            fechaPago.getFullYear() === parseInt(filtroAnioEventosDash);
