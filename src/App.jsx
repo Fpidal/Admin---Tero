@@ -6082,7 +6082,7 @@ function App() {
                     fecha: formData.get('fecha'),
                     vencimiento: formData.get('vencimiento'),
                     concepto: formData.get('concepto') || null,
-                    estado: formData.get('estado') || 'pendiente'
+                    estado: selectedItem?.estado || 'pendiente'
                   };
                   if (selectedItem) {
                     await updateFacturaVenta(selectedItem.id, data);
@@ -6150,16 +6150,6 @@ function App() {
                     <label className="block text-sm font-medium text-slate-700 mb-1">Concepto</label>
                     <input name="concepto" defaultValue={selectedItem?.concepto || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500" />
                   </div>
-                  {selectedItem && (
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Estado</label>
-                      <select name="estado" defaultValue={selectedItem?.estado || 'pendiente'} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
-                        <option value="pendiente">Pendiente</option>
-                        <option value="cobrada">Cobrada</option>
-                        <option value="vencida">Vencida</option>
-                      </select>
-                    </div>
-                  )}
                   <div className="flex gap-3 pt-4">
                     <button type="submit" className="flex-1 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all">
                       {selectedItem ? 'Guardar' : 'Crear Factura'}
