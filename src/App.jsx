@@ -2634,6 +2634,35 @@ function App() {
     if (!error) await fetchCobros();
   };
 
+  // Sincronizar cobros antiguos con facturas (por descripción o cliente)
+  const sincronizarCobrosConFacturas = async () => {
+    const cobrosSinFactura = cobros.filter(c => !c.factura_venta_id);
+    if (cobrosSinFactura.length === 0) {
+      alert('Todos los cobros ya están asociados a facturas');
+      return;
+    }
+
+    let actualizados = 0;
+    for (const cobro of cobrosSinFactura) {
+      // Buscar número de factura en la descripción (ej: "Fact. 0001-00000123")
+      const match = cobro.descripcion?.match(/Fact\.\s*([A-Z0-9\-]+)/i);
+      if (match) {
+        const numeroFactura = match[1];
+        const factura = facturasVenta.find(f => f.numero === numeroFactura);
+        if (factura) {
+          const { error } = await supabase
+            .from('cobros')
+            .update({ factura_venta_id: factura.id })
+            .eq('id', cobro.id);
+          if (!error) actualizados++;
+        }
+      }
+    }
+
+    await fetchCobros();
+    alert(`Se actualizaron ${actualizados} de ${cobrosSinFactura.length} cobros`);
+  };
+
   // CRUD Notas de Crédito de Venta
   const createNotaCreditoVenta = async (nc) => {
     const { error } = await supabase.from('notas_credito_venta').insert([nc]);
@@ -3981,13 +4010,25 @@ function App() {
                     <p className="text-xs text-slate-500">Total Cobrado</p>
                     <p className="text-lg font-bold text-emerald-500 mono">{formatCurrency(cobros.reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0), false)}</p>
                   </div>
-                  <button
-                    onClick={() => { setSelectedItem(null); setShowModal('cobro'); }}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all text-sm"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Nuevo Cobro
-                  </button>
+                  <div className="flex gap-2">
+                    {cobros.some(c => !c.factura_venta_id) && (
+                      <button
+                        onClick={sincronizarCobrosConFacturas}
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl border border-amber-300 bg-amber-50 text-amber-700 font-medium hover:bg-amber-100 transition-all text-sm"
+                        title="Asociar cobros antiguos a sus facturas"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        Sincronizar
+                      </button>
+                    )}
+                    <button
+                      onClick={() => { setSelectedItem(null); setShowModal('cobro'); }}
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all text-sm"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Nuevo Cobro
+                    </button>
+                  </div>
                 </div>
 
                 {/* Cobros agrupados por factura */}
