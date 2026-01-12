@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   BarChart3, DollarSign, Users, FileText, AlertTriangle,
-  Calendar, Plus, X, Search, ChevronDown, ChevronUp,
+  Calendar, Plus, X, Search, ChevronDown, ChevronUp, ChevronRight,
   Building2, CreditCard, Clock, CheckCircle, AlertCircle,
   Truck, User, Edit3, Trash2, Filter, Download,
   TrendingUp, TrendingDown, Loader2, LogOut, Eye, Printer, RefreshCw
