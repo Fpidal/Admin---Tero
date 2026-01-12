@@ -4007,11 +4007,25 @@ function App() {
                               <span className="text-xs text-slate-400">{cliente?.nombre}</span>
                               <span className="text-xs text-slate-400">({cobrosFactura.length} cobros)</span>
                             </div>
-                            <div className="flex items-center gap-3 text-xs">
-                              <span className="text-blue-600 font-medium">{formatCurrency(f.monto, false)}</span>
-                              {ncFactura > 0 && <span className="text-red-500">-{formatCurrency(ncFactura, false)}</span>}
-                              <span className="text-emerald-600 font-medium">{formatCurrency(totalCobrado, false)}</span>
-                              <span className={`font-bold ${saldo > 0 ? 'text-amber-600' : 'text-slate-400'}`}>{formatCurrency(saldo, false)}</span>
+                            <div className="flex items-center gap-4 text-xs">
+                              <div className="text-center">
+                                <span className="text-slate-400 text-[10px] block">Total</span>
+                                <span className="text-blue-600 font-medium">{formatCurrency(f.monto, false)}</span>
+                              </div>
+                              {ncFactura > 0 && (
+                                <div className="text-center">
+                                  <span className="text-slate-400 text-[10px] block">NC</span>
+                                  <span className="text-red-500">-{formatCurrency(ncFactura, false)}</span>
+                                </div>
+                              )}
+                              <div className="text-center">
+                                <span className="text-slate-400 text-[10px] block">Cobrado</span>
+                                <span className="text-emerald-600 font-medium">{formatCurrency(totalCobrado, false)}</span>
+                              </div>
+                              <div className="text-center">
+                                <span className="text-slate-400 text-[10px] block">Saldo</span>
+                                <span className={`font-bold ${saldo > 0 ? 'text-amber-600' : 'text-slate-400'}`}>{formatCurrency(saldo, false)}</span>
+                              </div>
                             </div>
                           </div>
                           {/* Detalle de cobros (expandible) */}
