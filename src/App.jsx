@@ -77,6 +77,7 @@ const CATEGORIAS_PROVEEDOR = [
   { value: 'panaderia', label: 'Panadería' },
   { value: 'pescaderia', label: 'Pescadería' },
   { value: 'planes_afip_arba', label: 'Planes AFIP/ARBA' },
+  { value: 'pollo', label: 'Pollo' },
   { value: 'quesos_fiambres', label: 'Quesos y fiambres' },
   { value: 'servicio_gas', label: 'Servicio de gas' },
   { value: 'servicio_luz', label: 'Servicio de luz' },
