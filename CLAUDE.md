@@ -37,6 +37,7 @@ Dashboard de **gestión financiera/administrativa** para el restaurante Tero. Pe
 CREATE TABLE proveedores (
   id SERIAL PRIMARY KEY,
   nombre TEXT NOT NULL,
+  codigo TEXT, -- código autogenerado PROV-0001, PROV-0002, etc.
   categoria TEXT, -- pescaderia, carnes, bodega, almacen, verduras, arreglos, bebidas, otros
   condicion_pago INTEGER DEFAULT 0, -- 0=contado, 7, 15, 21, 30, 45, 60 días
   cuit TEXT,
@@ -137,6 +138,7 @@ CREATE TABLE modificaciones (
 CREATE TABLE clientes (
   id SERIAL PRIMARY KEY,
   nombre TEXT NOT NULL,
+  codigo TEXT, -- código autogenerado CLI-0001, CLI-0002, etc.
   cuit TEXT,
   telefono TEXT,
   email TEXT,
@@ -183,10 +185,11 @@ CREATE TABLE cobros (
    - Compras del mes (con filtros mes/año)
    - Últimos pagos
 
-2. **Ingresos** - Gestión de ventas con 3 subsecciones:
-   - **Facturas**: CRUD de facturas de venta con cliente, vencimiento y estado
+2. **Ingresos** - Gestión de ventas con 4 subsecciones:
+   - **Facturas**: CRUD de facturas de venta con cliente, vencimiento y estado (actualiza automáticamente al cobrar)
    - **Cobros**: Registro de cobros asociados a facturas o clientes
-   - **Clientes**: CRUD completo (nombre, CUIT, teléfono, email, dirección, condición IVA)
+   - **Clientes**: CRUD completo con código autogenerado (CLI-0001, CLI-0002, etc.)
+   - **Cta. Corriente**: Vista de saldos por cliente
 
 3. **Facturas** - CRUD de facturas de proveedores con:
    - Búsqueda y filtros por estado, proveedor, mes, año
@@ -196,6 +199,7 @@ CREATE TABLE cobros (
    - Totales de facturas filtradas
 
 4. **Proveedores** - CRUD de proveedores con:
+   - Código autogenerado (PROV-0001, PROV-0002, etc.)
    - Categorías (Pescadería, Carnes, Bodega, Almacén, Verduras, Arreglos, Bebidas, Otros)
    - Condiciones de pago (Contado, 7, 15, 21, 30, 45, 60 días)
    - Datos de contacto (persona de contacto, celular)
@@ -204,7 +208,7 @@ CREATE TABLE cobros (
 
 5. **Pago Proveedores** - Registro de pagos con:
    - Pagos totales o parciales de facturas
-   - Filtros por proveedor, mes, año
+   - Filtros por proveedor, mes, año, ayer, últimos 7 días
    - Vista de facturas pendientes con saldo
    - Solapa de Conciliación bancaria (marcar pagos como conciliados)
 
@@ -244,9 +248,10 @@ CREATE TABLE cobros (
 ## Estado Actual
 
 - ✅ Estructura base creada
-- ✅ Supabase conectado
+- ✅ Supabase conectado con RLS habilitado
 - ✅ Autenticación con contraseña
 - ✅ CRUD completo para todas las entidades
+- ✅ Códigos autogenerados para proveedores (PROV-0001) y clientes (CLI-0001)
 - ✅ Categorías y condiciones de pago en proveedores (incluyendo 21 días)
 - ✅ Auto-cálculo de vencimiento en facturas
 - ✅ Detección de facturas duplicadas
@@ -255,11 +260,12 @@ CREATE TABLE cobros (
 - ✅ Registro de anulaciones y modificaciones
 - ✅ Múltiples informes y reportes
 - ✅ Generación de PDF
-- ✅ Filtros avanzados en todas las secciones
+- ✅ Filtros avanzados en todas las secciones (incluyendo ayer, últimos 7 días)
 - ✅ Separador de miles en inputs numéricos
 - ✅ Responsive design
 - ✅ Conciliación bancaria en Pago Proveedores
-- ✅ Módulo de Ingresos (Clientes, Facturas de Venta, Cobros)
+- ✅ Módulo de Ingresos (Clientes, Facturas de Venta, Cobros, Cta. Corriente)
+- ✅ Estado de factura de venta actualizado automáticamente al cobrar
 
 ## Deploy
 
