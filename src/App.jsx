@@ -779,6 +779,7 @@ const SITUACIONES_IVA = [
 function ModalProveedor({ proveedor, onClose, onSave, onDelete }) {
   const [form, setForm] = useState({
     nombre: proveedor?.nombre || '',
+    codigo: proveedor?.codigo || '',
     contacto: proveedor?.contacto || '',
     celular: proveedor?.celular || '',
     categoria: proveedor?.categoria || '',
@@ -823,11 +824,17 @@ function ModalProveedor({ proveedor, onClose, onSave, onDelete }) {
           <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <div>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="col-span-2">
               <label className="block text-xs text-slate-400 mb-0.5">Nombre *</label>
               <input type="text" required value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
             </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-0.5">Código</label>
+              <input type="text" value={form.codigo} onChange={e => setForm({...form, codigo: e.target.value})} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" placeholder="ID externo" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-xs text-slate-400 mb-0.5">Categoría</label>
               <select value={form.categoria} onChange={e => setForm({...form, categoria: e.target.value})} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
@@ -835,12 +842,12 @@ function ModalProveedor({ proveedor, onClose, onSave, onDelete }) {
                 {CATEGORIAS_PROVEEDOR.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-xs text-slate-400 mb-0.5">Contacto</label>
               <input type="text" value={form.contacto} onChange={e => setForm({...form, contacto: e.target.value})} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" placeholder="Nombre persona" />
             </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-xs text-slate-400 mb-0.5">Celular</label>
               <input type="text" value={form.celular} onChange={e => setForm({...form, celular: e.target.value})} className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" placeholder="11-XXXX-XXXX" />
@@ -5982,6 +5989,7 @@ function App() {
                 const formData = new FormData(e.target);
                 const data = {
                   nombre: formData.get('nombre'),
+                  codigo: formData.get('codigo') || null,
                   cuit: formData.get('cuit') || null,
                   telefono: formData.get('telefono') || null,
                   email: formData.get('email') || null,
@@ -5994,9 +6002,15 @@ function App() {
                   await createCliente(data);
                 }
               }} className="space-y-4" autoComplete="off">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Nombre *</label>
-                  <input name="nombre" defaultValue={selectedItem?.nombre || ''} required autoComplete="off" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500" />
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Nombre *</label>
+                    <input name="nombre" defaultValue={selectedItem?.nombre || ''} required autoComplete="off" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Código</label>
+                    <input name="codigo" defaultValue={selectedItem?.codigo || ''} autoComplete="off" placeholder="ID externo" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500" />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">CUIT</label>
