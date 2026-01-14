@@ -77,13 +77,27 @@ npm run dev
 
 ### Categorías de Proveedores
 
-- Pescadería
-- Carnes
-- Bodega
 - Almacén
-- Verduras
-- Arreglos
+- Alquiler
+- Arreglos de local
 - Bebidas
+- Bodega
+- Carnes
+- Contabilidad
+- DJ Eventos
+- Elementos de limpieza
+- Impuestos municipales
+- IVA
+- Mariscos
+- Panadería
+- Pescadería
+- Planes AFIP/ARBA
+- Pollo
+- Quesos y fiambres
+- Servicio de gas
+- Servicio de luz
+- Técnica eventos
+- Verduras
 - Otros
 
 ### Condiciones de Pago
