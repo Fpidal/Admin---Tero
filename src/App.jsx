@@ -4182,7 +4182,10 @@ function App() {
                     clientes.map(c => (
                       <div key={c.id} className="glass rounded-xl p-4 hover:shadow-lg transition-all">
                         <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-semibold text-slate-800">{c.nombre}</h3>
+                          <div>
+                            <h3 className="font-semibold text-slate-800">{c.nombre}</h3>
+                            {c.codigo && <p className="text-xs text-slate-400 font-mono">ID: {c.codigo}</p>}
+                          </div>
                           <div className="flex gap-1">
                             <button onClick={() => { setSelectedItem(c); setShowModal('cliente'); }} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Editar">
                               <Edit3 className="w-3.5 h-3.5" />
@@ -4552,6 +4555,7 @@ function App() {
                         <Edit3 className="w-3 h-3 text-slate-400" />
                       </div>
                       <h3 className="font-semibold text-sm mb-1 truncate">{p.nombre}</h3>
+                      {p.codigo && <p className="text-xs text-slate-400 font-mono">ID: {p.codigo}</p>}
                       {p.contacto && <p className="text-xs text-blue-600 truncate">{p.contacto}</p>}
                       {p.celular && <p className="text-xs text-slate-500 truncate">{p.celular}</p>}
                       <p className="text-xs text-slate-500 mt-1">
