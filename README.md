@@ -5,9 +5,10 @@ Dashboard de gestión financiera y administrativa para el restaurante Tero.
 ## Características
 
 - **Dashboard** - Vista general con métricas financieras, gráficos de gastos y próximos vencimientos
+- **Ingresos** - Gestión de ventas con facturas, cobros, clientes y cuenta corriente
 - **Facturas** - CRUD completo con filtros por estado, proveedor, mes y año
-- **Proveedores** - Gestión con categorías, condiciones de pago y datos de contacto
-- **Pago Proveedores** - Registro de pagos totales o parciales de facturas
+- **Proveedores** - Gestión con categorías, condiciones de pago, código autogenerado (PROV-0001)
+- **Pago Proveedores** - Registro de pagos con filtros (ayer, últimos 7 días, mes, año) y conciliación bancaria
 - **Órdenes de Pago** - Sistema de órdenes de pago para control de egresos
 - **Notas de Crédito** - Gestión de NC con asignación opcional a facturas
 - **Empleados** - CRUD con datos personales, puesto, sueldo y datos bancarios
@@ -19,7 +20,7 @@ Dashboard de gestión financiera y administrativa para el restaurante Tero.
 
 - **Frontend**: React 18 + Vite
 - **Estilos**: Tailwind CSS
-- **Base de datos**: Supabase (PostgreSQL)
+- **Base de datos**: Supabase (PostgreSQL) con RLS habilitado
 - **Gráficos**: Recharts
 - **Iconos**: Lucide React
 - **PDF**: jsPDF + jspdf-autotable
@@ -28,7 +29,7 @@ Dashboard de gestión financiera y administrativa para el restaurante Tero.
 
 ```bash
 # Clonar el repositorio
-git clone https://github.com/tu-usuario/admin-tero.git
+git clone https://github.com/Fpidal/Admin---Tero.git
 
 # Instalar dependencias
 npm install
@@ -54,12 +55,23 @@ npm run dev
 
 ### Tablas principales
 
-- **proveedores** - Datos de proveedores (nombre, categoría, condición de pago, contacto, datos bancarios)
+**Egresos:**
+- **proveedores** - Datos de proveedores con código autogenerado (PROV-0001, PROV-0002, etc.)
 - **facturas** - Facturas de proveedores (número, monto, fecha, vencimiento, estado)
-- **empleados** - Datos de empleados (nombre, documento, puesto, sueldo, datos bancarios)
-- **pagos** - Registro de todos los pagos (facturas, sueldos, otros)
+- **pagos** - Registro de todos los pagos (facturas, sueldos, otros) con conciliación bancaria
 - **notas_credito** - Notas de crédito de proveedores
 - **ordenes_pago** - Órdenes de pago generadas
+
+**Ingresos:**
+- **clientes** - Datos de clientes con código autogenerado (CLI-0001, CLI-0002, etc.)
+- **facturas_venta** - Facturas de venta con estado automático al cobrar
+- **cobros** - Registro de cobros de clientes
+- **notas_credito_venta** - Notas de crédito de venta
+
+**Empleados:**
+- **empleados** - Datos de empleados (nombre, documento, puesto, sueldo, datos bancarios)
+
+**Auditoría:**
 - **anulaciones** - Registro de pagos anulados
 - **modificaciones** - Historial de modificaciones de montos
 
@@ -87,12 +99,15 @@ npm run dev
 ## Funcionalidades Destacadas
 
 - Autenticación con contraseña
+- Códigos autogenerados para proveedores (PROV-0001) y clientes (CLI-0001)
 - Auto-cálculo de vencimiento según condición de pago del proveedor
+- Estado de factura de venta actualizado automáticamente al cobrar
 - Detección de facturas duplicadas
+- Conciliación bancaria en Pago Proveedores
 - Registro automático de anulaciones y modificaciones
 - Generación de informes en PDF
 - Separador de miles en campos numéricos
-- Filtros avanzados por fecha, proveedor, categoría y estado
+- Filtros avanzados (ayer, últimos 7 días, mes, año, proveedor, categoría, estado)
 - Responsive design para móviles
 
 ## Deploy
