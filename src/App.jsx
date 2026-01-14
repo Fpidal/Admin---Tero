@@ -4697,8 +4697,23 @@ function App() {
             }
             // Filtro por mes/año
             const fechaPago = new Date(p.fecha + 'T12:00:00');
-            if (filtroAnioPagoProv !== 'todos' && fechaPago.getFullYear() !== parseInt(filtroAnioPagoProv)) return false;
-            if (filtroMesPagoProv !== 'todos' && fechaPago.getMonth() !== parseInt(filtroMesPagoProv)) return false;
+            const hoy = new Date();
+            hoy.setHours(0, 0, 0, 0);
+
+            if (filtroMesPagoProv === 'ayer') {
+              const ayer = new Date(hoy);
+              ayer.setDate(ayer.getDate() - 1);
+              const fechaPagoSinHora = new Date(fechaPago);
+              fechaPagoSinHora.setHours(0, 0, 0, 0);
+              if (fechaPagoSinHora.getTime() !== ayer.getTime()) return false;
+            } else if (filtroMesPagoProv === 'ultimos7') {
+              const hace7dias = new Date(hoy);
+              hace7dias.setDate(hace7dias.getDate() - 7);
+              if (fechaPago < hace7dias) return false;
+            } else {
+              if (filtroAnioPagoProv !== 'todos' && fechaPago.getFullYear() !== parseInt(filtroAnioPagoProv)) return false;
+              if (filtroMesPagoProv !== 'todos' && fechaPago.getMonth() !== parseInt(filtroMesPagoProv)) return false;
+            }
             return true;
           });
           const totalFiltrado = pagosFiltrados.reduce((sum, p) => sum + p.monto, 0);
@@ -4754,6 +4769,8 @@ function App() {
                     className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
                   >
                     <option value="todos">Todos los meses</option>
+                    <option value="ayer">Ayer</option>
+                    <option value="ultimos7">Últimos 7 días</option>
                     {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
                   </select>
                   <select
