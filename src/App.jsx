@@ -2101,6 +2101,7 @@ function App() {
   const [filtroProveedorPagoProv, setFiltroProveedorPagoProv] = useState('todos');
   const [filtroMesPagoProv, setFiltroMesPagoProv] = useState('todos');
   const [filtroAnioPagoProv, setFiltroAnioPagoProv] = useState(new Date().getFullYear().toString());
+  const [filtroFechaPagoProv, setFiltroFechaPagoProv] = useState(''); // fecha específica
   const [subTabPagoProv, setSubTabPagoProv] = useState('pagos'); // 'pagos' | 'conciliacion'
 
   // Autenticación para conciliación
@@ -4696,12 +4697,15 @@ function App() {
               const proveedor = proveedores.find(prov => prov.id === parseInt(filtroProveedorPagoProv));
               if (!proveedor || !p.descripcion.includes(proveedor.nombre)) return false;
             }
-            // Filtro por mes/año
+            // Filtro por fecha específica o mes/año
             const fechaPago = new Date(p.fecha + 'T12:00:00');
             const hoy = new Date();
             hoy.setHours(0, 0, 0, 0);
 
-            if (filtroMesPagoProv === 'ayer') {
+            // Si hay fecha específica, filtrar solo por esa fecha
+            if (filtroFechaPagoProv) {
+              if (p.fecha !== filtroFechaPagoProv) return false;
+            } else if (filtroMesPagoProv === 'ayer') {
               const ayer = new Date(hoy);
               ayer.setDate(ayer.getDate() - 1);
               const fechaPagoSinHora = new Date(fechaPago);
@@ -4766,7 +4770,7 @@ function App() {
                   </select>
                   <select
                     value={filtroMesPagoProv}
-                    onChange={(e) => setFiltroMesPagoProv(e.target.value)}
+                    onChange={(e) => { setFiltroMesPagoProv(e.target.value); setFiltroFechaPagoProv(''); }}
                     className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
                   >
                     <option value="todos">Todos los meses</option>
@@ -4776,7 +4780,7 @@ function App() {
                   </select>
                   <select
                     value={filtroAnioPagoProv}
-                    onChange={(e) => setFiltroAnioPagoProv(e.target.value)}
+                    onChange={(e) => { setFiltroAnioPagoProv(e.target.value); setFiltroFechaPagoProv(''); }}
                     className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
                   >
                     <option value="todos">Todos los años</option>
@@ -4784,6 +4788,23 @@ function App() {
                       <option key={a} value={a}>{a}</option>
                     ))}
                   </select>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="date"
+                      value={filtroFechaPagoProv}
+                      onChange={(e) => { setFiltroFechaPagoProv(e.target.value); if (e.target.value) { setFiltroMesPagoProv('todos'); setFiltroAnioPagoProv('todos'); } }}
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                    />
+                    {filtroFechaPagoProv && (
+                      <button
+                        onClick={() => setFiltroFechaPagoProv('')}
+                        className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600"
+                        title="Limpiar fecha"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
