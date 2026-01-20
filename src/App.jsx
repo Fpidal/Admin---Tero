@@ -3296,9 +3296,7 @@ function App() {
         const fechaVencimiento = new Date(f.vencimiento + 'T12:00:00');
         const matchAnio = filtroAnioFactura === 'todos' || fechaVencimiento.getFullYear() === parseInt(filtroAnioFactura);
 
-        // Filtro por mes con opciones especiales
-        const hoy = new Date();
-        hoy.setHours(0, 0, 0, 0);
+        // Filtro por mes con opciones especiales (usa 'hoy' ya declarada arriba)
         let matchMes = true;
         if (filtroMesFactura === 'hoy') {
           const fechaSinHora = new Date(fechaVencimiento);
