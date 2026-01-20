@@ -4372,7 +4372,7 @@ function App() {
           <div className="space-y-4">
             {/* Barra de acciones y filtros */}
             <div className="glass rounded-2xl p-4">
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-3">
                 {/* Filtros */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -4432,33 +4432,35 @@ function App() {
                 {/* Espaciador flexible */}
                 <div className="flex-1"></div>
 
-                {/* Botones de acción a la derecha */}
-                <button
-                  onClick={() => { setSelectedItem(null); setShowModal('factura'); }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all text-sm whitespace-nowrap"
-                >
-                  <Plus className="w-4 h-4" />
-                  Nueva Factura
-                </button>
-                <button
-                  onClick={() => { setSelectedItem({ tipo: 'factura' }); setShowModal('pago'); }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all text-sm whitespace-nowrap"
-                >
-                  <DollarSign className="w-4 h-4" />
-                  Registrar Pago
-                </button>
-                <button
-                  onClick={async () => {
-                    if (confirm('¿Corregir facturas marcadas como pagadas que tienen saldo pendiente?')) {
-                      const result = await corregirEstadosFacturas();
-                      alert(`Se corrigieron ${result.corregidas} facturas`);
-                    }
-                  }}
-                  className="p-2 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-all"
-                  title="Corregir estados incorrectos"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                </button>
+                {/* Botones de acción a la derecha - agrupados para no separarse */}
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <button
+                    onClick={() => { setSelectedItem(null); setShowModal('factura'); }}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all text-sm whitespace-nowrap"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Nueva Factura
+                  </button>
+                  <button
+                    onClick={() => { setSelectedItem({ tipo: 'factura' }); setShowModal('pago'); }}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all text-sm whitespace-nowrap"
+                  >
+                    <DollarSign className="w-4 h-4" />
+                    Registrar Pago
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (confirm('¿Corregir facturas marcadas como pagadas que tienen saldo pendiente?')) {
+                        const result = await corregirEstadosFacturas();
+                        alert(`Se corrigieron ${result.corregidas} facturas`);
+                      }
+                    }}
+                    className="p-2 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-all"
+                    title="Corregir estados incorrectos"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
 
