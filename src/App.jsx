@@ -4013,7 +4013,7 @@ function App() {
                     <p className="text-lg font-bold text-red-500 mono">{formatCurrency(notasCreditoVenta.reduce((sum, nc) => sum + (parseFloat(nc.monto) || 0), 0))}</p>
                   </div>
                   <button
-                    onClick={() => { setSelectedItem(null); setShowModal('nc-venta'); }}
+                    onClick={() => { setSelectedItem(null); setModalClienteId(null); setModalFacturaId(''); setShowModal('nc-venta'); }}
                     className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-medium hover:from-red-600 hover:to-red-700 transition-all text-sm"
                   >
                     <Plus className="w-4 h-4" />
@@ -4052,7 +4052,7 @@ function App() {
                                 <td className="px-3 py-2.5 text-right font-semibold mono text-red-500 text-xs">{formatCurrency(nc.monto)}</td>
                                 <td className="px-3 py-2.5">
                                   <div className="flex justify-center gap-1">
-                                    <button onClick={() => { setSelectedItem(nc); setShowModal('nc-venta'); }} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Editar">
+                                    <button onClick={() => { setSelectedItem(nc); setModalClienteId(nc.cliente_id); setModalFacturaId(nc.factura_venta_id || ''); setShowModal('nc-venta'); }} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Editar">
                                       <Edit3 className="w-3.5 h-3.5 text-slate-400" />
                                     </button>
                                     <button onClick={() => deleteNotaCreditoVenta(nc.id)} className="p-1.5 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar">
@@ -6438,16 +6438,26 @@ function App() {
 
       {/* Modal Nota de Crédito de Venta */}
       {showModal === 'nc-venta' && (() => {
-        const clienteNCId = selectedItem?.cliente_id || modalClienteId || '';
-        const facturaNCId = selectedItem?.factura_venta_id || modalFacturaId || '';
+        // Usar estados del modal (se inicializan al abrir)
+        const clienteNCId = modalClienteId || '';
+        const facturaNCId = modalFacturaId || '';
 
         // Filtrar facturas del cliente seleccionado
         const facturasDelCliente = facturasVenta.filter(f => f.cliente_id === parseInt(clienteNCId));
 
-        // Calcular NC por factura
+        // Calcular cobros y NC por factura para determinar saldo
+        const saldosPorFactura = {};
+        facturasDelCliente.forEach(f => {
+          const totalCobros = cobros.filter(c => parseInt(c.factura_venta_id) === f.id).reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0);
+          const totalNC = notasCreditoVenta.filter(nc => parseInt(nc.factura_venta_id) === f.id && nc.id !== selectedItem?.id).reduce((sum, nc) => sum + (parseFloat(nc.monto) || 0), 0);
+          const saldo = (parseFloat(f.monto) || 0) - totalCobros - totalNC;
+          saldosPorFactura[f.id] = saldo;
+        });
+
+        // Calcular NC por factura (excluyendo la NC actual si se está editando)
         const ncPorFacturaVenta = {};
         notasCreditoVenta.forEach(nc => {
-          if (nc.factura_venta_id) {
+          if (nc.factura_venta_id && nc.id !== selectedItem?.id) {
             ncPorFacturaVenta[nc.factura_venta_id] = (ncPorFacturaVenta[nc.factura_venta_id] || 0) + nc.monto;
           }
         });
@@ -6505,19 +6515,26 @@ function App() {
                       ) : (
                         <select
                           value={facturaNCId}
-                          onChange={(e) => setModalFacturaId(e.target.value ? parseInt(e.target.value) : null)}
+                          onChange={(e) => setModalFacturaId(e.target.value ? parseInt(e.target.value) : '')}
                           className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-red-500"
                         >
                           <option value="">Sin factura asociada</option>
                           {facturasDelCliente.map(f => {
+                            const saldo = saldosPorFactura[f.id] || 0;
                             const tieneNC = ncPorFacturaVenta[f.id] > 0;
+                            // Solo mostrar facturas con saldo pendiente, o la factura actualmente asociada
+                            const esFacturaActual = selectedItem && parseInt(selectedItem.factura_venta_id) === f.id;
+                            if (saldo <= 0 && !esFacturaActual) return null;
                             return (
                               <option key={f.id} value={f.id}>
-                                {f.numero} {tieneNC ? `[NC: ${formatCurrency(ncPorFacturaVenta[f.id])}]` : ''} - {formatCurrency(f.monto)}
+                                {f.numero} - Saldo: {formatCurrency(saldo)} {tieneNC ? `[NC: ${formatCurrency(ncPorFacturaVenta[f.id])}]` : ''}
                               </option>
                             );
                           })}
                         </select>
+                      )}
+                      {facturasDelCliente.length > 0 && facturasDelCliente.every(f => (saldosPorFactura[f.id] || 0) <= 0) && !selectedItem?.factura_venta_id && (
+                        <p className="text-xs text-amber-600 mt-1">Todas las facturas de este cliente están cobradas</p>
                       )}
                     </div>
                   )}
