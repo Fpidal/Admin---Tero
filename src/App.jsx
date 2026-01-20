@@ -3295,7 +3295,28 @@ function App() {
         // Usar vencimiento para filtrar por mes/año (no fecha de confección)
         const fechaVencimiento = new Date(f.vencimiento + 'T12:00:00');
         const matchAnio = filtroAnioFactura === 'todos' || fechaVencimiento.getFullYear() === parseInt(filtroAnioFactura);
-        const matchMes = filtroMesFactura === 'todos' || fechaVencimiento.getMonth() === parseInt(filtroMesFactura);
+
+        // Filtro por mes con opciones especiales
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        let matchMes = true;
+        if (filtroMesFactura === 'hoy') {
+          const fechaSinHora = new Date(fechaVencimiento);
+          fechaSinHora.setHours(0, 0, 0, 0);
+          matchMes = fechaSinHora.getTime() === hoy.getTime();
+        } else if (filtroMesFactura === 'ayer') {
+          const ayer = new Date(hoy);
+          ayer.setDate(ayer.getDate() - 1);
+          const fechaSinHora = new Date(fechaVencimiento);
+          fechaSinHora.setHours(0, 0, 0, 0);
+          matchMes = fechaSinHora.getTime() === ayer.getTime();
+        } else if (filtroMesFactura === 'ultimos7') {
+          const hace7dias = new Date(hoy);
+          hace7dias.setDate(hace7dias.getDate() - 7);
+          matchMes = fechaVencimiento >= hace7dias;
+        } else if (filtroMesFactura !== 'todos') {
+          matchMes = fechaVencimiento.getMonth() === parseInt(filtroMesFactura);
+        }
         return matchSearch && matchEstado && matchProveedor && matchAnio && matchMes;
       });
   }, [facturas, searchTerm, filtroEstado, filtroProveedorFactura, filtroAnioFactura, filtroMesFactura, pagosPorFactura, pagosPendientesPorFactura, ncPorFactura]);
@@ -4381,6 +4402,9 @@ function App() {
                   className="px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
                 >
                   <option value="todos">Mes</option>
+                  <option value="hoy">Hoy</option>
+                  <option value="ayer">Ayer</option>
+                  <option value="ultimos7">Últimos 7 días</option>
                   {MESES.map((mes, index) => (
                     <option key={index} value={index}>{mes}</option>
                   ))}
