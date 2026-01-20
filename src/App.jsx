@@ -6522,9 +6522,9 @@ function App() {
                           {facturasDelCliente.map(f => {
                             const saldo = saldosPorFactura[f.id] || 0;
                             const tieneNC = ncPorFacturaVenta[f.id] > 0;
-                            // Solo mostrar facturas con saldo pendiente, o la factura actualmente asociada
+                            // Solo mostrar facturas con saldo > $10 (ignorar centavos), o la factura actualmente asociada
                             const esFacturaActual = selectedItem && parseInt(selectedItem.factura_venta_id) === f.id;
-                            if (saldo <= 0 && !esFacturaActual) return null;
+                            if (saldo < 10 && !esFacturaActual) return null;
                             return (
                               <option key={f.id} value={f.id}>
                                 {f.numero} - Saldo: {formatCurrency(saldo)} {tieneNC ? `[NC: ${formatCurrency(ncPorFacturaVenta[f.id])}]` : ''}
@@ -6533,7 +6533,7 @@ function App() {
                           })}
                         </select>
                       )}
-                      {facturasDelCliente.length > 0 && facturasDelCliente.every(f => (saldosPorFactura[f.id] || 0) <= 0) && !selectedItem?.factura_venta_id && (
+                      {facturasDelCliente.length > 0 && facturasDelCliente.every(f => (saldosPorFactura[f.id] || 0) < 10) && !selectedItem?.factura_venta_id && (
                         <p className="text-xs text-amber-600 mt-1">Todas las facturas de este cliente están cobradas</p>
                       )}
                     </div>
