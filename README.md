@@ -121,7 +121,8 @@ npm run dev
 - Registro automático de anulaciones y modificaciones
 - Generación de informes en PDF
 - Separador de miles en campos numéricos
-- Filtros avanzados (ayer, últimos 7 días, mes, año, proveedor, categoría, estado)
+- Filtros avanzados (hoy, ayer, últimos 7 días, fecha específica, mes, año, proveedor, categoría, estado)
+- Validación de NC: no permite asociar a facturas cobradas al 100%
 - Responsive design para móviles
 
 ## Deploy
