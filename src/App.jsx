@@ -3848,7 +3848,26 @@ function App() {
               const facturasVentaFiltradas = facturasVenta.filter(f => {
                 const matchCliente = filtroClienteFacturaVenta === 'todos' || parseInt(f.cliente_id) === parseInt(filtroClienteFacturaVenta);
                 const fechaFactura = new Date(f.fecha + 'T12:00:00');
-                const matchMes = filtroMesFacturaVenta === 'todos' || fechaFactura.getMonth() === parseInt(filtroMesFacturaVenta);
+                const hoy = new Date();
+                hoy.setHours(0, 0, 0, 0);
+                let matchMes = true;
+                if (filtroMesFacturaVenta === 'hoy') {
+                  const fechaSinHora = new Date(fechaFactura);
+                  fechaSinHora.setHours(0, 0, 0, 0);
+                  matchMes = fechaSinHora.getTime() === hoy.getTime();
+                } else if (filtroMesFacturaVenta === 'ayer') {
+                  const ayer = new Date(hoy);
+                  ayer.setDate(ayer.getDate() - 1);
+                  const fechaSinHora = new Date(fechaFactura);
+                  fechaSinHora.setHours(0, 0, 0, 0);
+                  matchMes = fechaSinHora.getTime() === ayer.getTime();
+                } else if (filtroMesFacturaVenta === 'ultimos7') {
+                  const hace7dias = new Date(hoy);
+                  hace7dias.setDate(hace7dias.getDate() - 7);
+                  matchMes = fechaFactura >= hace7dias;
+                } else if (filtroMesFacturaVenta !== 'todos') {
+                  matchMes = fechaFactura.getMonth() === parseInt(filtroMesFacturaVenta);
+                }
                 return matchCliente && matchMes;
               });
 
@@ -3870,6 +3889,9 @@ function App() {
                       className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
                     >
                       <option value="todos">Todos los meses</option>
+                      <option value="hoy">Hoy</option>
+                      <option value="ayer">Ayer</option>
+                      <option value="ultimos7">Últimos 7 días</option>
                       {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
                     </select>
                   </div>
