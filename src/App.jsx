@@ -2366,8 +2366,10 @@ function App() {
   };
 
   useEffect(() => {
-    fetchAllData();
-  }, []);
+    if (isAuthenticated) {
+      fetchAllData();
+    }
+  }, [isAuthenticated]);
 
   // Auto-logout por inactividad (10 minutos)
   useEffect(() => {
