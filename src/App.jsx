@@ -1373,7 +1373,7 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
     if (facturaPreseleccionada) {
       // Calcular saldo de la factura preseleccionada
       const pagosFactura = pagos
-        .filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado' && p.descripcion && p.descripcion.includes(facturaPreseleccionada.numero))
+        .filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado' && p.descripcion && p.descripcion.includes(facturaPreseleccionada.numero) && parseInt(p.referencia_id) === facturaPreseleccionada.proveedor_id)
         .reduce((sum, p) => sum + p.monto, 0);
       const ncFactura = notasCredito
         .filter(nc => nc.factura_id === facturaPreseleccionada.id)
@@ -1404,7 +1404,7 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
         .map(f => {
           // Calcular pagos CONFIRMADOS de esta factura
           const pagosFactura = pagos
-            .filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado' && p.descripcion && p.descripcion.includes(f.numero))
+            .filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado' && p.descripcion && p.descripcion.includes(f.numero) && parseInt(p.referencia_id) === f.proveedor_id)
             .reduce((sum, p) => sum + p.monto, 0);
           // Calcular NC de esta factura
           const ncFactura = notasCredito
@@ -2327,11 +2327,11 @@ function App() {
 
     if (!facturasDB) return { corregidas: 0 };
 
-    // Calcular pagos por factura
+    // Calcular pagos por factura (matching por proveedor + número)
     const pagosMap = {};
     (pagosDB || []).filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado').forEach(p => {
       facturasDB.forEach(f => {
-        if (p.descripcion && p.descripcion.includes(f.numero)) {
+        if (p.descripcion && p.descripcion.includes(f.numero) && parseInt(p.referencia_id) === f.proveedor_id) {
           pagosMap[f.id] = (pagosMap[f.id] || 0) + p.monto;
         }
       });
@@ -2492,7 +2492,7 @@ function App() {
     if (!factura) return;
 
     // Verificar si la factura tiene pagos asociados
-    const pagosFactura = pagos.filter(p => p.tipo === 'factura' && p.descripcion && p.descripcion.includes(factura.numero));
+    const pagosFactura = pagos.filter(p => p.tipo === 'factura' && p.descripcion && p.descripcion.includes(factura.numero) && parseInt(p.referencia_id) === factura.proveedor_id);
     if (pagosFactura.length > 0) {
       alert('No se puede anular esta factura porque tiene pagos registrados. Primero debe anular los pagos asociados.');
       return;
@@ -2903,11 +2903,11 @@ function App() {
 
     if (!facturasDB) return;
 
-    // Calcular pagos por factura
+    // Calcular pagos por factura (matching por proveedor + número)
     const pagosMap = {};
     (pagosDB || []).filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado').forEach(p => {
       facturasDB.forEach(f => {
-        if (p.descripcion && p.descripcion.includes(f.numero)) {
+        if (p.descripcion && p.descripcion.includes(f.numero) && parseInt(p.referencia_id) === f.proveedor_id) {
           pagosMap[f.id] = (pagosMap[f.id] || 0) + p.monto;
         }
       });
@@ -3006,11 +3006,11 @@ function App() {
     const mesActual = hoy.getMonth();
     const anioActual = hoy.getFullYear();
 
-    // Calcular pagos confirmados por factura para stats
+    // Calcular pagos confirmados por factura para stats (matching por proveedor + número)
     const pagosConfirmadosPorFactura = {};
     pagos.filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado').forEach(p => {
       facturas.forEach(f => {
-        if (p.descripcion && p.descripcion.includes(f.numero)) {
+        if (p.descripcion && p.descripcion.includes(f.numero) && parseInt(p.referencia_id) === f.proveedor_id) {
           pagosConfirmadosPorFactura[f.id] = (pagosConfirmadosPorFactura[f.id] || 0) + p.monto;
         }
       });
@@ -3090,7 +3090,7 @@ function App() {
     const pagosMap = {};
     pagos.filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado').forEach(p => {
       facturas.forEach(f => {
-        if (p.descripcion && p.descripcion.includes(f.numero)) {
+        if (p.descripcion && p.descripcion.includes(f.numero) && parseInt(p.referencia_id) === f.proveedor_id) {
           pagosMap[f.id] = (pagosMap[f.id] || 0) + p.monto;
         }
       });
@@ -3112,7 +3112,7 @@ function App() {
     const pagosMap = {};
     pagos.filter(p => p.tipo === 'factura' && p.estado_pago === 'pendiente').forEach(p => {
       facturas.forEach(f => {
-        if (p.descripcion && p.descripcion.includes(f.numero)) {
+        if (p.descripcion && p.descripcion.includes(f.numero) && parseInt(p.referencia_id) === f.proveedor_id) {
           pagosMap[f.id] = (pagosMap[f.id] || 0) + p.monto;
         }
       });
@@ -3337,6 +3337,20 @@ function App() {
   const handleLogout = () => {
     localStorage.removeItem('tero_auth');
     setIsAuthenticated(false);
+    // Limpiar datos para que no se muestren datos viejos al re-loguearse
+    setProveedores([]);
+    setFacturas([]);
+    setEmpleados([]);
+    setPagos([]);
+    setNotasCredito([]);
+    setAnulaciones([]);
+    setModificaciones([]);
+    setOrdenesPago([]);
+    setClientes([]);
+    setFacturasVenta([]);
+    setCobros([]);
+    setNotasCreditoVenta([]);
+    setLoading(true);
   };
 
   if (!isAuthenticated) {
@@ -5564,10 +5578,10 @@ function App() {
                     const facturasProveedor = facturas.filter(f => f.proveedor_id === prov.id && f.estado !== 'pagada');
                     const totalFacturas = facturasProveedor.reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0);
 
-                    // Pagos confirmados al proveedor
+                    // Pagos confirmados al proveedor (matching por proveedor + número)
                     const pagosProveedor = pagos
                       .filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado' && p.descripcion)
-                      .filter(p => facturasProveedor.some(f => p.descripcion.includes(f.numero)))
+                      .filter(p => facturasProveedor.some(f => p.descripcion.includes(f.numero) && parseInt(p.referencia_id) === f.proveedor_id))
                       .reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
 
                     // NC del proveedor aplicadas a facturas pendientes
