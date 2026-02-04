@@ -6347,14 +6347,15 @@ function App() {
                 });
 
                 const facturasPendientesCliente = facturasVenta
-                  .filter(f => parseInt(f.cliente_id) === parseInt(clienteSeleccionado) && f.estado !== 'cobrada')
+                  .filter(f => parseInt(f.cliente_id) === parseInt(clienteSeleccionado))
                   .map(f => {
                     const fid = parseInt(f.id);
                     const nc = ncPorFacturaVenta[fid] || 0;
                     const cobrado = cobrosPorFactura[fid] || 0;
                     const saldo = (parseFloat(f.monto) || 0) - nc - cobrado;
                     return { ...f, nc, cobrado, saldo };
-                  });
+                  })
+                  .filter(f => f.saldo > 0);
 
                 return (
                   <form onSubmit={async (e) => {
