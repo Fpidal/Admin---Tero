@@ -4413,22 +4413,22 @@ function App() {
           <div className="space-y-4">
             {/* Barra de acciones y filtros */}
             <div className="glass rounded-2xl p-4">
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
                 {/* Filtros */}
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <div className="relative flex-shrink-0">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
                     type="text"
                     placeholder="Buscar..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 pr-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 w-36 text-sm"
+                    className="pl-8 pr-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 w-28 text-sm"
                   />
                 </div>
                 <select
                   value={filtroAnioFactura}
                   onChange={(e) => setFiltroAnioFactura(e.target.value)}
-                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                  className="px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm flex-shrink-0"
                 >
                   <option value="todos">Año</option>
                   {[...new Set(facturas.map(f => new Date(f.vencimiento + 'T12:00:00').getFullYear()))].sort((a, b) => b - a).map(a => (
@@ -4438,32 +4438,32 @@ function App() {
                 <select
                   value={filtroMesFactura}
                   onChange={(e) => setFiltroMesFactura(e.target.value)}
-                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                  className="px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm flex-shrink-0"
                   title="Filtrar por vencimiento"
                 >
-                  <option value="todos">Vencimiento</option>
+                  <option value="todos">Venc.</option>
                   <option value="hoy">Hoy</option>
                   <option value="ayer">Ayer</option>
-                  <option value="proximos7">Próximos 7 días</option>
+                  <option value="proximos7">Próx. 7 días</option>
                   {MESES.map((mes, index) => (
-                    <option key={index} value={index}>{mes}</option>
+                    <option key={index} value={index}>{mes.slice(0, 3)}</option>
                   ))}
                 </select>
                 <select
                   value={filtroMesFechaFactura}
                   onChange={(e) => setFiltroMesFechaFactura(e.target.value)}
-                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                  className="px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm flex-shrink-0"
                   title="Filtrar por fecha de factura"
                 >
-                  <option value="todos">Fecha Fact.</option>
+                  <option value="todos">F.Fact.</option>
                   {MESES.map((mes, index) => (
-                    <option key={index} value={index}>{mes}</option>
+                    <option key={index} value={index}>{mes.slice(0, 3)}</option>
                   ))}
                 </select>
                 <select
                   value={filtroProveedorFactura}
                   onChange={(e) => setFiltroProveedorFactura(e.target.value)}
-                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                  className="px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm flex-shrink-0 max-w-[120px]"
                 >
                   <option value="todos">Proveedor</option>
                   {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
@@ -4471,35 +4471,35 @@ function App() {
                 <select
                   value={filtroEstado}
                   onChange={(e) => setFiltroEstado(e.target.value)}
-                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                  className="px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm flex-shrink-0"
                 >
                   <option value="todos">Estado</option>
-                  <option value="pendiente">Pendientes</option>
-                  <option value="aprobar">Por aprobar</option>
-                  <option value="parcial">Parciales</option>
-                  <option value="pagada">Pagadas</option>
-                  <option value="vencida">Vencidas</option>
-                  <option value="vence_semana">Vence esta semana</option>
+                  <option value="pendiente">Pend.</option>
+                  <option value="aprobar">Aprobar</option>
+                  <option value="parcial">Parcial</option>
+                  <option value="pagada">Pagada</option>
+                  <option value="vencida">Vencida</option>
+                  <option value="vence_semana">Vence sem.</option>
                 </select>
 
                 {/* Espaciador flexible */}
-                <div className="flex-1"></div>
+                <div className="flex-1 min-w-[10px]"></div>
 
-                {/* Botones de acción a la derecha - agrupados para no separarse */}
-                <div className="flex items-center gap-3 flex-shrink-0">
+                {/* Botones de acción a la derecha */}
+                <div className="flex items-center gap-2 flex-shrink-0">
                   <button
                     onClick={() => { setSelectedItem(null); setShowModal('factura'); }}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all text-sm whitespace-nowrap"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all text-sm whitespace-nowrap"
                   >
                     <Plus className="w-4 h-4" />
                     Nueva Factura
                   </button>
                   <button
                     onClick={() => { setSelectedItem({ tipo: 'factura' }); setShowModal('pago'); }}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all text-sm whitespace-nowrap"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all text-sm whitespace-nowrap"
                   >
                     <DollarSign className="w-4 h-4" />
-                    Registrar Pago
+                    Reg. Pago
                   </button>
                   <button
                     onClick={async () => {
