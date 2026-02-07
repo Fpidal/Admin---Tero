@@ -2056,6 +2056,8 @@ function App() {
   const [modalFacturaCobroId, setModalFacturaCobroId] = useState(null); // Factura seleccionada en modal Cobro
   const [modalSubtotal, setModalSubtotal] = useState('');
   const [modalIva, setModalIva] = useState('21'); // 21, 10.5, 0 (exento)
+  const [empleadoStats, setEmpleadoStats] = useState(null); // Empleado seleccionado para ver estadísticas
+  const [filtroStatsEmpleado, setFiltroStatsEmpleado] = useState('todos'); // 'todos', 'semana', 'mes', o número de mes
 
   // Filtros
   const [searchTerm, setSearchTerm] = useState('');
@@ -2894,6 +2896,20 @@ function App() {
       // Actualizar estados de facturas automáticamente
       await actualizarEstadosFacturas();
     }
+  };
+
+  // Confirmar un pago individual (para pagos que quedaron pendientes en órdenes confirmadas)
+  const confirmarPagoIndividual = async (pagoId) => {
+    const { error } = await supabase
+      .from('pagos')
+      .update({ estado_pago: 'confirmado' })
+      .eq('id', pagoId);
+
+    if (!error) {
+      await fetchPagos();
+      await actualizarEstadosFacturas();
+    }
+    return { error };
   };
 
   // Actualizar estados de facturas según sus saldos
@@ -4397,7 +4413,7 @@ function App() {
           <div className="space-y-4">
             {/* Barra de acciones y filtros */}
             <div className="glass rounded-2xl p-4">
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 {/* Filtros */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -4734,9 +4750,14 @@ function App() {
                             </span>
                           </td>
                           <td className="px-5 py-4 text-right">
-                            <button onClick={() => { setSelectedItem(e); setShowModal('empleado'); }} className="p-2 hover:bg-slate-100 rounded-lg transition-colors" title="Editar">
-                              <Edit3 className="w-4 h-4" />
-                            </button>
+                            <div className="flex items-center justify-end gap-1">
+                              <button onClick={() => { setEmpleadoStats(e); setFiltroStatsEmpleado('todos'); }} className="p-2 hover:bg-blue-100 rounded-lg transition-colors text-blue-500" title="Ver pagos">
+                                <BarChart3 className="w-4 h-4" />
+                              </button>
+                              <button onClick={() => { setSelectedItem(e); setShowModal('empleado'); }} className="p-2 hover:bg-slate-100 rounded-lg transition-colors" title="Editar">
+                                <Edit3 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -5488,10 +5509,11 @@ function App() {
                 <div className="space-y-2">
                   {ordenesPago.filter(o => o.estado === 'confirmada').slice(0, 20).map(orden => {
                     const pagosOrden = pagos.filter(p => p.orden_pago_id === orden.id);
+                    const pagosPendientesOrden = pagosOrden.filter(p => p.estado_pago === 'pendiente');
                     const totalOrden = pagosOrden.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
                     const isExpanded = ordenSeleccionada === orden.id;
                     return (
-                      <div key={orden.id} className="glass rounded-xl overflow-hidden">
+                      <div key={orden.id} className={`glass rounded-xl overflow-hidden ${pagosPendientesOrden.length > 0 ? 'ring-2 ring-amber-400' : ''}`}>
                         <div
                           className="flex justify-between items-center p-3 cursor-pointer hover:bg-slate-50 transition-colors"
                           onClick={() => setOrdenSeleccionada(isExpanded ? null : orden.id)}
@@ -5502,6 +5524,11 @@ function App() {
                             </span>
                             <span className="font-medium">Orden #{orden.id}</span>
                             <span className="text-xs text-slate-500">{formatDate(orden.fecha)}</span>
+                            {pagosPendientesOrden.length > 0 && (
+                              <span className="px-2 py-0.5 text-xs bg-amber-100 text-amber-700 rounded-full font-medium">
+                                {pagosPendientesOrden.length} por confirmar
+                              </span>
+                            )}
                           </div>
                           <div className="flex items-center gap-4">
                             <span className="text-xs text-slate-500">{pagosOrden.length} pago(s)</span>
@@ -5512,12 +5539,26 @@ function App() {
                           <div className="border-t border-slate-100 p-3 bg-slate-50/50">
                             <div className="space-y-2">
                               {pagosOrden.map(p => (
-                                <div key={p.id} className="flex justify-between items-center bg-white rounded-lg p-2 text-sm">
+                                <div key={p.id} className={`flex justify-between items-center rounded-lg p-2 text-sm ${p.estado_pago === 'pendiente' ? 'bg-amber-50 border border-amber-200' : 'bg-white'}`}>
                                   <div className="flex-1">
                                     <p className="font-medium text-xs">{p.descripcion}</p>
                                     <p className="text-xs text-slate-400">{p.metodo} - {formatDate(p.fecha)}</p>
                                   </div>
-                                  <span className="font-semibold mono text-sm text-emerald-600">{formatCurrency(p.monto)}</span>
+                                  <div className="flex items-center gap-2">
+                                    {p.estado_pago === 'pendiente' && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          confirmarPagoIndividual(p.id);
+                                        }}
+                                        className="px-2 py-1 text-xs bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
+                                        title="Confirmar este pago"
+                                      >
+                                        Confirmar
+                                      </button>
+                                    )}
+                                    <span className={`font-semibold mono text-sm ${p.estado_pago === 'pendiente' ? 'text-amber-600' : 'text-emerald-600'}`}>{formatCurrency(p.monto)}</span>
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -6727,6 +6768,133 @@ function App() {
                 </button>
               </form>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Estadísticas Empleado */}
+      {empleadoStats && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="glass rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h2 className="text-lg font-bold text-slate-800">Historial de Pagos</h2>
+                <p className="text-sm text-slate-500">{empleadoStats.nombre}</p>
+              </div>
+              <button onClick={() => setEmpleadoStats(null)} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Filtros */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              <button
+                onClick={() => setFiltroStatsEmpleado('todos')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${filtroStatsEmpleado === 'todos' ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+              >
+                Todos
+              </button>
+              <button
+                onClick={() => setFiltroStatsEmpleado('semana')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${filtroStatsEmpleado === 'semana' ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+              >
+                Esta semana
+              </button>
+              <button
+                onClick={() => setFiltroStatsEmpleado('mes')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${filtroStatsEmpleado === 'mes' ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+              >
+                Este mes
+              </button>
+              <select
+                value={filtroStatsEmpleado.startsWith('mes-') ? filtroStatsEmpleado : ''}
+                onChange={(e) => e.target.value && setFiltroStatsEmpleado(e.target.value)}
+                className="px-3 py-1.5 rounded-lg text-sm border border-slate-200 bg-white"
+              >
+                <option value="">Mes específico...</option>
+                {MESES.map((mes, index) => (
+                  <option key={index} value={`mes-${index}`}>{mes}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Lista de pagos */}
+            {(() => {
+              const hoy = new Date();
+              hoy.setHours(0, 0, 0, 0);
+
+              const pagosEmpleado = pagos
+                .filter(p => p.tipo === 'sueldo' && parseInt(p.referencia_id) === empleadoStats.id)
+                .filter(p => {
+                  if (filtroStatsEmpleado === 'todos') return true;
+                  const fechaPago = new Date(p.fecha + 'T12:00:00');
+                  if (filtroStatsEmpleado === 'semana') {
+                    // Semana calendario: domingo a sábado
+                    const inicioSemana = new Date(hoy);
+                    inicioSemana.setDate(hoy.getDate() - hoy.getDay()); // Domingo
+                    const finSemana = new Date(inicioSemana);
+                    finSemana.setDate(inicioSemana.getDate() + 6); // Sábado
+                    return fechaPago >= inicioSemana && fechaPago <= finSemana;
+                  }
+                  if (filtroStatsEmpleado === 'mes') {
+                    return fechaPago.getMonth() === hoy.getMonth() && fechaPago.getFullYear() === hoy.getFullYear();
+                  }
+                  if (filtroStatsEmpleado.startsWith('mes-')) {
+                    const mesNum = parseInt(filtroStatsEmpleado.replace('mes-', ''));
+                    return fechaPago.getMonth() === mesNum;
+                  }
+                  return true;
+                })
+                .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+              const totalPagos = pagosEmpleado.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
+
+              return (
+                <>
+                  {/* Resumen */}
+                  <div className="bg-gradient-to-r from-emerald-50 to-emerald-100 rounded-xl p-4 mb-4">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="text-sm text-emerald-600">Total pagado</p>
+                        <p className="text-2xl font-bold text-emerald-700 mono">{formatCurrency(totalPagos)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-emerald-600">Cantidad de pagos</p>
+                        <p className="text-2xl font-bold text-emerald-700">{pagosEmpleado.length}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tabla de pagos */}
+                  {pagosEmpleado.length === 0 ? (
+                    <p className="text-center text-slate-400 py-8">No hay pagos en el período seleccionado</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="text-left text-slate-400 text-xs border-b border-slate-200">
+                            <th className="px-3 py-2 font-medium">Fecha</th>
+                            <th className="px-3 py-2 font-medium">Concepto</th>
+                            <th className="px-3 py-2 font-medium">Método</th>
+                            <th className="px-3 py-2 font-medium text-right">Monto</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pagosEmpleado.map(p => (
+                            <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50">
+                              <td className="px-3 py-2 text-slate-600">{formatDate(p.fecha)}</td>
+                              <td className="px-3 py-2">{p.descripcion || '-'}</td>
+                              <td className="px-3 py-2 text-slate-500">{p.metodo || '-'}</td>
+                              <td className="px-3 py-2 text-right font-semibold mono text-emerald-600">{formatCurrency(p.monto)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
