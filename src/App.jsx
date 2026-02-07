@@ -2069,6 +2069,7 @@ function App() {
   const [filtroProveedorFactura, setFiltroProveedorFactura] = useState('todos');
   const [filtroMesFactura, setFiltroMesFactura] = useState('todos');
   const [filtroAnioFactura, setFiltroAnioFactura] = useState('todos');
+  const [filtroMesFechaFactura, setFiltroMesFechaFactura] = useState('todos'); // Filtro por fecha de factura (no vencimiento)
 
   // Filtros Informes
   const [informeActivo, setInformeActivo] = useState('saldo-proveedor');
@@ -3310,16 +3311,24 @@ function App() {
           const fechaSinHora = new Date(fechaVencimiento);
           fechaSinHora.setHours(0, 0, 0, 0);
           matchMes = fechaSinHora.getTime() === ayer.getTime();
-        } else if (filtroMesFactura === 'ultimos7') {
-          const hace7dias = new Date(hoy);
-          hace7dias.setDate(hace7dias.getDate() - 7);
-          matchMes = fechaVencimiento >= hace7dias;
+        } else if (filtroMesFactura === 'proximos7') {
+          const en7dias = new Date(hoy);
+          en7dias.setDate(en7dias.getDate() + 7);
+          matchMes = fechaVencimiento >= hoy && fechaVencimiento <= en7dias;
         } else if (filtroMesFactura !== 'todos') {
           matchMes = fechaVencimiento.getMonth() === parseInt(filtroMesFactura);
         }
-        return matchSearch && matchEstado && matchProveedor && matchAnio && matchMes;
+
+        // Filtro por fecha de factura (fecha de confección, no vencimiento)
+        let matchFechaFactura = true;
+        if (filtroMesFechaFactura !== 'todos') {
+          const fechaFactura = new Date(f.fecha + 'T12:00:00');
+          matchFechaFactura = fechaFactura.getMonth() === parseInt(filtroMesFechaFactura);
+        }
+
+        return matchSearch && matchEstado && matchProveedor && matchAnio && matchMes && matchFechaFactura;
       });
-  }, [facturas, searchTerm, filtroEstado, filtroProveedorFactura, filtroAnioFactura, filtroMesFactura, pagosPorFactura, pagosPendientesPorFactura, ncPorFactura]);
+  }, [facturas, searchTerm, filtroEstado, filtroProveedorFactura, filtroAnioFactura, filtroMesFactura, filtroMesFechaFactura, pagosPorFactura, pagosPendientesPorFactura, ncPorFactura]);
 
   const getDiasVencimiento = (vencimiento) => {
     const hoy = new Date();
@@ -4414,11 +4423,23 @@ function App() {
                   value={filtroMesFactura}
                   onChange={(e) => setFiltroMesFactura(e.target.value)}
                   className="px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                  title="Filtrar por vencimiento"
                 >
-                  <option value="todos">Mes</option>
+                  <option value="todos">Vencimiento</option>
                   <option value="hoy">Hoy</option>
                   <option value="ayer">Ayer</option>
-                  <option value="ultimos7">Últimos 7 días</option>
+                  <option value="proximos7">Próximos 7 días</option>
+                  {MESES.map((mes, index) => (
+                    <option key={index} value={index}>{mes}</option>
+                  ))}
+                </select>
+                <select
+                  value={filtroMesFechaFactura}
+                  onChange={(e) => setFiltroMesFechaFactura(e.target.value)}
+                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                  title="Filtrar por fecha de factura"
+                >
+                  <option value="todos">Fecha Fact.</option>
                   {MESES.map((mes, index) => (
                     <option key={index} value={index}>{mes}</option>
                   ))}
