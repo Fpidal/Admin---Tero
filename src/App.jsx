@@ -783,7 +783,7 @@ function ModalProveedor({ proveedor, onClose, onSave, onDelete }) {
     contacto: proveedor?.contacto || '',
     celular: proveedor?.celular || '',
     categoria: proveedor?.categoria || '',
-    condicion_pago: proveedor?.condicion_pago ?? 0,
+    condicion_pago: parseInt(proveedor?.condicion_pago) || 0,
     forma_pago: proveedor?.forma_pago || '',
     situacion_iva: proveedor?.situacion_iva ?? 21,
     cuit: proveedor?.cuit || '',
@@ -1028,7 +1028,7 @@ function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, on
 
   const handleProveedorChange = (proveedorId) => {
     const proveedor = proveedores.find(p => p.id === parseInt(proveedorId));
-    const dias = proveedor?.condicion_pago || 0;
+    const dias = parseInt(proveedor?.condicion_pago) || 0;
     const ivaPct = proveedor?.situacion_iva ?? 21;
     const vencimiento = calcularVencimiento(form.fecha, dias);
     const neto = calcularNeto(form.bruto, ivaPct, form.otras_retenciones, form.bruto2, form.iva_porcentaje2);
