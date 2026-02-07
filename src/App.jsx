@@ -1,4 +1,4 @@
-// Administración Tero - Dashboard v2.1
+// Administración Tero - Dashboard v2.2
 import { useState, useEffect, useMemo } from 'react';
 import {
   BarChart3, DollarSign, Users, FileText, AlertTriangle,
