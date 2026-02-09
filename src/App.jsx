@@ -3960,12 +3960,19 @@ function App() {
                     {(() => {
                       const totalFacturado = facturasVentaFiltradas.reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0);
                       const idsFacturasFiltradas = facturasVentaFiltradas.map(f => parseInt(f.id));
+                      const clientesFiltrados = filtroClienteFacturaVenta !== 'todos'
+                        ? [parseInt(filtroClienteFacturaVenta)]
+                        : [...new Set(facturasVentaFiltradas.map(f => parseInt(f.cliente_id)))];
                       const totalNC = notasCreditoVenta
                         .filter(nc => idsFacturasFiltradas.includes(parseInt(nc.factura_venta_id)) ||
                           (filtroClienteFacturaVenta !== 'todos' && parseInt(nc.cliente_id) === parseInt(filtroClienteFacturaVenta)))
                         .reduce((sum, nc) => sum + (parseFloat(nc.monto) || 0), 0);
+                      // Incluir cobros con factura asignada Y cobros sin factura pero del cliente filtrado
                       const totalCobrado = cobros
-                        .filter(c => idsFacturasFiltradas.includes(parseInt(c.factura_venta_id)))
+                        .filter(c =>
+                          idsFacturasFiltradas.includes(parseInt(c.factura_venta_id)) ||
+                          (!c.factura_venta_id && clientesFiltrados.includes(parseInt(c.cliente_id)))
+                        )
                         .reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0);
                       const saldo = totalFacturado - totalNC - totalCobrado;
                       return (
@@ -4183,6 +4190,46 @@ function App() {
                   </div>
                 </div>
 
+                {/* Cobros sin factura asignada */}
+                {(() => {
+                  const cobrosSinFactura = cobros.filter(c => !c.factura_venta_id || c.factura_venta_id === 0 || c.factura_venta_id === '0' || c.factura_venta_id === '');
+                  if (cobrosSinFactura.length === 0) return null;
+
+                  return (
+                    <div className="glass rounded-xl p-4 border-2 border-amber-200 bg-amber-50/30">
+                      <div className="flex items-center gap-2 mb-3">
+                        <AlertCircle className="w-4 h-4 text-amber-500" />
+                        <h4 className="font-semibold text-amber-700">Cobros sin factura asignada ({cobrosSinFactura.length})</h4>
+                      </div>
+                      <div className="space-y-2">
+                        {cobrosSinFactura.map(c => {
+                          const cliente = clientes.find(cl => cl.id === c.cliente_id);
+                          return (
+                            <div key={c.id} className="flex items-center justify-between bg-white rounded-lg p-3 border border-amber-200">
+                              <div className="flex items-center gap-4">
+                                <div>
+                                  <p className="font-medium text-sm">{cliente?.nombre || 'Sin cliente'}</p>
+                                  <p className="text-xs text-slate-500">{formatDate(c.fecha)} - {c.metodo}</p>
+                                  {c.descripcion && <p className="text-xs text-slate-400">{c.descripcion}</p>}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="font-bold text-emerald-600 mono">{formatCurrency(c.monto, false)}</span>
+                                <button onClick={() => { setSelectedItem(c); setShowModal('cobro'); }} className="p-1.5 hover:bg-blue-100 rounded-lg transition-colors" title="Editar / Asignar factura">
+                                  <Edit3 className="w-4 h-4 text-blue-500" />
+                                </button>
+                                <button onClick={() => deleteCobro(c.id)} className="p-1.5 hover:bg-red-100 rounded-lg transition-colors" title="Eliminar">
+                                  <Trash2 className="w-4 h-4 text-red-400" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Cobros agrupados por factura */}
                 <div className="space-y-2">
                   {(() => {
@@ -4191,8 +4238,14 @@ function App() {
                       cobros.some(c => parseInt(c.factura_venta_id) === parseInt(f.id))
                     );
 
-                    if (facturasConCobros.length === 0) {
+                    const cobrosSinFactura = cobros.filter(c => !c.factura_venta_id || c.factura_venta_id === 0 || c.factura_venta_id === '0' || c.factura_venta_id === '');
+
+                    if (facturasConCobros.length === 0 && cobrosSinFactura.length === 0) {
                       return <p className="text-slate-400 text-sm text-center py-8">No hay cobros registrados</p>;
+                    }
+
+                    if (facturasConCobros.length === 0) {
+                      return null; // Solo hay cobros sin factura, ya se muestran arriba
                     }
 
                     const toggleExpandido = (id) => {
@@ -6409,7 +6462,8 @@ function App() {
                   }
                 });
 
-                const facturasPendientesCliente = facturasVenta
+                // Todas las facturas del cliente con su saldo calculado
+                const facturasCliente = facturasVenta
                   .filter(f => parseInt(f.cliente_id) === parseInt(clienteSeleccionado))
                   .map(f => {
                     const fid = parseInt(f.id);
@@ -6417,8 +6471,13 @@ function App() {
                     const cobrado = cobrosPorFactura[fid] || 0;
                     const saldo = (parseFloat(f.monto) || 0) - nc - cobrado;
                     return { ...f, nc, cobrado, saldo };
-                  })
-                  .filter(f => f.saldo > 0);
+                  });
+
+                // Para nuevo cobro: solo facturas con saldo pendiente
+                // Para editar: todas las facturas del cliente (para poder reasignar)
+                const facturasPendientesCliente = selectedItem
+                  ? facturasCliente
+                  : facturasCliente.filter(f => f.saldo > 0);
 
                 return (
                   <form onSubmit={async (e) => {
@@ -6471,21 +6530,17 @@ function App() {
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <label className="block text-xs font-medium text-slate-700 mb-1">Factura</label>
-                        {facturasPendientesCliente.length === 0 ? (
-                          <p className="text-xs text-slate-500 italic py-1">Sin facturas pendientes</p>
-                        ) : (
-                          <select
-                            name="factura_venta_id"
-                            value={modalFacturaCobroId || selectedItem?.factura_venta_id || ''}
-                            onChange={(e) => setModalFacturaCobroId(e.target.value ? parseInt(e.target.value) : null)}
-                            className="w-full px-2 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm"
-                          >
-                            <option value="">Sin factura</option>
-                            {facturasPendientesCliente.map(f => (
-                              <option key={f.id} value={f.id}>{f.numero}</option>
-                            ))}
-                          </select>
-                        )}
+                        <select
+                          name="factura_venta_id"
+                          value={modalFacturaCobroId || selectedItem?.factura_venta_id || ''}
+                          onChange={(e) => setModalFacturaCobroId(e.target.value ? parseInt(e.target.value) : null)}
+                          className="w-full px-2 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-500 text-sm"
+                        >
+                          <option value="">Sin factura (a cuenta)</option>
+                          {facturasPendientesCliente.map(f => (
+                            <option key={f.id} value={f.id}>{f.numero} {f.saldo <= 0 ? '(pagada)' : ''}</option>
+                          ))}
+                        </select>
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-slate-700 mb-1">Fecha *</label>
