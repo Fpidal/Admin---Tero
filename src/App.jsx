@@ -4001,39 +4001,37 @@ function App() {
 
               return (
               <div className="space-y-4">
-                <div className="flex flex-wrap justify-between items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={filtroClienteFacturaVenta}
-                      onChange={(e) => setFiltroClienteFacturaVenta(e.target.value)}
-                      className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
-                    >
-                      <option value="todos">Todos los clientes</option>
-                      {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                    </select>
-                    <select
-                      value={filtroMesFacturaVenta}
-                      onChange={(e) => setFiltroMesFacturaVenta(e.target.value)}
-                      className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
-                    >
-                      <option value="todos">Todos los meses</option>
-                      <option value="hoy">Hoy</option>
-                      <option value="ayer">Ayer</option>
-                      <option value="ultimos7">Últimos 7 días</option>
-                      {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
-                    </select>
-                    <select
-                      value={filtroEstadoFacturaVenta}
-                      onChange={(e) => setFiltroEstadoFacturaVenta(e.target.value)}
-                      className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
-                    >
-                      <option value="todos">Todos los estados</option>
-                      <option value="pendiente">Pendiente</option>
-                      <option value="cobrada">Cobrada</option>
-                      <option value="vencida">Vencida</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={filtroClienteFacturaVenta}
+                    onChange={(e) => setFiltroClienteFacturaVenta(e.target.value)}
+                    className="px-2 py-1 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-xs"
+                  >
+                    <option value="todos">Todos</option>
+                    {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                  </select>
+                  <select
+                    value={filtroMesFacturaVenta}
+                    onChange={(e) => setFiltroMesFacturaVenta(e.target.value)}
+                    className="px-2 py-1 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-xs"
+                  >
+                    <option value="todos">Todos</option>
+                    <option value="hoy">Hoy</option>
+                    <option value="ayer">Ayer</option>
+                    <option value="ultimos7">Últ. 7 días</option>
+                    {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                  </select>
+                  <select
+                    value={filtroEstadoFacturaVenta}
+                    onChange={(e) => setFiltroEstadoFacturaVenta(e.target.value)}
+                    className="px-2 py-1 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-xs"
+                  >
+                    <option value="todos">Todos</option>
+                    <option value="pendiente">Pendiente</option>
+                    <option value="cobrada">Cobrada</option>
+                    <option value="vencida">Vencida</option>
+                  </select>
+                  <div className="flex items-center gap-2 ml-2">
                     {(() => {
                       const totalFacturado = facturasVentaFiltradas.reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0);
                       const idsFacturasFiltradas = facturasVentaFiltradas.map(f => parseInt(f.id));
@@ -4054,49 +4052,51 @@ function App() {
                       const saldo = totalFacturado - totalNC - totalCobrado;
                       return (
                         <>
-                          <div className="text-right">
-                            <p className="text-xs text-slate-500">Facturado</p>
-                            <p className="text-base font-bold text-blue-500 mono">{formatCurrency(totalFacturado, false)}</p>
+                          <div className="text-center">
+                            <p className="text-[10px] text-slate-500">Facturado</p>
+                            <p className="text-sm font-bold text-blue-500 mono">{formatCurrency(totalFacturado, false)}</p>
                           </div>
-                          <div className="text-right">
-                            <p className="text-xs text-slate-500">NC</p>
-                            <p className="text-base font-bold text-red-500 mono">{formatCurrency(totalNC, false)}</p>
+                          <div className="text-center">
+                            <p className="text-[10px] text-slate-500">NC</p>
+                            <p className="text-sm font-bold text-red-500 mono">{formatCurrency(totalNC, false)}</p>
                           </div>
-                          <div className="text-right">
-                            <p className="text-xs text-slate-500">Cobrado</p>
-                            <p className="text-base font-bold text-emerald-500 mono">{formatCurrency(totalCobrado, false)}</p>
+                          <div className="text-center">
+                            <p className="text-[10px] text-slate-500">Cobrado</p>
+                            <p className="text-sm font-bold text-emerald-500 mono">{formatCurrency(totalCobrado, false)}</p>
                           </div>
-                          <div className="text-right">
-                            <p className="text-xs text-slate-500">Saldo</p>
-                            <p className="text-base font-bold text-amber-600 mono">{formatCurrency(saldo, false)}</p>
+                          <div className="text-center">
+                            <p className="text-[10px] text-slate-500">Saldo</p>
+                            <p className="text-sm font-bold text-amber-600 mono">{formatCurrency(saldo, false)}</p>
                           </div>
                         </>
                       );
                     })()}
+                  </div>
+                  <div className="flex items-center gap-1.5 ml-auto">
                     {facturasVenta.some(f => !f.monto || parseFloat(f.monto) === 0) && (
                       <button
                         onClick={corregirFacturasSinMonto}
-                        className="flex items-center gap-2 px-3 py-2 rounded-xl border border-amber-300 bg-amber-50 text-amber-700 font-medium hover:bg-amber-100 transition-all text-sm"
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg border border-amber-300 bg-amber-50 text-amber-700 font-medium hover:bg-amber-100 transition-all text-xs"
                         title="Corregir facturas con Total = $0"
                       >
-                        <RefreshCw className="w-4 h-4" />
-                        Corregir Montos
+                        <RefreshCw className="w-3 h-3" />
+                        Corregir
                       </button>
                     )}
                     <button
                       onClick={recalcularEstadosFacturasVenta}
-                      className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-300 bg-slate-50 text-slate-700 font-medium hover:bg-slate-100 transition-all text-sm"
+                      className="flex items-center gap-1 px-2 py-1 rounded-lg border border-slate-300 bg-slate-50 text-slate-700 font-medium hover:bg-slate-100 transition-all text-xs"
                       title="Recalcular estados de facturas según cobros"
                     >
-                      <RefreshCw className="w-4 h-4" />
-                      Recalcular Estados
+                      <RefreshCw className="w-3 h-3" />
+                      Recalcular
                     </button>
                     <button
                       onClick={() => { setSelectedItem(null); setShowModal('factura-venta'); }}
-                      className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all text-sm"
+                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all text-xs"
                     >
-                      <Plus className="w-4 h-4" />
-                      Nueva Factura
+                      <Plus className="w-3 h-3" />
+                      Nueva
                     </button>
                   </div>
                 </div>
