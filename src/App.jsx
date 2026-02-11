@@ -2100,6 +2100,7 @@ function App() {
   // Filtros para Facturas de Venta (Ingresos)
   const [filtroClienteFacturaVenta, setFiltroClienteFacturaVenta] = useState('todos');
   const [filtroMesFacturaVenta, setFiltroMesFacturaVenta] = useState('todos');
+  const [filtroEstadoFacturaVenta, setFiltroEstadoFacturaVenta] = useState('todos');
 
   // Filtros para Pago Proveedores
   const [filtroProveedorPagoProv, setFiltroProveedorPagoProv] = useState('todos');
@@ -2649,9 +2650,19 @@ function App() {
   };
 
   const updateCobro = async (id, cobro) => {
+    // Obtener el cobro anterior para actualizar estado de factura vieja si cambió
+    const { data: cobroAnterior } = await supabase.from('cobros').select('factura_venta_id').eq('id', id).single();
     const { error } = await supabase.from('cobros').update(cobro).eq('id', id);
     if (!error) {
       await fetchCobros();
+      // Actualizar estado de factura anterior si cambió
+      if (cobroAnterior?.factura_venta_id && cobroAnterior.factura_venta_id !== cobro.factura_venta_id) {
+        await actualizarEstadoFacturaVenta(cobroAnterior.factura_venta_id);
+      }
+      // Actualizar estado de factura actual
+      if (cobro.factura_venta_id) {
+        await actualizarEstadoFacturaVenta(cobro.factura_venta_id);
+      }
       setShowModal(null);
       setSelectedItem(null);
     }
@@ -2660,8 +2671,16 @@ function App() {
 
   const deleteCobro = async (id) => {
     if (!confirm('¿Estás seguro de eliminar este cobro?')) return;
+    // Obtener factura_venta_id antes de eliminar
+    const { data: cobro } = await supabase.from('cobros').select('factura_venta_id').eq('id', id).single();
     const { error } = await supabase.from('cobros').delete().eq('id', id);
-    if (!error) await fetchCobros();
+    if (!error) {
+      await fetchCobros();
+      // Actualizar estado de factura si tenía una asociada
+      if (cobro?.factura_venta_id) {
+        await actualizarEstadoFacturaVenta(cobro.factura_venta_id);
+      }
+    }
   };
 
   // Sincronizar cobros antiguos con facturas (por descripción o cliente)
@@ -2673,6 +2692,7 @@ function App() {
     }
 
     let actualizados = 0;
+    const facturasActualizadas = new Set();
     for (const cobro of cobrosSinFactura) {
       // Buscar número de factura en la descripción (ej: "Fact. 0001-00000123")
       const match = cobro.descripcion?.match(/Fact\.\s*([A-Z0-9\-]+)/i);
@@ -2684,12 +2704,19 @@ function App() {
             .from('cobros')
             .update({ factura_venta_id: factura.id })
             .eq('id', cobro.id);
-          if (!error) actualizados++;
+          if (!error) {
+            actualizados++;
+            facturasActualizadas.add(factura.id);
+          }
         }
       }
     }
 
     await fetchCobros();
+    // Actualizar estados de todas las facturas afectadas
+    for (const facturaId of facturasActualizadas) {
+      await actualizarEstadoFacturaVenta(facturaId);
+    }
     alert(`Se actualizaron ${actualizados} de ${cobrosSinFactura.length} cobros`);
   };
 
@@ -2719,6 +2746,44 @@ function App() {
 
     await fetchFacturasVenta();
     alert(`Se corrigieron ${corregidas} de ${facturasSinMonto.length} facturas`);
+  };
+
+  // Recalcular estados de todas las facturas de venta
+  const recalcularEstadosFacturasVenta = async () => {
+    if (!confirm('¿Recalcular estados de todas las facturas de venta?')) return;
+
+    // Obtener todos los cobros y NC de la base de datos
+    const { data: todosLosCobros } = await supabase.from('cobros').select('*');
+    const { data: todasLasNC } = await supabase.from('notas_credito_venta').select('*');
+    const { data: todasLasFacturas } = await supabase.from('facturas_venta').select('*');
+
+    let actualizadas = 0;
+    let cambios = 0;
+
+    for (const factura of todasLasFacturas || []) {
+      const totalCobros = (todosLosCobros || [])
+        .filter(c => parseInt(c.factura_venta_id) === parseInt(factura.id))
+        .reduce((sum, c) => sum + (parseFloat(c.monto) || 0), 0);
+
+      const totalNC = (todasLasNC || [])
+        .filter(nc => parseInt(nc.factura_venta_id) === parseInt(factura.id))
+        .reduce((sum, nc) => sum + (parseFloat(nc.monto) || 0), 0);
+
+      const montoFactura = parseFloat(factura.monto) || 0;
+      const saldoPendiente = montoFactura - totalNC - totalCobros;
+      // Tolerancia de $10 para diferencias de redondeo
+      const nuevoEstado = saldoPendiente <= 10 ? 'cobrada' : 'pendiente';
+
+      if (factura.estado !== nuevoEstado) {
+        await supabase.from('facturas_venta').update({ estado: nuevoEstado }).eq('id', factura.id);
+        cambios++;
+        console.log(`Factura ${factura.numero}: ${factura.estado} -> ${nuevoEstado} (Monto: ${montoFactura}, Cobros: ${totalCobros}, NC: ${totalNC}, Saldo: ${saldoPendiente})`);
+      }
+      actualizadas++;
+    }
+
+    await fetchFacturasVenta();
+    alert(`Se revisaron ${actualizadas} facturas. Se actualizaron ${cambios} estados.`);
   };
 
   // CRUD Notas de Crédito de Venta
@@ -2764,7 +2829,8 @@ function App() {
     if (facturaDB) {
       const montoFactura = parseFloat(facturaDB.monto) || 0;
       const saldoPendiente = montoFactura - totalNC - totalCobros;
-      const nuevoEstado = saldoPendiente <= 0 ? 'cobrada' : 'pendiente';
+      // Tolerancia de $10 para diferencias de redondeo
+      const nuevoEstado = saldoPendiente <= 10 ? 'cobrada' : 'pendiente';
       await supabase.from('facturas_venta').update({ estado: nuevoEstado }).eq('id', facturaId);
       await fetchFacturasVenta();
     }
@@ -3908,6 +3974,7 @@ function App() {
               // Filtrar facturas de venta
               const facturasVentaFiltradas = facturasVenta.filter(f => {
                 const matchCliente = filtroClienteFacturaVenta === 'todos' || parseInt(f.cliente_id) === parseInt(filtroClienteFacturaVenta);
+                const matchEstado = filtroEstadoFacturaVenta === 'todos' || f.estado === filtroEstadoFacturaVenta;
                 const fechaFactura = new Date(f.fecha + 'T12:00:00');
                 const hoy = new Date();
                 hoy.setHours(0, 0, 0, 0);
@@ -3929,7 +3996,7 @@ function App() {
                 } else if (filtroMesFacturaVenta !== 'todos') {
                   matchMes = fechaFactura.getMonth() === parseInt(filtroMesFacturaVenta);
                 }
-                return matchCliente && matchMes;
+                return matchCliente && matchMes && matchEstado;
               });
 
               return (
@@ -3954,6 +4021,16 @@ function App() {
                       <option value="ayer">Ayer</option>
                       <option value="ultimos7">Últimos 7 días</option>
                       {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                    </select>
+                    <select
+                      value={filtroEstadoFacturaVenta}
+                      onChange={(e) => setFiltroEstadoFacturaVenta(e.target.value)}
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                    >
+                      <option value="todos">Todos los estados</option>
+                      <option value="pendiente">Pendiente</option>
+                      <option value="cobrada">Cobrada</option>
+                      <option value="vencida">Vencida</option>
                     </select>
                   </div>
                   <div className="flex items-center gap-3">
@@ -4006,6 +4083,14 @@ function App() {
                         Corregir Montos
                       </button>
                     )}
+                    <button
+                      onClick={recalcularEstadosFacturasVenta}
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-300 bg-slate-50 text-slate-700 font-medium hover:bg-slate-100 transition-all text-sm"
+                      title="Recalcular estados de facturas según cobros"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Recalcular Estados
+                    </button>
                     <button
                       onClick={() => { setSelectedItem(null); setShowModal('factura-venta'); }}
                       className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all text-sm"
