@@ -2065,7 +2065,7 @@ function App() {
   const [filtroEstado, setFiltroEstado] = useState('todos');
   const [filtroMesPago, setFiltroMesPago] = useState('todos');
   const [filtroTipoPago, setFiltroTipoPago] = useState('todos');
-  const [filtroMesEmpleado, setFiltroMesEmpleado] = useState(new Date().getMonth().toString()); // Mes actual por defecto
+  const [filtroMesEmpleado, setFiltroMesEmpleado] = useState('todos');
   const [filtroConceptoEmpleado, setFiltroConceptoEmpleado] = useState('todos');
   const [filtroCategoriaProveedor, setFiltroCategoriaProveedor] = useState('todos');
   const [filtroMetodoPago, setFiltroMetodoPago] = useState('todos');
@@ -5319,36 +5319,93 @@ function App() {
         )}
 
         {/* Pago Empleados */}
-        {activeTab === 'pago-empleados' && (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
-              <h2 className="text-xl font-bold">Pago a Empleados</h2>
-              <div className="flex flex-wrap items-center gap-3">
+        {activeTab === 'pago-empleados' && (() => {
+          const pagosEmpleados = pagos.filter(p => p.tipo === 'sueldo');
+
+          // Filtrar por fecha
+          const hoy = new Date();
+          hoy.setHours(0, 0, 0, 0);
+          const pagosFiltradosFecha = pagosEmpleados.filter(p => {
+            const fechaPago = new Date(p.fecha + 'T12:00:00');
+            if (filtroMesEmpleado === 'todos') return true;
+            if (filtroMesEmpleado === 'ultimos7') {
+              const hace7dias = new Date(hoy);
+              hace7dias.setDate(hace7dias.getDate() - 7);
+              return fechaPago >= hace7dias;
+            }
+            if (filtroMesEmpleado === 'ultimos15') {
+              const hace15dias = new Date(hoy);
+              hace15dias.setDate(hace15dias.getDate() - 15);
+              return fechaPago >= hace15dias;
+            }
+            return fechaPago.getMonth() === parseInt(filtroMesEmpleado);
+          });
+
+          // Filtrar por concepto
+          const pagosFiltrados = pagosFiltradosFecha.filter(p => filtroConceptoEmpleado === 'todos' || p.descripcion?.includes(filtroConceptoEmpleado));
+
+          // Calcular totales por concepto (sobre los filtrados por fecha)
+          const totalPorConcepto = {};
+          CONCEPTOS_EMPLEADO.forEach(c => {
+            totalPorConcepto[c.label] = pagosFiltradosFecha
+              .filter(p => p.descripcion?.includes(c.label))
+              .reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
+          });
+          const totalGeneral = pagosFiltrados.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
+
+          return (
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <select
+                  value={filtroMesEmpleado}
+                  onChange={(e) => setFiltroMesEmpleado(e.target.value)}
+                  className="px-2 py-1 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-xs"
+                >
+                  <option value="todos">Todos</option>
+                  <option value="ultimos7">Últ. 7 días</option>
+                  <option value="ultimos15">Últ. 15 días</option>
+                  {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                </select>
                 <select
                   value={filtroConceptoEmpleado}
                   onChange={(e) => setFiltroConceptoEmpleado(e.target.value)}
-                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
+                  className="px-2 py-1 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-xs"
                 >
-                  <option value="todos">Todos los conceptos</option>
+                  <option value="todos">Todos</option>
                   {CONCEPTOS_EMPLEADO.map(c => <option key={c.value} value={c.label}>{c.label}</option>)}
                 </select>
-                <div className="text-right hidden sm:block">
-                  <p className="text-xs text-slate-500">Total filtrado</p>
-                  <p className="text-lg font-bold text-emerald-500 mono">
-                    {formatCurrency(pagos
-                      .filter(p => p.tipo === 'sueldo')
-                      .filter(p => filtroConceptoEmpleado === 'todos' || p.descripcion?.includes(filtroConceptoEmpleado))
-                      .reduce((sum, p) => sum + p.monto, 0))}
-                  </p>
-                </div>
-                <button
-                  onClick={() => { setSelectedItem({ tipo: 'sueldo' }); setShowModal('pago'); }}
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all text-sm"
-                >
-                  <Plus className="w-4 h-4" />
-                  Registrar Pago
-                </button>
               </div>
+              <div className="flex items-center gap-2">
+                {filtroConceptoEmpleado === 'todos' ? (
+                  <>
+                    {CONCEPTOS_EMPLEADO.map(c => (
+                      totalPorConcepto[c.label] > 0 && (
+                        <div key={c.value} className="text-center">
+                          <p className="text-[10px] text-slate-500">{c.label}</p>
+                          <p className="text-sm font-bold text-emerald-500 mono">{formatCurrency(totalPorConcepto[c.label], false)}</p>
+                        </div>
+                      )
+                    ))}
+                  </>
+                ) : (
+                  <div className="text-center">
+                    <p className="text-[10px] text-slate-500">{filtroConceptoEmpleado}</p>
+                    <p className="text-sm font-bold text-emerald-500 mono">{formatCurrency(totalGeneral, false)}</p>
+                  </div>
+                )}
+                <div className="text-center border-l border-slate-200 pl-2 ml-1">
+                  <p className="text-[10px] text-slate-500">Total</p>
+                  <p className="text-sm font-bold text-blue-500 mono">{formatCurrency(totalGeneral, false)}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setSelectedItem({ tipo: 'sueldo' }); setShowModal('pago'); }}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all text-xs"
+              >
+                <Plus className="w-3 h-3" />
+                Nuevo
+              </button>
             </div>
 
             <div className="glass rounded-2xl glow overflow-hidden">
@@ -5364,16 +5421,10 @@ function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {pagos
-                      .filter(p => p.tipo === 'sueldo')
-                      .filter(p => filtroConceptoEmpleado === 'todos' || p.descripcion?.includes(filtroConceptoEmpleado))
-                      .length === 0 ? (
+                    {pagosFiltrados.length === 0 ? (
                       <tr><td colSpan="5" className="px-3 py-8 text-center text-slate-400 text-xs">No hay pagos con los filtros seleccionados</td></tr>
                     ) : (
-                      pagos
-                        .filter(p => p.tipo === 'sueldo')
-                        .filter(p => filtroConceptoEmpleado === 'todos' || p.descripcion?.includes(filtroConceptoEmpleado))
-                        .map(p => (
+                      pagosFiltrados.map(p => (
                           <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                             <td className="px-3 py-2.5 text-xs">{formatDate(p.fecha)}</td>
                             <td className="px-3 py-2.5 text-xs">{p.descripcion}</td>
@@ -5392,7 +5443,8 @@ function App() {
               </div>
             </div>
           </div>
-        )}
+        );
+        })()}
 
         {/* Pagos - Consulta General */}
         {activeTab === 'pagos' && (
@@ -6990,19 +7042,29 @@ function App() {
 
               const totalPagos = pagosEmpleado.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
 
+              // Calcular totales por concepto para este empleado
+              const totalPorConceptoEmpleado = {};
+              CONCEPTOS_EMPLEADO.forEach(c => {
+                totalPorConceptoEmpleado[c.label] = pagosEmpleado
+                  .filter(p => p.descripcion?.includes(c.label))
+                  .reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
+              });
+
               return (
                 <>
-                  {/* Resumen */}
-                  <div className="bg-gradient-to-r from-emerald-50 to-emerald-100 rounded-xl p-4 mb-4">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="text-sm text-emerald-600">Total pagado</p>
-                        <p className="text-2xl font-bold text-emerald-700 mono">{formatCurrency(totalPagos)}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm text-emerald-600">Cantidad de pagos</p>
-                        <p className="text-2xl font-bold text-emerald-700">{pagosEmpleado.length}</p>
-                      </div>
+                  {/* Resumen por concepto */}
+                  <div className="flex flex-wrap items-center justify-center gap-3 mb-4">
+                    {CONCEPTOS_EMPLEADO.map(c => (
+                      totalPorConceptoEmpleado[c.label] > 0 && (
+                        <div key={c.value} className="text-center">
+                          <p className="text-[10px] text-slate-500">{c.label}</p>
+                          <p className="text-sm font-bold text-emerald-500 mono">{formatCurrency(totalPorConceptoEmpleado[c.label], false)}</p>
+                        </div>
+                      )
+                    ))}
+                    <div className="text-center border-l border-slate-200 pl-3 ml-1">
+                      <p className="text-[10px] text-slate-500">Total</p>
+                      <p className="text-sm font-bold text-blue-500 mono">{formatCurrency(totalPagos, false)}</p>
                     </div>
                   </div>
 
