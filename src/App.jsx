@@ -3608,17 +3608,17 @@ function App() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                     <div className="bg-blue-50 rounded-xl p-3">
                       <p className="text-xs text-slate-500">Compras del Mes</p>
-                      <p className="text-lg font-bold text-blue-600 mono">{formatCurrency(totalCompras)}</p>
+                      <p className="text-lg font-bold text-blue-600 mono">{formatCurrency(totalCompras, false)}</p>
                       <p className="text-xs text-slate-400">{comprasDelMes.length} facturas</p>
                     </div>
                     <div className="bg-emerald-50 rounded-xl p-3">
                       <p className="text-xs text-slate-500">Pago Proveedores</p>
-                      <p className="text-lg font-bold text-emerald-600 mono">{formatCurrency(totalPagadoMes)}</p>
+                      <p className="text-lg font-bold text-emerald-600 mono">{formatCurrency(totalPagadoMes, false)}</p>
                       <p className="text-xs text-slate-400">{pagosDelMes.length} pagos</p>
                     </div>
                     <div className="bg-amber-50 rounded-xl p-3">
                       <p className="text-xs text-slate-500">Saldo Pendiente</p>
-                      <p className="text-lg font-bold text-amber-600 mono">{formatCurrency(saldoPendienteCompras)}</p>
+                      <p className="text-lg font-bold text-amber-600 mono">{formatCurrency(saldoPendienteCompras, false)}</p>
                       <p className="text-xs text-slate-400">de compras del mes</p>
                     </div>
                     <div className="bg-purple-50 rounded-xl p-3">
