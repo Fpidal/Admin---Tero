@@ -3515,12 +3515,12 @@ function App() {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 pb-12">
+      <main className="max-w-7xl mx-auto px-2 sm:px-6 pb-12">
         {/* Dashboard */}
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
             {/* Stats Cards */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               <div className="stat-card glass rounded-2xl p-4 sm:p-5 glow">
                 <div className="flex items-start justify-between">
                   <div>
