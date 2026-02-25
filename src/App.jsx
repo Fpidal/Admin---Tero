@@ -3394,6 +3394,32 @@ function App() {
           const fechaSinHora = new Date(fechaVencimiento);
           fechaSinHora.setHours(0, 0, 0, 0);
           matchMes = fechaSinHora.getTime() === ayer.getTime();
+        } else if (filtroMesFactura === 'semana') {
+          // Esta semana calendario (lunes a domingo)
+          const diaSemana = hoy.getDay(); // 0=domingo, 1=lunes...
+          const diasDesdeIunes = diaSemana === 0 ? 6 : diaSemana - 1;
+          const inicioSemana = new Date(hoy);
+          inicioSemana.setDate(hoy.getDate() - diasDesdeIunes);
+          inicioSemana.setHours(0, 0, 0, 0);
+          const finSemana = new Date(inicioSemana);
+          finSemana.setDate(inicioSemana.getDate() + 6);
+          finSemana.setHours(23, 59, 59, 999);
+          const fechaSinHora = new Date(fechaVencimiento);
+          fechaSinHora.setHours(12, 0, 0, 0);
+          matchMes = fechaSinHora >= inicioSemana && fechaSinHora <= finSemana;
+        } else if (filtroMesFactura === '2semanas') {
+          // Esta semana y la próxima (lunes a domingo x2)
+          const diaSemana = hoy.getDay();
+          const diasDesdeIunes = diaSemana === 0 ? 6 : diaSemana - 1;
+          const inicioSemana = new Date(hoy);
+          inicioSemana.setDate(hoy.getDate() - diasDesdeIunes);
+          inicioSemana.setHours(0, 0, 0, 0);
+          const finDosSemanas = new Date(inicioSemana);
+          finDosSemanas.setDate(inicioSemana.getDate() + 13); // 2 semanas = 14 días - 1
+          finDosSemanas.setHours(23, 59, 59, 999);
+          const fechaSinHora = new Date(fechaVencimiento);
+          fechaSinHora.setHours(12, 0, 0, 0);
+          matchMes = fechaSinHora >= inicioSemana && fechaSinHora <= finDosSemanas;
         } else if (filtroMesFactura === 'proximos7') {
           const en7dias = new Date(hoy);
           en7dias.setDate(en7dias.getDate() + 7);
@@ -3404,7 +3430,29 @@ function App() {
 
         // Filtro por fecha de factura (fecha de confección, no vencimiento)
         let matchFechaFactura = true;
-        if (filtroMesFechaFactura !== 'todos') {
+        if (filtroMesFechaFactura === 'semana') {
+          const fechaFactura = new Date(f.fecha + 'T12:00:00');
+          const diaSemana = hoy.getDay();
+          const diasDesdeIunes = diaSemana === 0 ? 6 : diaSemana - 1;
+          const inicioSemana = new Date(hoy);
+          inicioSemana.setDate(hoy.getDate() - diasDesdeIunes);
+          inicioSemana.setHours(0, 0, 0, 0);
+          const finSemana = new Date(inicioSemana);
+          finSemana.setDate(inicioSemana.getDate() + 6);
+          finSemana.setHours(23, 59, 59, 999);
+          matchFechaFactura = fechaFactura >= inicioSemana && fechaFactura <= finSemana;
+        } else if (filtroMesFechaFactura === '2semanas') {
+          const fechaFactura = new Date(f.fecha + 'T12:00:00');
+          const diaSemana = hoy.getDay();
+          const diasDesdeIunes = diaSemana === 0 ? 6 : diaSemana - 1;
+          const inicioSemana = new Date(hoy);
+          inicioSemana.setDate(hoy.getDate() - diasDesdeIunes);
+          inicioSemana.setHours(0, 0, 0, 0);
+          const finDosSemanas = new Date(inicioSemana);
+          finDosSemanas.setDate(inicioSemana.getDate() + 13);
+          finDosSemanas.setHours(23, 59, 59, 999);
+          matchFechaFactura = fechaFactura >= inicioSemana && fechaFactura <= finDosSemanas;
+        } else if (filtroMesFechaFactura !== 'todos') {
           const fechaFactura = new Date(f.fecha + 'T12:00:00');
           matchFechaFactura = fechaFactura.getMonth() === parseInt(filtroMesFechaFactura);
         }
@@ -4583,6 +4631,8 @@ function App() {
                   <option value="todos">Venc.</option>
                   <option value="hoy">Hoy</option>
                   <option value="ayer">Ayer</option>
+                  <option value="semana">Esta sem.</option>
+                  <option value="2semanas">2 sem.</option>
                   <option value="proximos7">Próx. 7 días</option>
                   {MESES.map((mes, index) => (
                     <option key={index} value={index}>{mes.slice(0, 3)}</option>
@@ -4595,6 +4645,8 @@ function App() {
                   title="Filtrar por fecha de factura"
                 >
                   <option value="todos">F.Fact.</option>
+                  <option value="semana">Esta sem.</option>
+                  <option value="2semanas">2 sem.</option>
                   {MESES.map((mes, index) => (
                     <option key={index} value={index}>{mes.slice(0, 3)}</option>
                   ))}
