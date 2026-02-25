@@ -4745,6 +4745,7 @@ function App() {
                       <th className="px-3 py-2 font-medium">Proveedor</th>
                       <th className="px-3 py-2 font-medium">Número</th>
                       <th className="px-3 py-2 font-medium">Obs.</th>
+                      <th className="px-3 py-2 font-medium">Fecha</th>
                       <th className="px-3 py-2 font-medium">Vencimiento</th>
                       <th className="px-3 py-2 font-medium">Estado</th>
                       <th className="px-3 py-2 font-medium text-right">Monto</th>
@@ -4775,6 +4776,7 @@ function App() {
                           <td className="px-3 py-2 font-medium">{f.proveedor}</td>
                           <td className="px-3 py-2 text-slate-400">{f.numero}</td>
                           <td className="px-3 py-2">{f.concepto}</td>
+                          <td className="px-3 py-2 text-slate-500">{formatDate(f.fecha)}</td>
                           <td className="px-3 py-2">
                             <div>
                               <p>{formatDate(f.vencimiento)}</p>
