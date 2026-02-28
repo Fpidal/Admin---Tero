@@ -2842,19 +2842,30 @@ function App() {
     const { factura_id, concepto_empleado, ...pagoData } = pago;
     console.log('Creando pago:', pagoData);
 
-    // Si es pago a proveedor, agregarlo a una orden pendiente
+    // Agregar a orden pendiente según tipo
     if (pagoData.tipo === 'factura') {
-      // Buscar orden pendiente existente o crear una nueva
-      let ordenPendiente = ordenesPago.find(o => o.estado === 'pendiente');
+      // Buscar orden pendiente de proveedores o crear una nueva
+      let ordenPendiente = ordenesPago.find(o => o.estado === 'pendiente' && (o.tipo === 'proveedores' || !o.tipo));
       if (!ordenPendiente) {
-        ordenPendiente = await createOrdenPago();
+        ordenPendiente = await createOrdenPago('proveedores');
+      }
+      if (ordenPendiente) {
+        pagoData.orden_pago_id = ordenPendiente.id;
+        pagoData.estado_pago = 'pendiente';
+      }
+    } else if (pagoData.tipo === 'sueldo') {
+      // Buscar orden pendiente de empleados con el mismo método de pago o crear una nueva
+      const metodo = pagoData.metodo || 'Efectivo';
+      let ordenPendiente = ordenesPago.find(o => o.estado === 'pendiente' && o.tipo === 'empleados' && o.metodo_pago === metodo);
+      if (!ordenPendiente) {
+        ordenPendiente = await createOrdenPago('empleados', metodo);
       }
       if (ordenPendiente) {
         pagoData.orden_pago_id = ordenPendiente.id;
         pagoData.estado_pago = 'pendiente';
       }
     } else {
-      // Pagos de empleados y otros se confirman directamente
+      // Otros pagos se confirman directamente
       pagoData.estado_pago = 'confirmado';
     }
 
@@ -2927,10 +2938,18 @@ function App() {
   };
 
   // CRUD Ordenes de Pago
-  const createOrdenPago = async () => {
+  const createOrdenPago = async (tipo = 'proveedores', metodoPago = null) => {
+    const ordenData = {
+      fecha: new Date().toISOString().split('T')[0],
+      estado: 'pendiente',
+      tipo: tipo
+    };
+    if (metodoPago) {
+      ordenData.metodo_pago = metodoPago;
+    }
     const { data, error } = await supabase
       .from('ordenes_pago')
-      .insert([{ fecha: new Date().toISOString().split('T')[0], estado: 'pendiente' }])
+      .insert([ordenData])
       .select();
     if (!error && data) {
       await fetchOrdenesPago();
@@ -5651,29 +5670,29 @@ function App() {
         {activeTab === 'ordenes-pago' && (
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
-              <h2 className="text-lg font-bold">Órdenes de Pago a Proveedores</h2>
+              <h2 className="text-lg font-bold">Órdenes de Pago</h2>
             </div>
 
-            {/* Órdenes pendientes */}
-            {ordenesPago.filter(o => o.estado === 'pendiente').length > 0 && (
+            {/* Órdenes pendientes de PROVEEDORES */}
+            {ordenesPago.filter(o => o.estado === 'pendiente' && (o.tipo === 'proveedores' || !o.tipo)).length > 0 && (
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-amber-600 flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  Órdenes Pendientes de Confirmación
+                <h3 className="text-sm font-semibold text-blue-600 flex items-center gap-2">
+                  <Truck className="w-4 h-4" />
+                  Proveedores - Pendientes
                 </h3>
-                {ordenesPago.filter(o => o.estado === 'pendiente').map(orden => {
+                {ordenesPago.filter(o => o.estado === 'pendiente' && (o.tipo === 'proveedores' || !o.tipo)).map(orden => {
                   const pagosOrden = pagos.filter(p => p.orden_pago_id === orden.id && p.estado_pago === 'pendiente');
                   const totalOrden = pagosOrden.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
 
                   return (
-                    <div key={orden.id} className="glass rounded-xl p-4 border-2 border-amber-200">
+                    <div key={orden.id} className="glass rounded-xl p-4 border-2 border-blue-200">
                       <div className="flex justify-between items-start mb-3">
                         <div>
                           <p className="font-semibold">Orden #{orden.id}</p>
                           <p className="text-xs text-slate-500">{formatDate(orden.fecha)}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-lg font-bold text-amber-600 mono">{formatCurrency(totalOrden)}</p>
+                          <p className="text-lg font-bold text-blue-600 mono">{formatCurrency(totalOrden)}</p>
                           <p className="text-xs text-slate-500">{pagosOrden.length} pago(s)</p>
                         </div>
                       </div>
@@ -5734,12 +5753,97 @@ function App() {
               </div>
             )}
 
+            {/* Órdenes pendientes de EMPLEADOS (agrupadas por método de pago) */}
+            {ordenesPago.filter(o => o.estado === 'pendiente' && o.tipo === 'empleados').length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-cyan-600 flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  Empleados - Pendientes
+                </h3>
+                {ordenesPago.filter(o => o.estado === 'pendiente' && o.tipo === 'empleados').map(orden => {
+                  const pagosOrden = pagos.filter(p => p.orden_pago_id === orden.id && p.estado_pago === 'pendiente');
+                  const totalOrden = pagosOrden.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
+
+                  return (
+                    <div key={orden.id} className="glass rounded-xl p-4 border-2 border-cyan-200">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <p className="font-semibold flex items-center gap-2">
+                            Orden #{orden.id}
+                            <span className="px-2 py-0.5 text-xs bg-cyan-100 text-cyan-700 rounded-full">
+                              {orden.metodo_pago || 'Sin método'}
+                            </span>
+                          </p>
+                          <p className="text-xs text-slate-500">{formatDate(orden.fecha)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-cyan-600 mono">{formatCurrency(totalOrden)}</p>
+                          <p className="text-xs text-slate-500">{pagosOrden.length} pago(s)</p>
+                        </div>
+                      </div>
+
+                      {/* Lista de pagos en la orden */}
+                      <div className="space-y-2 mb-4">
+                        {pagosOrden.map(p => (
+                          <div key={p.id} className="flex justify-between items-center bg-white/50 rounded-lg p-2 text-sm">
+                            <div className="flex-1">
+                              <p className="font-medium text-xs">{p.descripcion}</p>
+                              <p className="text-xs text-slate-400">{formatDate(p.fecha)}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold mono text-sm">{formatCurrency(p.monto)}</span>
+                              <button
+                                onClick={() => {
+                                  if (confirm('¿Quitar este pago de la orden?')) {
+                                    anularPagoDeOrden(p.id);
+                                  }
+                                }}
+                                className="p-1 text-red-500 hover:bg-red-50 rounded"
+                                title="Quitar de la orden"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Botones de acción */}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            if (confirm('¿Confirmar esta orden de pago? Los pagos serán aplicados.')) {
+                              confirmarOrdenPago(orden.id);
+                            }
+                          }}
+                          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all text-sm"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          Confirmar Orden
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm('¿Anular toda la orden? Se eliminarán todos los pagos pendientes.')) {
+                              anularOrdenPago(orden.id);
+                            }
+                          }}
+                          className="px-4 py-2 rounded-xl border border-red-200 text-red-500 hover:bg-red-50 transition-all text-sm"
+                        >
+                          Anular
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             {/* Mensaje si no hay órdenes pendientes */}
             {ordenesPago.filter(o => o.estado === 'pendiente').length === 0 && (
               <div className="glass rounded-xl p-8 text-center">
                 <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
                 <p className="text-slate-500">No hay órdenes pendientes de confirmación</p>
-                <p className="text-xs text-slate-400 mt-1">Los pagos a proveedores aparecerán aquí para su aprobación</p>
+                <p className="text-xs text-slate-400 mt-1">Los pagos a proveedores y empleados aparecerán aquí para su aprobación</p>
               </div>
             )}
 
@@ -5768,6 +5872,9 @@ function App() {
                               <ChevronDown className="w-4 h-4 text-slate-400" />
                             </span>
                             <span className="font-medium">Orden #{orden.id}</span>
+                            <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${orden.tipo === 'empleados' ? 'bg-cyan-100 text-cyan-700' : 'bg-blue-100 text-blue-700'}`}>
+                              {orden.tipo === 'empleados' ? `Emp - ${orden.metodo_pago || ''}` : 'Prov'}
+                            </span>
                             <span className="text-xs text-slate-500">{formatDate(orden.fecha)}</span>
                             {pagosPendientesOrden.length > 0 && (
                               <span className="px-2 py-0.5 text-xs bg-amber-100 text-amber-700 rounded-full font-medium">
