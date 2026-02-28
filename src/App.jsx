@@ -5584,16 +5584,6 @@ function App() {
                 </p>
               </div>
               <div className="glass rounded-xl p-3">
-                <p className="text-xs text-slate-500">Total Eventos</p>
-                <p className="text-lg font-bold text-purple-500 mono">
-                  {formatCurrency(pagos
-                    .filter(p => (p.tipo === 'evento' || p.tipo === 'evento_parcial') && p.estado_pago === 'confirmado')
-                    .filter(p => filtroMesPago === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesPago))
-                    .filter(p => filtroMetodoPago === 'todos' || p.metodo === filtroMetodoPago)
-                    .reduce((sum, p) => sum + p.monto, 0), false)}
-                </p>
-              </div>
-              <div className="glass rounded-xl p-3">
                 <p className="text-xs text-slate-500">Total General</p>
                 <p className="text-lg font-bold text-emerald-500 mono">
                   {formatCurrency(pagos
@@ -5604,17 +5594,6 @@ function App() {
                     .reduce((sum, p) => sum + p.monto, 0), false)}
                 </p>
               </div>
-            </div>
-
-            {/* Botón Nuevo Pago Evento */}
-            <div className="flex justify-end">
-              <button
-                onClick={() => setShowModal('pago-evento')}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 text-white font-medium hover:from-purple-600 hover:to-purple-700 transition-all text-sm"
-              >
-                <Plus className="w-4 h-4" />
-                Nuevo Pago Evento
-              </button>
             </div>
 
             <div className="glass rounded-2xl glow overflow-hidden">
@@ -7053,78 +7032,6 @@ function App() {
           </div>
         );
       })()}
-
-      {/* Modal Pago Evento */}
-      {showModal === 'pago-evento' && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
-            <div className="p-4">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-bold text-slate-800">Nuevo Pago Evento</h2>
-                <button onClick={() => setShowModal(null)} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                const data = {
-                  tipo: formData.get('tipo_evento'),
-                  descripcion: formData.get('descripcion'),
-                  monto: parseFloat(parseInputMonto(formData.get('monto'))),
-                  fecha: formData.get('fecha'),
-                  metodo: formData.get('metodo'),
-                  estado: 'confirmado'
-                };
-                const { error } = await supabase.from('pagos').insert([data]);
-                if (!error) {
-                  await fetchPagos();
-                  setShowModal(null);
-                }
-              }} className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">Tipo *</label>
-                    <select name="tipo_evento" required className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-purple-500 text-sm">
-                      <option value="evento">Evento Completo</option>
-                      <option value="evento_parcial">Evento Parcial</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">Fecha *</label>
-                    <input name="fecha" type="date" defaultValue={new Date().toISOString().split('T')[0]} required className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-purple-500 text-sm" />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Descripción *</label>
-                  <input name="descripcion" required placeholder="Ej: DJ Fiesta 15/01, Técnica Evento Corporativo" className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-purple-500 text-sm" />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">Monto *</label>
-                    <input name="monto" required placeholder="0" className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-purple-500 text-sm text-right" onChange={(e) => e.target.value = formatInputMonto(e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">Método *</label>
-                    <select name="metodo" required className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-purple-500 text-sm">
-                      <option value="Transferencia">Transferencia</option>
-                      <option value="Efectivo">Efectivo</option>
-                      <option value="Mercado Pago">Mercado Pago</option>
-                    </select>
-                  </div>
-                </div>
-
-                <button type="submit" className="w-full px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 text-white font-medium hover:from-purple-600 hover:to-purple-700 transition-all text-sm">
-                  Registrar Pago
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Modal Estadísticas Empleado */}
       {empleadoStats && (
