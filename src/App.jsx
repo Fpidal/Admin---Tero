@@ -1259,6 +1259,8 @@ function ModalEmpleado({ empleado, onClose, onSave, onDelete }) {
     sueldo_mensual: empleado?.sueldo_mensual || '',
     plus: empleado?.plus || '',
     sueldo: empleado?.sueldo || '',
+    cantidad_turnos: empleado?.cantidad_turnos || '',
+    pago_evento: empleado?.pago_evento || '',
     fecha_ingreso: empleado?.fecha_ingreso || '',
     banco: empleado?.banco || '',
     cbu: empleado?.cbu || ''
@@ -1282,9 +1284,11 @@ function ModalEmpleado({ empleado, onClose, onSave, onDelete }) {
       sueldo_semanal: parseFloat(form.sueldo_semanal) || 0,
       sueldo_mensual: sueldoMensualCalculado,
       plus: plusMonto,
-      sueldo: sueldoTotal
+      sueldo: sueldoTotal,
+      cantidad_turnos: parseInt(form.cantidad_turnos) || 0,
+      pago_evento: parseFloat(form.pago_evento) || 0
     };
-    const result = await onSave(dataToSave);
+    const result = await onSave(dataToSave, empleado);
     setSaving(false);
     if (result?.error) {
       setError(result.error.message || 'Error al guardar. Verificá los permisos de la base de datos.');
@@ -1376,6 +1380,17 @@ function ModalEmpleado({ empleado, onClose, onSave, onDelete }) {
               </div>
             </div>
           </div>
+          {/* Turnos y Pago Evento */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Turnos por semana</label>
+              <input type="number" min="0" max="7" value={form.cantidad_turnos} onChange={e => setForm({...form, cantidad_turnos: e.target.value})} className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm text-right" placeholder="0" />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Pago por evento</label>
+              <input type="text" value={formatInputMonto(form.pago_evento)} onChange={e => setForm({...form, pago_evento: parseInputMonto(e.target.value)})} className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm text-right" placeholder="0" />
+            </div>
+          </div>
           {/* Banco y CBU */}
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -1415,6 +1430,68 @@ function ModalEmpleado({ empleado, onClose, onSave, onDelete }) {
             </button>
           )}
         </form>
+      </div>
+    </div>
+  );
+}
+
+// Modal Historial de Sueldos
+function ModalHistorialSueldos({ empleado, historial, onClose }) {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="glass rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h2 className="text-xl font-bold">Historial de Sueldos</h2>
+            <p className="text-sm text-slate-500">{empleado?.nombre}</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
+        </div>
+
+        {historial.length === 0 ? (
+          <div className="text-center py-8 text-slate-400">
+            No hay cambios de sueldo registrados
+          </div>
+        ) : (
+          <table className="w-full">
+            <thead>
+              <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                <th className="pb-3 font-medium">Fecha</th>
+                <th className="pb-3 font-medium text-right">Semanal</th>
+                <th className="pb-3 font-medium text-right">Mensual</th>
+                <th className="pb-3 font-medium text-right">Plus</th>
+                <th className="pb-3 font-medium text-right">Total</th>
+                <th className="pb-3 font-medium text-right">Variación</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {historial.map((h, idx) => (
+                <tr key={h.id} className="hover:bg-slate-50/50">
+                  <td className="py-3 text-sm">{new Date(h.fecha).toLocaleDateString('es-AR')}</td>
+                  <td className="py-3 text-sm text-right mono">{formatCurrency(h.sueldo_semanal || 0, false)}</td>
+                  <td className="py-3 text-sm text-right mono">{formatCurrency(h.sueldo_mensual || 0, false)}</td>
+                  <td className="py-3 text-sm text-right mono">{formatCurrency(h.plus || 0, false)}</td>
+                  <td className="py-3 text-sm text-right mono font-medium">{formatCurrency(h.sueldo_total || 0, false)}</td>
+                  <td className="py-3 text-sm text-right">
+                    {idx === historial.length - 1 ? (
+                      <span className="text-slate-400">-</span>
+                    ) : (
+                      <span className={`font-medium ${h.variacion_porcentaje > 0 ? 'text-emerald-600' : h.variacion_porcentaje < 0 ? 'text-red-500' : 'text-slate-400'}`}>
+                        {h.variacion_porcentaje > 0 ? '+' : ''}{h.variacion_porcentaje?.toFixed(1)}%
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+
+        <div className="flex justify-end mt-6">
+          <button onClick={onClose} className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all">
+            Cerrar
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -2154,6 +2231,7 @@ function App() {
   const [modalIva, setModalIva] = useState('21'); // 21, 10.5, 0 (exento)
   const [empleadoStats, setEmpleadoStats] = useState(null); // Empleado seleccionado para ver estadísticas
   const [filtroStatsEmpleado, setFiltroStatsEmpleado] = useState('todos'); // 'todos', 'semana', 'mes', o número de mes
+  const [historialEmpleado, setHistorialEmpleado] = useState(null); // { empleado, historial } para ver historial de sueldos
 
   // Filtros
   const [searchTerm, setSearchTerm] = useState('');
@@ -2163,6 +2241,7 @@ function App() {
   const [filtroMesEmpleado, setFiltroMesEmpleado] = useState('todos');
   const [filtroConceptoEmpleado, setFiltroConceptoEmpleado] = useState('todos');
   const [filtroPuestosEmpleado, setFiltroPuestosEmpleado] = useState([]); // Array de puestos seleccionados
+  const [showFiltroPuestos, setShowFiltroPuestos] = useState(false); // Mostrar dropdown de puestos
   const [filtroCategoriaProveedor, setFiltroCategoriaProveedor] = useState('todos');
   const [filtroMetodoPago, setFiltroMetodoPago] = useState('todos');
   const [filtroProveedorFactura, setFiltroProveedorFactura] = useState('todos');
@@ -2639,9 +2718,28 @@ function App() {
     return { error };
   };
 
-  const updateEmpleado = async (id, empleado) => {
+  const updateEmpleado = async (id, empleado, empleadoAnterior) => {
     const { error } = await supabase.from('empleados').update(empleado).eq('id', id);
     if (!error) {
+      // Si el sueldo cambió, guardar en historial
+      const sueldoAnterior = empleadoAnterior?.sueldo || 0;
+      const sueldoNuevo = empleado.sueldo || 0;
+      if (sueldoAnterior !== sueldoNuevo && sueldoNuevo > 0) {
+        // Calcular variación porcentual
+        const variacion = sueldoAnterior > 0
+          ? ((sueldoNuevo - sueldoAnterior) / sueldoAnterior) * 100
+          : 100;
+
+        await supabase.from('historial_sueldos').insert([{
+          empleado_id: id,
+          fecha: new Date().toISOString().split('T')[0],
+          sueldo_semanal: empleado.sueldo_semanal || 0,
+          sueldo_mensual: empleado.sueldo_mensual || 0,
+          plus: empleado.plus || 0,
+          sueldo_total: sueldoNuevo,
+          variacion_porcentaje: variacion
+        }]);
+      }
       await fetchEmpleados();
       setShowModal(null);
       setSelectedItem(null);
@@ -2653,6 +2751,17 @@ function App() {
     if (!confirm('¿Estás seguro de eliminar este empleado?')) return;
     const { error } = await supabase.from('empleados').delete().eq('id', id);
     if (!error) await fetchEmpleados();
+  };
+
+  const verHistorialSueldos = async (empleado) => {
+    const { data, error } = await supabase
+      .from('historial_sueldos')
+      .select('*')
+      .eq('empleado_id', empleado.id)
+      .order('fecha', { ascending: false });
+    if (!error) {
+      setHistorialEmpleado({ empleado, historial: data || [] });
+    }
   };
 
   const pagarSueldo = async (empleado) => {
@@ -5005,65 +5114,74 @@ function App() {
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
               <h2 className="text-xl font-bold">Empleados</h2>
-              <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+              <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
                 <select
                   value={filtroMesEmpleado}
                   onChange={(e) => setFiltroMesEmpleado(e.target.value)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50"
+                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm"
                 >
                   <option value="todos">Todos los meses</option>
                   {MESES.map((mes, index) => (
                     <option key={index} value={index}>{mes}</option>
                   ))}
                 </select>
-                <button
-                  onClick={() => { setSelectedItem(null); setShowModal('empleado'); }}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all"
-                >
-                  <Plus className="w-5 h-5" />
-                  Nuevo Empleado
-                </button>
-              </div>
-            </div>
-
-            {/* Filtro por puestos (dropdown con checkboxes) */}
-            <div className="flex flex-wrap gap-2 items-center">
-              <span className="text-xs text-slate-500 mr-1">Filtrar por puesto:</span>
-              <div className="relative">
-                <div className="flex flex-wrap gap-1 items-center">
-                  {PUESTOS_EMPLEADO.map(puesto => (
-                    <label
-                      key={puesto}
-                      className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs cursor-pointer transition-all ${
-                        filtroPuestosEmpleado.includes(puesto)
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={filtroPuestosEmpleado.includes(puesto)}
-                        onChange={() => {
-                          if (filtroPuestosEmpleado.includes(puesto)) {
-                            setFiltroPuestosEmpleado(filtroPuestosEmpleado.filter(p => p !== puesto));
-                          } else {
-                            setFiltroPuestosEmpleado([...filtroPuestosEmpleado, puesto]);
-                          }
-                        }}
-                        className="hidden"
-                      />
-                      {puesto}
-                    </label>
-                  ))}
-                  {filtroPuestosEmpleado.length > 0 && (
-                    <button
-                      onClick={() => setFiltroPuestosEmpleado([])}
-                      className="px-2 py-1 rounded-lg text-xs font-medium bg-red-100 text-red-600 hover:bg-red-200 transition-all"
-                    >
-                      Limpiar
-                    </button>
+                {/* Dropdown filtro por puestos */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowFiltroPuestos(!showFiltroPuestos)}
+                    className={`px-3 py-2 rounded-xl border text-sm flex items-center gap-2 ${
+                      filtroPuestosEmpleado.length > 0
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-slate-200 bg-white text-slate-600'
+                    }`}
+                  >
+                    <Filter className="w-4 h-4" />
+                    {filtroPuestosEmpleado.length > 0 ? `${filtroPuestosEmpleado.length} puestos` : 'Puestos'}
+                    <ChevronDown className={`w-4 h-4 transition-transform ${showFiltroPuestos ? 'rotate-180' : ''}`} />
+                  </button>
+                  {showFiltroPuestos && (
+                    <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 min-w-[200px] max-h-[300px] overflow-y-auto">
+                      <div className="p-2 border-b border-slate-100 flex justify-between items-center">
+                        <span className="text-xs text-slate-500">Seleccionar puestos</span>
+                        {filtroPuestosEmpleado.length > 0 && (
+                          <button
+                            onClick={() => setFiltroPuestosEmpleado([])}
+                            className="text-xs text-red-500 hover:text-red-700"
+                          >
+                            Limpiar
+                          </button>
+                        )}
+                      </div>
+                      {PUESTOS_EMPLEADO.map(puesto => (
+                        <label
+                          key={puesto}
+                          className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 cursor-pointer text-sm"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={filtroPuestosEmpleado.includes(puesto)}
+                            onChange={() => {
+                              if (filtroPuestosEmpleado.includes(puesto)) {
+                                setFiltroPuestosEmpleado(filtroPuestosEmpleado.filter(p => p !== puesto));
+                              } else {
+                                setFiltroPuestosEmpleado([...filtroPuestosEmpleado, puesto]);
+                              }
+                            }}
+                            className="w-4 h-4 rounded border-slate-300 text-blue-500 focus:ring-blue-500"
+                          />
+                          {puesto}
+                        </label>
+                      ))}
+                    </div>
                   )}
                 </div>
+                <button
+                  onClick={() => { setSelectedItem(null); setShowModal('empleado'); }}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all text-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  Nuevo
+                </button>
               </div>
             </div>
 
@@ -5099,14 +5217,17 @@ function App() {
                           <td className="px-5 py-4 text-sm">{e.puesto || '-'}</td>
                           <td className="px-5 py-4 text-sm text-slate-400">{formatDate(e.fecha_ingreso)}</td>
                           <td className="px-5 py-4 text-sm text-slate-400">{e.banco || '-'}</td>
-                          <td className="px-5 py-4 text-right font-semibold mono">{formatCurrency(e.sueldo)}</td>
+                          <td className="px-5 py-4 text-right font-semibold mono">{formatCurrency(e.sueldo, false)}</td>
                           <td className="px-5 py-4 text-right">
                             <span className={`font-semibold mono ${pagadoMes > 0 ? 'text-emerald-500' : 'text-slate-300'}`}>
-                              {formatCurrency(pagadoMes)}
+                              {formatCurrency(pagadoMes, false)}
                             </span>
                           </td>
                           <td className="px-5 py-4 text-right">
                             <div className="flex items-center justify-end gap-1">
+                              <button onClick={() => verHistorialSueldos(e)} className="p-2 hover:bg-emerald-100 rounded-lg transition-colors text-emerald-500" title="Historial de sueldos">
+                                <TrendingUp className="w-4 h-4" />
+                              </button>
                               <button onClick={() => { setEmpleadoStats(e); setFiltroStatsEmpleado('todos'); }} className="p-2 hover:bg-blue-100 rounded-lg transition-colors text-blue-500" title="Ver pagos">
                                 <BarChart3 className="w-4 h-4" />
                               </button>
@@ -6589,8 +6710,17 @@ function App() {
         <ModalEmpleado
           empleado={selectedItem}
           onClose={() => { setShowModal(null); setSelectedItem(null); }}
-          onSave={selectedItem ? (data) => updateEmpleado(selectedItem.id, data) : createEmpleado}
+          onSave={selectedItem ? (data, empleadoAnterior) => updateEmpleado(selectedItem.id, data, empleadoAnterior) : createEmpleado}
           onDelete={deleteEmpleado}
+        />
+      )}
+
+      {/* Modal Historial de Sueldos */}
+      {historialEmpleado && (
+        <ModalHistorialSueldos
+          empleado={historialEmpleado.empleado}
+          historial={historialEmpleado.historial}
+          onClose={() => setHistorialEmpleado(null)}
         />
       )}
 
