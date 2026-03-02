@@ -1249,7 +1249,7 @@ function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, on
 }
 
 // Modal Empleado
-function ModalEmpleado({ empleado, onClose, onSave, onDelete }) {
+function ModalEmpleado({ empleado, onClose, onSave, onBaja, onDelete, isExEmpleado = false }) {
   const [form, setForm] = useState({
     nombre: empleado?.nombre || '',
     documento: empleado?.documento || '',
@@ -1267,6 +1267,8 @@ function ModalEmpleado({ empleado, onClose, onSave, onDelete }) {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [showBajaForm, setShowBajaForm] = useState(false);
+  const [informeBaja, setInformeBaja] = useState('');
 
   // Calcular sueldo mensual y total
   const sueldoMensualCalculado = form.tipo_cobro === 'semanal'
@@ -1414,11 +1416,56 @@ function ModalEmpleado({ empleado, onClose, onSave, onDelete }) {
               {empleado ? 'Guardar' : 'Crear'}
             </button>
           </div>
-          {empleado && onDelete && (
+          {empleado && !isExEmpleado && onBaja && (
+            <>
+              {!showBajaForm ? (
+                <button
+                  type="button"
+                  onClick={() => setShowBajaForm(true)}
+                  className="w-full mt-3 px-4 py-2.5 rounded-xl border border-amber-200 text-amber-600 hover:bg-amber-50 transition-all flex items-center justify-center gap-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Fuera de nómina
+                </button>
+              ) : (
+                <div className="mt-3 p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
+                  <p className="text-sm font-medium text-amber-800">Motivo de baja (opcional)</p>
+                  <textarea
+                    value={informeBaja}
+                    onChange={(e) => setInformeBaja(e.target.value)}
+                    placeholder="Ej: Renuncia voluntaria, conflictos laborales, mejor oferta, despido, etc..."
+                    className="w-full px-3 py-2 rounded-lg border border-amber-200 bg-white focus:outline-none focus:border-amber-400 text-sm resize-none"
+                    rows={3}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => { setShowBajaForm(false); setInformeBaja(''); }}
+                      className="flex-1 px-3 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (confirm('¿Confirmar baja del empleado?')) {
+                          await onBaja(empleado.id, informeBaja);
+                        }
+                      }}
+                      className="flex-1 px-3 py-2 rounded-lg bg-amber-500 text-white hover:bg-amber-600 text-sm font-medium"
+                    >
+                      Confirmar baja
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+          {empleado && isExEmpleado && onDelete && (
             <button
               type="button"
               onClick={() => {
-                if (confirm('¿Estás seguro de eliminar este empleado?')) {
+                if (confirm('¿Estás seguro de eliminar definitivamente este ex empleado?')) {
                   onDelete(empleado.id);
                   onClose();
                 }
@@ -1426,7 +1473,7 @@ function ModalEmpleado({ empleado, onClose, onSave, onDelete }) {
               className="w-full mt-3 px-4 py-2.5 rounded-xl border border-red-200 text-red-500 hover:bg-red-50 transition-all flex items-center justify-center gap-2"
             >
               <Trash2 className="w-4 h-4" />
-              Eliminar empleado
+              Eliminar definitivamente
             </button>
           )}
         </form>
@@ -2219,6 +2266,7 @@ function App() {
   const [cobros, setCobros] = useState([]);
   const [notasCreditoVenta, setNotasCreditoVenta] = useState([]);
   const [subTabIngresos, setSubTabIngresos] = useState('facturas'); // 'facturas' | 'cobros' | 'clientes' | 'nc'
+  const [subTabEmpleados, setSubTabEmpleados] = useState('activos'); // 'activos' | 'ex'
   const [cobrosExpandidos, setCobrosExpandidos] = useState([]); // IDs de facturas expandidas en cobros
 
   // Modales
@@ -2232,6 +2280,7 @@ function App() {
   const [empleadoStats, setEmpleadoStats] = useState(null); // Empleado seleccionado para ver estadísticas
   const [filtroStatsEmpleado, setFiltroStatsEmpleado] = useState('todos'); // 'todos', 'semana', 'mes', o número de mes
   const [historialEmpleado, setHistorialEmpleado] = useState(null); // { empleado, historial } para ver historial de sueldos
+  const [editandoInforme, setEditandoInforme] = useState(null); // { id, nombre, informe } para editar informe de ex empleado
 
   // Filtros
   const [searchTerm, setSearchTerm] = useState('');
@@ -2762,6 +2811,48 @@ function App() {
     if (!error) {
       setHistorialEmpleado({ empleado, historial: data || [] });
     }
+  };
+
+  // Dar de baja empleado (fuera de nómina)
+  const darBajaEmpleado = async (id, informe = '') => {
+    const { error } = await supabase
+      .from('empleados')
+      .update({
+        activo: false,
+        fecha_baja: new Date().toISOString().split('T')[0],
+        informe_baja: informe
+      })
+      .eq('id', id);
+    if (!error) {
+      await fetchEmpleados();
+      setShowModal(null);
+      setSelectedItem(null);
+    }
+    return { error };
+  };
+
+  // Reactivar empleado
+  const reactivarEmpleado = async (id) => {
+    const { error } = await supabase
+      .from('empleados')
+      .update({
+        activo: true,
+        fecha_baja: null,
+        informe_baja: null
+      })
+      .eq('id', id);
+    if (!error) await fetchEmpleados();
+    return { error };
+  };
+
+  // Actualizar informe de baja
+  const updateInformeBaja = async (id, informe) => {
+    const { error } = await supabase
+      .from('empleados')
+      .update({ informe_baja: informe })
+      .eq('id', id);
+    if (!error) await fetchEmpleados();
+    return { error };
   };
 
   const pagarSueldo = async (empleado) => {
@@ -5104,14 +5195,43 @@ function App() {
 
         {/* Empleados */}
         {activeTab === 'empleados' && (() => {
-          // Obtener puestos únicos de los empleados
+          // Separar empleados activos y ex empleados
+          const empleadosActivos = empleados.filter(e => e.activo !== false);
+          const exEmpleados = empleados.filter(e => e.activo === false);
+
           // Filtrar empleados por puestos seleccionados
           const empleadosFiltrados = filtroPuestosEmpleado.length === 0
-            ? empleados
-            : empleados.filter(e => filtroPuestosEmpleado.includes(e.puesto));
+            ? empleadosActivos
+            : empleadosActivos.filter(e => filtroPuestosEmpleado.includes(e.puesto));
 
           return (
           <div className="space-y-6">
+            {/* Sub-tabs: Empleados / Ex Empleados */}
+            <div className="flex gap-2 border-b border-slate-200 pb-2">
+              <button
+                onClick={() => setSubTabEmpleados('activos')}
+                className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-all ${
+                  subTabEmpleados === 'activos'
+                    ? 'bg-blue-500 text-white'
+                    : 'text-slate-500 hover:bg-slate-100'
+                }`}
+              >
+                Empleados ({empleadosActivos.length})
+              </button>
+              <button
+                onClick={() => setSubTabEmpleados('ex')}
+                className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-all ${
+                  subTabEmpleados === 'ex'
+                    ? 'bg-amber-500 text-white'
+                    : 'text-slate-500 hover:bg-slate-100'
+                }`}
+              >
+                Ex Empleados ({exEmpleados.length})
+              </button>
+            </div>
+
+            {subTabEmpleados === 'activos' && (
+            <>
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
               <h2 className="text-xl font-bold">Empleados</h2>
               <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
@@ -5250,7 +5370,7 @@ function App() {
                 <div className="flex justify-between items-center">
                   <div>
                     <h3 className="text-lg font-semibold">Sueldos Mensuales</h3>
-                    <p className="text-slate-400 text-sm">{empleados.length} empleados</p>
+                    <p className="text-slate-400 text-sm">{empleadosActivos.length} empleados</p>
                   </div>
                   <p className="text-2xl font-bold mono text-slate-600">{formatCurrency(stats.totalSueldosFijos)}</p>
                 </div>
@@ -5265,6 +5385,103 @@ function App() {
                 </div>
               </div>
             </div>
+            </>
+            )}
+
+            {/* Ex Empleados */}
+            {subTabEmpleados === 'ex' && (
+            <>
+            <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+              <h2 className="text-xl font-bold text-amber-700">Ex Empleados</h2>
+            </div>
+
+            {exEmpleados.length === 0 ? (
+              <div className="glass rounded-2xl p-8 text-center">
+                <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                <p className="text-slate-400">No hay ex empleados registrados</p>
+              </div>
+            ) : (
+              <div className="glass rounded-2xl glow overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="text-left text-slate-400 text-sm border-b border-slate-200">
+                        <th className="px-5 py-4 font-medium">Nombre</th>
+                        <th className="px-5 py-4 font-medium">Puesto</th>
+                        <th className="px-5 py-4 font-medium">Fecha Ingreso</th>
+                        <th className="px-5 py-4 font-medium">Fecha Baja</th>
+                        <th className="px-5 py-4 font-medium">Informe</th>
+                        <th className="px-5 py-4 font-medium text-right">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {exEmpleados.map(e => (
+                        <tr key={e.id} className="border-b border-slate-100 hover:bg-amber-50/30 transition-colors">
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+                                <span className="text-sm font-medium text-white">{e.nombre.split(' ').map(n => n[0]).join('')}</span>
+                              </div>
+                              <span className="font-medium text-slate-600">{e.nombre}</span>
+                            </div>
+                          </td>
+                          <td className="px-5 py-4 text-sm">{e.puesto || '-'}</td>
+                          <td className="px-5 py-4 text-sm text-slate-400">{formatDate(e.fecha_ingreso)}</td>
+                          <td className="px-5 py-4 text-sm text-amber-600 font-medium">{formatDate(e.fecha_baja)}</td>
+                          <td className="px-5 py-4">
+                            {e.informe_baja ? (
+                              <div className="max-w-xs">
+                                <p className="text-sm text-slate-600 line-clamp-2">{e.informe_baja}</p>
+                              </div>
+                            ) : (
+                              <span className="text-slate-300 text-sm">Sin informe</span>
+                            )}
+                          </td>
+                          <td className="px-5 py-4 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={() => setEditandoInforme({ id: e.id, nombre: e.nombre, informe: e.informe_baja || '' })}
+                                className="p-2 hover:bg-amber-100 rounded-lg transition-colors text-amber-600"
+                                title="Editar informe"
+                              >
+                                <FileText className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => verHistorialSueldos(e)}
+                                className="p-2 hover:bg-emerald-100 rounded-lg transition-colors text-emerald-500"
+                                title="Historial de sueldos"
+                              >
+                                <TrendingUp className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  if (confirm(`¿Reactivar a ${e.nombre}?`)) {
+                                    await reactivarEmpleado(e.id);
+                                  }
+                                }}
+                                className="p-2 hover:bg-blue-100 rounded-lg transition-colors text-blue-500"
+                                title="Reactivar empleado"
+                              >
+                                <RefreshCw className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => { setSelectedItem(e); setShowModal('empleado'); }}
+                                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                                title="Editar datos"
+                              >
+                                <Edit3 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+            </>
+            )}
           </div>
         );
         })()}
@@ -6711,7 +6928,9 @@ function App() {
           empleado={selectedItem}
           onClose={() => { setShowModal(null); setSelectedItem(null); }}
           onSave={selectedItem ? (data, empleadoAnterior) => updateEmpleado(selectedItem.id, data, empleadoAnterior) : createEmpleado}
+          onBaja={darBajaEmpleado}
           onDelete={deleteEmpleado}
+          isExEmpleado={selectedItem?.activo === false}
         />
       )}
 
@@ -6722,6 +6941,47 @@ function App() {
           historial={historialEmpleado.historial}
           onClose={() => setHistorialEmpleado(null)}
         />
+      )}
+
+      {/* Modal Editar Informe de Baja */}
+      {editandoInforme && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="glass rounded-2xl p-6 w-full max-w-lg">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h2 className="text-lg font-bold text-amber-700">Informe de Baja</h2>
+                <p className="text-sm text-slate-500">{editandoInforme.nombre}</p>
+              </div>
+              <button onClick={() => setEditandoInforme(null)} className="p-2 hover:bg-slate-100 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <textarea
+              value={editandoInforme.informe}
+              onChange={(e) => setEditandoInforme({ ...editandoInforme, informe: e.target.value })}
+              placeholder="Escribir motivo de baja: renuncia voluntaria, conflictos laborales, mejor oferta, despido con/sin causa, juicio laboral, etc..."
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-amber-400 text-sm resize-none"
+              rows={6}
+            />
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => setEditandoInforme(null)}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  await updateInformeBaja(editandoInforme.id, editandoInforme.informe);
+                  setEditandoInforme(null);
+                }}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-amber-500 text-white font-medium hover:bg-amber-600 transition-all"
+              >
+                Guardar Informe
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Modal Pago */}
