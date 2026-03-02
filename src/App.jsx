@@ -1254,6 +1254,10 @@ function ModalEmpleado({ empleado, onClose, onSave, onDelete }) {
     nombre: empleado?.nombre || '',
     documento: empleado?.documento || '',
     puesto: empleado?.puesto || '',
+    tipo_cobro: empleado?.tipo_cobro || 'semanal',
+    sueldo_semanal: empleado?.sueldo_semanal || '',
+    sueldo_mensual: empleado?.sueldo_mensual || '',
+    plus: empleado?.plus || '',
     sueldo: empleado?.sueldo || '',
     fecha_ingreso: empleado?.fecha_ingreso || '',
     banco: empleado?.banco || '',
@@ -1262,11 +1266,25 @@ function ModalEmpleado({ empleado, onClose, onSave, onDelete }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
+  // Calcular sueldo mensual y total
+  const sueldoMensualCalculado = form.tipo_cobro === 'semanal'
+    ? (parseFloat(form.sueldo_semanal) || 0) * 52 / 12
+    : (parseFloat(form.sueldo_mensual) || 0);
+  const plusMonto = parseFloat(form.plus) || 0;
+  const sueldoTotal = sueldoMensualCalculado + plusMonto;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     setSaving(true);
-    const result = await onSave({ ...form, sueldo: parseFloat(form.sueldo) });
+    const dataToSave = {
+      ...form,
+      sueldo_semanal: parseFloat(form.sueldo_semanal) || 0,
+      sueldo_mensual: sueldoMensualCalculado,
+      plus: plusMonto,
+      sueldo: sueldoTotal
+    };
+    const result = await onSave(dataToSave);
     setSaving(false);
     if (result?.error) {
       setError(result.error.message || 'Error al guardar. Verificá los permisos de la base de datos.');
@@ -1280,34 +1298,94 @@ function ModalEmpleado({ empleado, onClose, onSave, onDelete }) {
           <h2 className="text-xl font-bold">{empleado ? 'Editar Empleado' : 'Nuevo Empleado'}</h2>
           <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">Nombre *</label>
-            <input type="text" required value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
+        <form onSubmit={handleSubmit} className="space-y-2">
+          {/* Fila 1: Nombre | Documento */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Nombre *</label>
+              <input type="text" required value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Documento</label>
+              <input type="text" value={form.documento} onChange={e => setForm({...form, documento: e.target.value})} className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" placeholder="XX.XXX.XXX" />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">Documento</label>
-            <input type="text" value={form.documento} onChange={e => setForm({...form, documento: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" placeholder="XX.XXX.XXX" />
+          {/* Fila 2: Fecha de Ingreso | Puesto */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Fecha de Ingreso</label>
+              <input type="date" value={form.fecha_ingreso} onChange={e => setForm({...form, fecha_ingreso: e.target.value})} className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Puesto</label>
+              <select value={form.puesto} onChange={e => setForm({...form, puesto: e.target.value})} className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm">
+                <option value="">Seleccionar...</option>
+                {PUESTOS_EMPLEADO.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
           </div>
+          {/* Tipo de cobro */}
           <div>
-            <label className="block text-sm text-slate-400 mb-1">Puesto</label>
-            <input type="text" value={form.puesto} onChange={e => setForm({...form, puesto: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
+            <label className="block text-xs text-slate-400 mb-1">Tipo de Cobro</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setForm({...form, tipo_cobro: 'semanal'})}
+                className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-all ${form.tipo_cobro === 'semanal' ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+              >
+                Semanal
+              </button>
+              <button
+                type="button"
+                onClick={() => setForm({...form, tipo_cobro: 'mensual'})}
+                className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-all ${form.tipo_cobro === 'mensual' ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+              >
+                Mensual
+              </button>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">Sueldo *</label>
-            <input type="text" required value={formatInputMonto(form.sueldo)} onChange={e => setForm({...form, sueldo: parseInputMonto(e.target.value)})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-right" placeholder="0" />
+          {/* Sueldos */}
+          <div className="grid grid-cols-2 gap-3">
+            {form.tipo_cobro === 'semanal' ? (
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Sueldo Semanal *</label>
+                <input type="text" required value={formatInputMonto(form.sueldo_semanal)} onChange={e => setForm({...form, sueldo_semanal: parseInputMonto(e.target.value)})} className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm text-right" placeholder="0" />
+              </div>
+            ) : (
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Sueldo Mensual *</label>
+                <input type="text" required value={formatInputMonto(form.sueldo_mensual)} onChange={e => setForm({...form, sueldo_mensual: parseInputMonto(e.target.value)})} className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm text-right" placeholder="0" />
+              </div>
+            )}
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Sueldo Mensual {form.tipo_cobro === 'semanal' ? '(calculado)' : ''}</label>
+              <div className="w-full px-3 py-1.5 rounded-lg bg-slate-100 text-sm text-right font-medium text-slate-700">
+                {formatCurrency(sueldoMensualCalculado, false)}
+              </div>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">Fecha de Ingreso</label>
-            <input type="date" value={form.fecha_ingreso} onChange={e => setForm({...form, fecha_ingreso: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Plus Mensual</label>
+              <input type="text" value={formatInputMonto(form.plus)} onChange={e => setForm({...form, plus: parseInputMonto(e.target.value)})} className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm text-right" placeholder="0" />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Sueldo Total</label>
+              <div className="w-full px-3 py-1.5 rounded-lg bg-emerald-100 text-sm text-right font-bold text-emerald-700">
+                {formatCurrency(sueldoTotal, false)}
+              </div>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">Banco</label>
-            <input type="text" value={form.banco} onChange={e => setForm({...form, banco: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
-          </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">CBU</label>
-            <input type="text" value={form.cbu} onChange={e => setForm({...form, cbu: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50" />
+          {/* Banco y CBU */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Banco</label>
+              <input type="text" value={form.banco} onChange={e => setForm({...form, banco: e.target.value})} className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">CBU</label>
+              <input type="text" value={form.cbu} onChange={e => setForm({...form, cbu: e.target.value})} className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-blue-500/50 text-sm" />
+            </div>
           </div>
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
@@ -1350,6 +1428,23 @@ const CONCEPTOS_EMPLEADO = [
   { value: 'vacaciones', label: 'Vacaciones' },
   { value: 'evento_completo', label: 'Evento Completo' },
   { value: 'evento_parcial', label: 'Evento Parcial' }
+];
+
+const PUESTOS_EMPLEADO = [
+  'Jefe de Cocina',
+  'Cocinero',
+  'Ayudante de Cocina',
+  'Bachero',
+  'Barra',
+  'Mozo',
+  'Encargado de Salon',
+  'Cajero',
+  'Encargado',
+  'Administrativo',
+  'Limpieza',
+  'Comis de Salon',
+  'Extra Eventos',
+  'Otros'
 ];
 
 function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados = [], facturas = [], pagos = [], notasCredito = [], facturaPreseleccionada }) {
@@ -2067,6 +2162,7 @@ function App() {
   const [filtroTipoPago, setFiltroTipoPago] = useState('todos');
   const [filtroMesEmpleado, setFiltroMesEmpleado] = useState('todos');
   const [filtroConceptoEmpleado, setFiltroConceptoEmpleado] = useState('todos');
+  const [filtroPuestosEmpleado, setFiltroPuestosEmpleado] = useState([]); // Array de puestos seleccionados
   const [filtroCategoriaProveedor, setFiltroCategoriaProveedor] = useState('todos');
   const [filtroMetodoPago, setFiltroMetodoPago] = useState('todos');
   const [filtroProveedorFactura, setFiltroProveedorFactura] = useState('todos');
@@ -4898,7 +4994,14 @@ function App() {
         )}
 
         {/* Empleados */}
-        {activeTab === 'empleados' && (
+        {activeTab === 'empleados' && (() => {
+          // Obtener puestos únicos de los empleados
+          // Filtrar empleados por puestos seleccionados
+          const empleadosFiltrados = filtroPuestosEmpleado.length === 0
+            ? empleados
+            : empleados.filter(e => filtroPuestosEmpleado.includes(e.puesto));
+
+          return (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
               <h2 className="text-xl font-bold">Empleados</h2>
@@ -4923,6 +5026,47 @@ function App() {
               </div>
             </div>
 
+            {/* Filtro por puestos (dropdown con checkboxes) */}
+            <div className="flex flex-wrap gap-2 items-center">
+              <span className="text-xs text-slate-500 mr-1">Filtrar por puesto:</span>
+              <div className="relative">
+                <div className="flex flex-wrap gap-1 items-center">
+                  {PUESTOS_EMPLEADO.map(puesto => (
+                    <label
+                      key={puesto}
+                      className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs cursor-pointer transition-all ${
+                        filtroPuestosEmpleado.includes(puesto)
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={filtroPuestosEmpleado.includes(puesto)}
+                        onChange={() => {
+                          if (filtroPuestosEmpleado.includes(puesto)) {
+                            setFiltroPuestosEmpleado(filtroPuestosEmpleado.filter(p => p !== puesto));
+                          } else {
+                            setFiltroPuestosEmpleado([...filtroPuestosEmpleado, puesto]);
+                          }
+                        }}
+                        className="hidden"
+                      />
+                      {puesto}
+                    </label>
+                  ))}
+                  {filtroPuestosEmpleado.length > 0 && (
+                    <button
+                      onClick={() => setFiltroPuestosEmpleado([])}
+                      className="px-2 py-1 rounded-lg text-xs font-medium bg-red-100 text-red-600 hover:bg-red-200 transition-all"
+                    >
+                      Limpiar
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
             <div className="glass rounded-2xl glow overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -4939,7 +5083,7 @@ function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {empleados.map(e => {
+                    {empleadosFiltrados.map(e => {
                       const pagadoMes = pagosPorEmpleado[e.id] || 0;
                       return (
                         <tr key={e.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
@@ -5001,7 +5145,8 @@ function App() {
               </div>
             </div>
           </div>
-        )}
+        );
+        })()}
 
         {/* Pago Proveedores */}
         {activeTab === 'pago-proveedores' && (() => {
