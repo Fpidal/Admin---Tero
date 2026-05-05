@@ -2369,19 +2369,38 @@ function App() {
     }
   };
 
+  // Helper: trae todas las filas de una tabla paginando para evitar el límite de 1000 de Supabase
+  const fetchAllPaginated = async (tabla, { select = '*', orderBy = null, ascending = true } = {}) => {
+    const PAGE_SIZE = 1000;
+    let todas = [];
+    let from = 0;
+    while (true) {
+      let query = supabase.from(tabla).select(select);
+      if (orderBy) query = query.order(orderBy, { ascending });
+      query = query.range(from, from + PAGE_SIZE - 1);
+      const { data, error } = await query;
+      if (error) return { data: null, error };
+      todas = todas.concat(data || []);
+      if (!data || data.length < PAGE_SIZE) break;
+      from += PAGE_SIZE;
+    }
+    return { data: todas, error: null };
+  };
+
   // Cargar datos desde Supabase
   const fetchProveedores = async () => {
-    const { data, error } = await supabase.from('proveedores').select('*').order('nombre');
+    const { data, error } = await fetchAllPaginated('proveedores', { orderBy: 'nombre' });
     if (!error) {
       setProveedores(data || []);
     }
   };
 
   const fetchFacturas = async () => {
-    const { data, error } = await supabase
-      .from('facturas')
-      .select('*, proveedores(nombre)')
-      .order('vencimiento', { ascending: true });
+    const { data, error } = await fetchAllPaginated('facturas', {
+      select: '*, proveedores(nombre)',
+      orderBy: 'vencimiento',
+      ascending: true
+    });
     if (!error) {
       const facturasConProveedor = (data || []).map(f => ({
         ...f,
@@ -2392,22 +2411,23 @@ function App() {
   };
 
   const fetchEmpleados = async () => {
-    const { data, error } = await supabase.from('empleados').select('*').order('nombre');
+    const { data, error } = await fetchAllPaginated('empleados', { orderBy: 'nombre' });
     if (!error) setEmpleados(data || []);
   };
 
   const fetchPagos = async () => {
-    const { data, error } = await supabase.from('pagos').select('*').order('fecha', { ascending: false });
-    console.log('Pagos cargados:', data, 'Error:', error);
+    const { data, error } = await fetchAllPaginated('pagos', { orderBy: 'fecha', ascending: false });
+    console.log('Pagos cargados:', data?.length, 'Error:', error);
     if (!error) setPagos(data || []);
   };
 
   const fetchNotasCredito = async () => {
     try {
-      const { data, error } = await supabase
-        .from('notas_credito')
-        .select('*, proveedores(nombre), facturas(numero)')
-        .order('fecha', { ascending: false });
+      const { data, error } = await fetchAllPaginated('notas_credito', {
+        select: '*, proveedores(nombre), facturas(numero)',
+        orderBy: 'fecha',
+        ascending: false
+      });
       if (!error && data) {
         const notasConRelaciones = data.map(nc => ({
           ...nc,
@@ -2416,21 +2436,19 @@ function App() {
         }));
         setNotasCredito(notasConRelaciones);
       } else {
-        // Si la tabla no existe, simplemente dejamos el array vacío
         setNotasCredito([]);
       }
     } catch (e) {
-      // Si hay error (tabla no existe), dejamos vacío
       setNotasCredito([]);
     }
   };
 
   const fetchAnulaciones = async () => {
     try {
-      const { data, error } = await supabase
-        .from('anulaciones')
-        .select('*')
-        .order('fecha_anulacion', { ascending: false });
+      const { data, error } = await fetchAllPaginated('anulaciones', {
+        orderBy: 'fecha_anulacion',
+        ascending: false
+      });
       if (!error && data) {
         setAnulaciones(data);
       } else {
@@ -2443,10 +2461,10 @@ function App() {
 
   const fetchModificaciones = async () => {
     try {
-      const { data, error } = await supabase
-        .from('modificaciones')
-        .select('*')
-        .order('fecha_modificacion', { ascending: false });
+      const { data, error } = await fetchAllPaginated('modificaciones', {
+        orderBy: 'fecha_modificacion',
+        ascending: false
+      });
       if (!error && data) {
         setModificaciones(data);
       } else {
@@ -2459,10 +2477,10 @@ function App() {
 
   const fetchOrdenesPago = async () => {
     try {
-      const { data, error } = await supabase
-        .from('ordenes_pago')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data, error } = await fetchAllPaginated('ordenes_pago', {
+        orderBy: 'created_at',
+        ascending: false
+      });
       if (!error && data) {
         setOrdenesPago(data);
       } else {
@@ -2476,7 +2494,7 @@ function App() {
   // Fetch para Ingresos
   const fetchClientes = async () => {
     try {
-      const { data, error } = await supabase.from('clientes').select('*').order('nombre');
+      const { data, error } = await fetchAllPaginated('clientes', { orderBy: 'nombre' });
       if (!error) setClientes(data || []);
     } catch (e) {
       setClientes([]);
@@ -2485,10 +2503,11 @@ function App() {
 
   const fetchFacturasVenta = async () => {
     try {
-      const { data, error } = await supabase
-        .from('facturas_venta')
-        .select('*, clientes(nombre)')
-        .order('vencimiento', { ascending: true });
+      const { data, error } = await fetchAllPaginated('facturas_venta', {
+        select: '*, clientes(nombre)',
+        orderBy: 'vencimiento',
+        ascending: true
+      });
       if (!error) {
         const facturasConCliente = (data || []).map(f => ({
           ...f,
@@ -2503,7 +2522,7 @@ function App() {
 
   const fetchCobros = async () => {
     try {
-      const { data, error } = await supabase.from('cobros').select('*').order('fecha', { ascending: false });
+      const { data, error } = await fetchAllPaginated('cobros', { orderBy: 'fecha', ascending: false });
       if (!error) setCobros(data || []);
     } catch (e) {
       setCobros([]);
@@ -2512,7 +2531,7 @@ function App() {
 
   const fetchNotasCreditoVenta = async () => {
     try {
-      const { data, error } = await supabase.from('notas_credito_venta').select('*').order('fecha', { ascending: false });
+      const { data, error } = await fetchAllPaginated('notas_credito_venta', { orderBy: 'fecha', ascending: false });
       if (!error) setNotasCreditoVenta(data || []);
     } catch (e) {
       setNotasCreditoVenta([]);
@@ -2551,10 +2570,10 @@ function App() {
 
   // Corregir estados de facturas que figuran como pagadas pero tienen saldo
   const corregirEstadosFacturas = async () => {
-    // Obtener datos frescos
-    const { data: facturasDB } = await supabase.from('facturas').select('*');
-    const { data: pagosDB } = await supabase.from('pagos').select('*');
-    const { data: notasCreditoDB } = await supabase.from('notas_credito').select('*');
+    // Obtener datos frescos (paginados para evitar el límite de 1000 de Supabase)
+    const { data: facturasDB } = await fetchAllPaginated('facturas');
+    const { data: pagosDB } = await fetchAllPaginated('pagos');
+    const { data: notasCreditoDB } = await fetchAllPaginated('notas_credito');
 
     if (!facturasDB) return { corregidas: 0 };
 
@@ -3050,10 +3069,10 @@ function App() {
   const recalcularEstadosFacturasVenta = async () => {
     if (!confirm('¿Recalcular estados de todas las facturas de venta?')) return;
 
-    // Obtener todos los cobros y NC de la base de datos
-    const { data: todosLosCobros } = await supabase.from('cobros').select('*');
-    const { data: todasLasNC } = await supabase.from('notas_credito_venta').select('*');
-    const { data: todasLasFacturas } = await supabase.from('facturas_venta').select('*');
+    // Obtener todos los cobros y NC de la base de datos (paginado por límite de 1000 de Supabase)
+    const { data: todosLosCobros } = await fetchAllPaginated('cobros');
+    const { data: todasLasNC } = await fetchAllPaginated('notas_credito_venta');
+    const { data: todasLasFacturas } = await fetchAllPaginated('facturas_venta');
 
     let actualizadas = 0;
     let cambios = 0;
@@ -3300,9 +3319,10 @@ function App() {
 
   // Actualizar estados de facturas según sus saldos
   const actualizarEstadosFacturas = async () => {
-    const { data: facturasDB } = await supabase.from('facturas').select('*');
-    const { data: pagosDB } = await supabase.from('pagos').select('*');
-    const { data: notasCreditoDB } = await supabase.from('notas_credito').select('*');
+    // Paginado para evitar el límite de 1000 de Supabase
+    const { data: facturasDB } = await fetchAllPaginated('facturas');
+    const { data: pagosDB } = await fetchAllPaginated('pagos');
+    const { data: notasCreditoDB } = await fetchAllPaginated('notas_credito');
 
     if (!facturasDB) return;
 
