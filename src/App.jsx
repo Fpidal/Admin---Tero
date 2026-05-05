@@ -2544,6 +2544,8 @@ function App() {
       fetchNotasCredito(), fetchAnulaciones(), fetchModificaciones(), fetchOrdenesPago(),
       fetchClientes(), fetchFacturasVenta(), fetchCobros(), fetchNotasCreditoVenta()
     ]);
+    // Sincronizar estados de facturas con sus saldos al cargar
+    await actualizarEstadosFacturas();
     setLoading(false);
   };
 
@@ -3198,6 +3200,8 @@ function App() {
     const { error } = await supabase.from('pagos').update(pagoData).eq('id', id);
     if (!error) {
       await fetchPagos();
+      // Sincronizar estados de facturas tras editar pago
+      await actualizarEstadosFacturas();
       setShowModal(null);
       setSelectedItem(null);
     }
@@ -3592,7 +3596,7 @@ function App() {
 
   const COLORS = ['#8b5cf6', '#06b6d4', '#f59e0b', '#ef4444', '#22c55e', '#ec4899'];
 
-  // Calcular pagos por empleado (filtrado por mes)
+  // Calcular pagos por empleado (filtrado por mes) - usa referencia_id directamente
   const pagosPorEmpleado = useMemo(() => {
     const pagosMap = {};
     pagos
@@ -3603,20 +3607,25 @@ function App() {
         return fechaPago.getMonth() === parseInt(filtroMesEmpleado);
       })
       .forEach(p => {
-        // Buscar empleado por nombre en la descripción
-        empleados.forEach(e => {
-          if (p.descripcion && p.descripcion.includes(e.nombre)) {
-            pagosMap[e.id] = (pagosMap[e.id] || 0) + p.monto;
-          }
-        });
+        // Usar referencia_id directamente (más confiable que buscar por nombre)
+        if (p.referencia_id) {
+          pagosMap[p.referencia_id] = (pagosMap[p.referencia_id] || 0) + p.monto;
+        }
       });
     return pagosMap;
-  }, [pagos, empleados, filtroMesEmpleado]);
+  }, [pagos, filtroMesEmpleado]);
 
-  // Total pagado a empleados en el mes seleccionado
+  // Total pagado a empleados en el mes seleccionado (suma directa de pagos confirmados)
   const totalPagadoEmpleadosMes = useMemo(() => {
-    return Object.values(pagosPorEmpleado).reduce((sum, monto) => sum + monto, 0);
-  }, [pagosPorEmpleado]);
+    return pagos
+      .filter(p => p.tipo === 'sueldo' && p.estado_pago === 'confirmado')
+      .filter(p => {
+        if (filtroMesEmpleado === 'todos') return true;
+        const fechaPago = new Date(p.fecha);
+        return fechaPago.getMonth() === parseInt(filtroMesEmpleado);
+      })
+      .reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
+  }, [pagos, filtroMesEmpleado]);
 
   // Combinar pagos confirmados y NC aplicadas para mostrar en sección Pagos
   const pagosYNC = useMemo(() => {
@@ -4023,7 +4032,7 @@ function App() {
                 </div>
                 {(() => {
                   const sueldosDelMes = pagos.filter(p => {
-                    if (p.tipo !== 'sueldo' || p.estado_pago === 'anulado') return false;
+                    if (p.tipo !== 'sueldo' || p.estado_pago !== 'confirmado') return false;
                     const fechaPago = new Date(p.fecha + 'T12:00:00');
                     return fechaPago.getMonth() === parseInt(filtroMesSueldosDash) &&
                            fechaPago.getFullYear() === parseInt(filtroAnioSueldosDash);
@@ -4075,7 +4084,7 @@ function App() {
                 </div>
                 {(() => {
                   const eventosDelMes = pagos.filter(p => {
-                    if (p.tipo !== 'sueldo' || p.estado_pago === 'anulado') return false;
+                    if (p.tipo !== 'sueldo' || p.estado_pago !== 'confirmado') return false;
                     if (!p.descripcion || !p.descripcion.startsWith('Evento Completo')) return false;
                     const fechaPago = new Date(p.fecha + 'T12:00:00');
                     return fechaPago.getMonth() === parseInt(filtroMesEventosDash) &&
@@ -5876,7 +5885,7 @@ function App() {
 
         {/* Pago Empleados */}
         {activeTab === 'pago-empleados' && (() => {
-          const pagosEmpleados = pagos.filter(p => p.tipo === 'sueldo');
+          const pagosEmpleados = pagos.filter(p => p.tipo === 'sueldo' && p.estado_pago === 'confirmado');
 
           // Filtrar por fecha
           const hoy = new Date();
@@ -6051,7 +6060,7 @@ function App() {
                 <p className="text-lg font-bold text-blue-500 mono">
                   {formatCurrency(pagos
                     .filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado')
-                    .filter(p => filtroMesPago === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesPago))
+                    .filter(p => filtroMesPago === 'todos' || new Date(p.fecha + 'T12:00:00').getMonth() === parseInt(filtroMesPago))
                     .filter(p => filtroMetodoPago === 'todos' || p.metodo === filtroMetodoPago)
                     .reduce((sum, p) => sum + p.monto, 0), false)}
                 </p>
@@ -6061,7 +6070,7 @@ function App() {
                 <p className="text-lg font-bold text-cyan-500 mono">
                   {formatCurrency(pagos
                     .filter(p => p.tipo === 'sueldo' && p.estado_pago === 'confirmado')
-                    .filter(p => filtroMesPago === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesPago))
+                    .filter(p => filtroMesPago === 'todos' || new Date(p.fecha + 'T12:00:00').getMonth() === parseInt(filtroMesPago))
                     .filter(p => filtroMetodoPago === 'todos' || p.metodo === filtroMetodoPago)
                     .reduce((sum, p) => sum + p.monto, 0), false)}
                 </p>
@@ -6072,7 +6081,7 @@ function App() {
                   {formatCurrency(pagos
                     .filter(p => p.estado_pago === 'confirmado')
                     .filter(p => filtroTipoPago === 'todos' || p.tipo === filtroTipoPago)
-                    .filter(p => filtroMesPago === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesPago))
+                    .filter(p => filtroMesPago === 'todos' || new Date(p.fecha + 'T12:00:00').getMonth() === parseInt(filtroMesPago))
                     .filter(p => filtroMetodoPago === 'todos' || p.metodo === filtroMetodoPago)
                     .reduce((sum, p) => sum + p.monto, 0), false)}
                 </p>
@@ -6094,14 +6103,14 @@ function App() {
                   <tbody>
                     {pagosYNC
                       .filter(p => filtroTipoPago === 'todos' || p.tipo === filtroTipoPago)
-                      .filter(p => filtroMesPago === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesPago))
+                      .filter(p => filtroMesPago === 'todos' || new Date(p.fecha + 'T12:00:00').getMonth() === parseInt(filtroMesPago))
                       .filter(p => filtroMetodoPago === 'todos' || p.metodo === filtroMetodoPago)
                       .length === 0 ? (
                       <tr><td colSpan="5" className="px-3 py-8 text-center text-slate-400 text-xs">No hay pagos con los filtros seleccionados</td></tr>
                     ) : (
                       pagosYNC
                         .filter(p => filtroTipoPago === 'todos' || p.tipo === filtroTipoPago)
-                        .filter(p => filtroMesPago === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesPago))
+                        .filter(p => filtroMesPago === 'todos' || new Date(p.fecha + 'T12:00:00').getMonth() === parseInt(filtroMesPago))
                         .filter(p => filtroMetodoPago === 'todos' || p.metodo === filtroMetodoPago)
                         .map(p => (
                           <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
@@ -6657,7 +6666,7 @@ function App() {
 
             {/* INFORME: Compras por Proveedor */}
             {informeActivo === 'compras-proveedor' && (() => {
-              const facturasFiltradas = facturas.filter(f => (filtroAnioInforme === 'todos' || new Date(f.fecha).getFullYear() === parseInt(filtroAnioInforme)) && (filtroMesInforme === 'todos' || new Date(f.fecha).getMonth() === parseInt(filtroMesInforme)));
+              const facturasFiltradas = facturas.filter(f => (filtroAnioInforme === 'todos' || new Date(f.fecha + 'T12:00:00').getFullYear() === parseInt(filtroAnioInforme)) && (filtroMesInforme === 'todos' || new Date(f.fecha + 'T12:00:00').getMonth() === parseInt(filtroMesInforme)));
               const comprasPorProveedor = proveedores.map(p => {
                 const facturasProveedor = facturasFiltradas.filter(f => f.proveedor_id === p.id);
                 const total = facturasProveedor.reduce((sum, f) => sum + (parseFloat(f.monto) || 0), 0);
@@ -6717,7 +6726,7 @@ function App() {
 
             {/* INFORME: Compras por Rubro */}
             {informeActivo === 'compras-rubro' && (() => {
-              const facturasFiltradas = facturas.filter(f => (filtroAnioInforme === 'todos' || new Date(f.fecha).getFullYear() === parseInt(filtroAnioInforme)) && (filtroMesInforme === 'todos' || new Date(f.fecha).getMonth() === parseInt(filtroMesInforme)));
+              const facturasFiltradas = facturas.filter(f => (filtroAnioInforme === 'todos' || new Date(f.fecha + 'T12:00:00').getFullYear() === parseInt(filtroAnioInforme)) && (filtroMesInforme === 'todos' || new Date(f.fecha + 'T12:00:00').getMonth() === parseInt(filtroMesInforme)));
               const comprasPorRubro = CATEGORIAS_PROVEEDOR.map(cat => {
                 const proveedoresRubro = proveedores.filter(p => p.categoria === cat.value);
                 const facturasRubro = facturasFiltradas.filter(f => proveedoresRubro.some(p => p.id === f.proveedor_id));
@@ -6778,7 +6787,7 @@ function App() {
 
             {/* INFORME: Pagos del Mes */}
             {informeActivo === 'pagos-mes' && (() => {
-              const pagosFiltrados = pagos.filter(p => p.estado_pago === 'confirmado' && (filtroAnioInforme === 'todos' || new Date(p.fecha).getFullYear() === parseInt(filtroAnioInforme)) && (filtroMesInforme === 'todos' || new Date(p.fecha).getMonth() === parseInt(filtroMesInforme)));
+              const pagosFiltrados = pagos.filter(p => p.estado_pago === 'confirmado' && (filtroAnioInforme === 'todos' || new Date(p.fecha + 'T12:00:00').getFullYear() === parseInt(filtroAnioInforme)) && (filtroMesInforme === 'todos' || new Date(p.fecha + 'T12:00:00').getMonth() === parseInt(filtroMesInforme)));
               const pagosProveedores = pagosFiltrados.filter(p => p.tipo === 'factura');
               const pagosEmpleados = pagosFiltrados.filter(p => p.tipo === 'sueldo');
               const totalProveedores = pagosProveedores.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
@@ -7620,7 +7629,7 @@ function App() {
               hoy.setHours(0, 0, 0, 0);
 
               const pagosEmpleado = pagos
-                .filter(p => p.tipo === 'sueldo' && parseInt(p.referencia_id) === empleadoStats.id)
+                .filter(p => p.tipo === 'sueldo' && p.estado_pago === 'confirmado' && parseInt(p.referencia_id) === empleadoStats.id)
                 .filter(p => {
                   if (filtroStatsEmpleado === 'todos') return true;
                   const fechaPago = new Date(p.fecha + 'T12:00:00');
