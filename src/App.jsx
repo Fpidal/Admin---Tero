@@ -1484,9 +1484,15 @@ function ModalEmpleado({ empleado, onClose, onSave, onBaja, onDelete, isExEmplea
 
 // Modal Historial de Sueldos
 function ModalHistorialSueldos({ empleado, historial, onClose }) {
+  const fueModificado = (h, campo) => (h.campos_modificados || '').includes(campo);
+  const claseCelda = (h, campo) =>
+    fueModificado(h, campo)
+      ? 'py-3 text-sm text-right mono font-bold text-blue-600'
+      : 'py-3 text-sm text-right mono';
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="glass rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="glass rounded-2xl p-6 w-full max-w-5xl max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <div>
             <h2 className="text-xl font-bold">Historial de Sueldos</h2>
@@ -1507,6 +1513,7 @@ function ModalHistorialSueldos({ empleado, historial, onClose }) {
                 <th className="pb-3 font-medium text-right">Semanal</th>
                 <th className="pb-3 font-medium text-right">Mensual</th>
                 <th className="pb-3 font-medium text-right">Plus</th>
+                <th className="pb-3 font-medium text-right">Pago Evento</th>
                 <th className="pb-3 font-medium text-right">Total</th>
                 <th className="pb-3 font-medium text-right">Variación</th>
               </tr>
@@ -1514,10 +1521,11 @@ function ModalHistorialSueldos({ empleado, historial, onClose }) {
             <tbody className="divide-y divide-slate-50">
               {historial.map((h, idx) => (
                 <tr key={h.id} className="hover:bg-slate-50/50">
-                  <td className="py-3 text-sm">{new Date(h.fecha).toLocaleDateString('es-AR')}</td>
-                  <td className="py-3 text-sm text-right mono">{formatCurrency(h.sueldo_semanal || 0, false)}</td>
-                  <td className="py-3 text-sm text-right mono">{formatCurrency(h.sueldo_mensual || 0, false)}</td>
-                  <td className="py-3 text-sm text-right mono">{formatCurrency(h.plus || 0, false)}</td>
+                  <td className="py-3 text-sm whitespace-nowrap">{new Date(h.fecha).toLocaleDateString('es-AR')}</td>
+                  <td className={claseCelda(h, 'sueldo_semanal')}>{formatCurrency(h.sueldo_semanal || 0, false)}</td>
+                  <td className={claseCelda(h, 'sueldo_mensual')}>{formatCurrency(h.sueldo_mensual || 0, false)}</td>
+                  <td className={claseCelda(h, 'plus')}>{formatCurrency(h.plus || 0, false)}</td>
+                  <td className={claseCelda(h, 'pago_evento')}>{formatCurrency(h.pago_evento || 0, false)}</td>
                   <td className="py-3 text-sm text-right mono font-medium">{formatCurrency(h.sueldo_total || 0, false)}</td>
                   <td className="py-3 text-sm text-right">
                     {idx === historial.length - 1 ? (
@@ -2791,24 +2799,34 @@ function App() {
   const updateEmpleado = async (id, empleado, empleadoAnterior) => {
     const { error } = await supabase.from('empleados').update(empleado).eq('id', id);
     if (!error) {
-      // Si el sueldo cambió, guardar en historial
-      const sueldoAnterior = empleadoAnterior?.sueldo || 0;
-      const sueldoNuevo = empleado.sueldo || 0;
-      if (sueldoAnterior !== sueldoNuevo && sueldoNuevo > 0) {
-        // Calcular variación porcentual
+      // Detectar cambios en cualquiera de los campos monetarios
+      const camposMonetarios = ['sueldo_semanal', 'sueldo_mensual', 'plus', 'pago_evento'];
+      const cambios = camposMonetarios.filter(c =>
+        Number(empleadoAnterior?.[c] || 0) !== Number(empleado[c] || 0)
+      );
+
+      if (cambios.length > 0) {
+        const sueldoAnterior = Number(empleadoAnterior?.sueldo || 0);
+        const sueldoNuevo = Number(empleado.sueldo || 0);
         const variacion = sueldoAnterior > 0
           ? ((sueldoNuevo - sueldoAnterior) / sueldoAnterior) * 100
-          : 100;
+          : 0;
 
-        await supabase.from('historial_sueldos').insert([{
+        const { error: histError } = await supabase.from('historial_sueldos').insert([{
           empleado_id: id,
           fecha: new Date().toISOString().split('T')[0],
-          sueldo_semanal: empleado.sueldo_semanal || 0,
-          sueldo_mensual: empleado.sueldo_mensual || 0,
-          plus: empleado.plus || 0,
+          sueldo_semanal: Number(empleado.sueldo_semanal) || 0,
+          sueldo_mensual: Number(empleado.sueldo_mensual) || 0,
+          plus: Number(empleado.plus) || 0,
+          pago_evento: Number(empleado.pago_evento) || 0,
           sueldo_total: sueldoNuevo,
-          variacion_porcentaje: variacion
+          variacion_porcentaje: variacion,
+          campos_modificados: cambios.join(', ')
         }]);
+
+        if (histError) {
+          console.error('Error guardando historial de sueldos:', histError);
+        }
       }
       await fetchEmpleados();
       setShowModal(null);
