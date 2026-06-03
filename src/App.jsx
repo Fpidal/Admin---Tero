@@ -3641,7 +3641,7 @@ function App() {
       .filter(p => p.tipo === 'sueldo' && p.estado_pago === 'confirmado')
       .filter(p => {
         if (filtroMesEmpleado === 'todos') return true;
-        const fechaPago = new Date(p.fecha);
+        const fechaPago = new Date(p.fecha + 'T12:00:00');
         return fechaPago.getMonth() === parseInt(filtroMesEmpleado);
       })
       .forEach(p => {
@@ -3659,7 +3659,7 @@ function App() {
       .filter(p => p.tipo === 'sueldo' && p.estado_pago === 'confirmado')
       .filter(p => {
         if (filtroMesEmpleado === 'todos') return true;
-        const fechaPago = new Date(p.fecha);
+        const fechaPago = new Date(p.fecha + 'T12:00:00');
         return fechaPago.getMonth() === parseInt(filtroMesEmpleado);
       })
       .reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
