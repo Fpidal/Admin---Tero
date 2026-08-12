@@ -62,6 +62,33 @@ const formatDate = (dateStr) => {
 
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
+// Vincula un pago con su factura.
+// Los pagos nuevos traen factura_id y se resuelven por ID (exacto, inmune a typos
+// y a que se edite el número de la factura). Los pagos viejos, cargados antes de
+// que existiera la columna, caen al matching por texto sobre la descripción.
+const pagoEsDeFactura = (pago, factura) => {
+  if (!pago || !factura) return false;
+  if (pago.factura_id != null) return parseInt(pago.factura_id) === factura.id;
+  return !!(pago.descripcion && pago.descripcion.includes(factura.numero)
+    && parseInt(pago.referencia_id) === factura.proveedor_id);
+};
+
+// Normaliza el número de comprobante al formato canónico "X 0000-00000000":
+// letra de comprobante (A/B/C/M/E/T) + punto de venta de 4 dígitos + número de 8.
+// Unifica los separadores (espacio, guión o ambos) y rellena los ceros, para que
+// el mismo comprobante no quede cargado de cinco formas distintas.
+// La O y la l tipeadas donde van dígitos se corrigen a 0 y 1.
+const normalizarNumeroFactura = (valor) => {
+  if (!valor) return '';
+  const limpio = valor.toString().trim().toUpperCase();
+  const m = limpio.match(/^(ND|NC|[ABCMET])[\s-]*([0-9OIL]+)[\s-]+([0-9OIL]+)$/);
+  if (!m) return limpio; // formato no reconocido: se respeta lo que escribió el usuario
+  const aDigitos = s => s.replace(/O/g, '0').replace(/[IL]/g, '1');
+  const puntoVenta = aDigitos(m[2]).padStart(4, '0');
+  const numero = aDigitos(m[3]).padStart(8, '0');
+  return `${m[1]} ${puntoVenta}-${numero}`;
+};
+
 const CATEGORIAS_PROVEEDOR = [
   { value: 'almacen', label: 'Almacén' },
   { value: 'alquiler', label: 'Alquiler' },
@@ -1001,9 +1028,12 @@ function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, on
   // Validar si ya existe una factura con el mismo número para el mismo proveedor
   const facturaExistente = () => {
     if (!form.proveedor_id || !form.numero) return false;
+    // Compara normalizado para que "A-1-123" y "A 0001-00000123" cuenten como
+    // la misma factura y el duplicado se detecte igual
+    const numeroNorm = normalizarNumeroFactura(form.numero);
     return facturas.some(f =>
       f.proveedor_id === parseInt(form.proveedor_id) &&
-      f.numero.toLowerCase() === form.numero.toLowerCase() &&
+      normalizarNumeroFactura(f.numero).toLowerCase() === numeroNorm.toLowerCase() &&
       (!factura || f.id !== factura.id) // Excluir la factura actual si estamos editando
     );
   };
@@ -1096,6 +1126,7 @@ function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, on
     }
     const result = await onSave({
       ...dataToSave,
+      numero: normalizarNumeroFactura(form.numero),
       bruto: parseFloat(form.bruto) || 0,
       iva_porcentaje: parseFloat(form.iva_porcentaje) || 0,
       otras_retenciones: parseFloat(form.otras_retenciones) || 0,
@@ -1127,7 +1158,7 @@ function ModalFactura({ factura, proveedores, facturas = [], onClose, onSave, on
             </div>
             <div>
               <label className="block text-xs text-slate-400 mb-0.5">Número Factura *</label>
-              <input type="text" required value={form.numero} onChange={e => setForm({...form, numero: e.target.value})} className={`w-full px-2 py-1.5 rounded-lg border bg-white focus:outline-none text-sm ${facturaExistente() ? 'border-red-400' : 'border-slate-200 focus:border-blue-500/50'}`} placeholder="A-0001-00000001" />
+              <input type="text" required value={form.numero} onChange={e => setForm({...form, numero: e.target.value})} onBlur={e => setForm(prev => ({...prev, numero: normalizarNumeroFactura(e.target.value)}))} className={`w-full px-2 py-1.5 rounded-lg border bg-white focus:outline-none text-sm ${facturaExistente() ? 'border-red-400' : 'border-slate-200 focus:border-blue-500/50'}`} placeholder="A 0001-00000001" title="Formato: letra de comprobante + punto de venta + número. Los ceros se completan solos." />
             </div>
           </div>
           {facturaExistente() && <p className="text-xs text-red-500">Ya existe esta factura para este proveedor</p>}
@@ -1601,7 +1632,7 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
     if (facturaPreseleccionada) {
       // Calcular saldo de la factura preseleccionada
       const pagosFactura = pagos
-        .filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado' && p.descripcion && p.descripcion.includes(facturaPreseleccionada.numero) && parseInt(p.referencia_id) === facturaPreseleccionada.proveedor_id)
+        .filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado' && pagoEsDeFactura(p, facturaPreseleccionada))
         .reduce((sum, p) => sum + p.monto, 0);
       const ncFactura = notasCredito
         .filter(nc => nc.factura_id === facturaPreseleccionada.id)
@@ -1632,7 +1663,7 @@ function ModalPago({ onClose, onSave, tipoDefault, proveedores = [], empleados =
         .map(f => {
           // Calcular pagos CONFIRMADOS de esta factura
           const pagosFactura = pagos
-            .filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado' && p.descripcion && p.descripcion.includes(f.numero) && parseInt(p.referencia_id) === f.proveedor_id)
+            .filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado' && pagoEsDeFactura(p, f))
             .reduce((sum, p) => sum + p.monto, 0);
           // Calcular NC de esta factura
           const ncFactura = notasCredito
@@ -2593,7 +2624,7 @@ function App() {
     const pagosMap = {};
     (pagosDB || []).filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado').forEach(p => {
       facturasDB.forEach(f => {
-        if (p.descripcion && p.descripcion.includes(f.numero) && parseInt(p.referencia_id) === f.proveedor_id) {
+        if (pagoEsDeFactura(p, f)) {
           pagosMap[f.id] = (pagosMap[f.id] || 0) + p.monto;
         }
       });
@@ -2754,7 +2785,7 @@ function App() {
     if (!factura) return;
 
     // Verificar si la factura tiene pagos asociados
-    const pagosFactura = pagos.filter(p => p.tipo === 'factura' && p.descripcion && p.descripcion.includes(factura.numero) && parseInt(p.referencia_id) === factura.proveedor_id);
+    const pagosFactura = pagos.filter(p => p.tipo === 'factura' && pagoEsDeFactura(p, factura));
     if (pagosFactura.length > 0) {
       alert('No se puede anular esta factura porque tiene pagos registrados. Primero debe anular los pagos asociados.');
       return;
@@ -3177,8 +3208,13 @@ function App() {
 
   // CRUD Pagos
   const createPago = async (pago) => {
-    // Quitar campos que no existen en la tabla
-    const { factura_id, concepto_empleado, ...pagoData } = pago;
+    // concepto_empleado es solo del formulario. factura_id sí se persiste: es el
+    // vínculo del pago con su factura (antes se resolvía buscando el número dentro
+    // de la descripción, que se rompía con cualquier typo).
+    const { concepto_empleado, ...pagoData } = pago;
+    pagoData.factura_id = pagoData.tipo === 'factura' && pagoData.factura_id
+      ? parseInt(pagoData.factura_id)
+      : null;
     console.log('Creando pago:', pagoData);
 
     // Agregar a orden pendiente según tipo
@@ -3352,7 +3388,7 @@ function App() {
     const pagosMap = {};
     (pagosDB || []).filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado').forEach(p => {
       facturasDB.forEach(f => {
-        if (p.descripcion && p.descripcion.includes(f.numero) && parseInt(p.referencia_id) === f.proveedor_id) {
+        if (pagoEsDeFactura(p, f)) {
           pagosMap[f.id] = (pagosMap[f.id] || 0) + p.monto;
         }
       });
@@ -3455,7 +3491,7 @@ function App() {
     const pagosConfirmadosPorFactura = {};
     pagos.filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado').forEach(p => {
       facturas.forEach(f => {
-        if (p.descripcion && p.descripcion.includes(f.numero) && parseInt(p.referencia_id) === f.proveedor_id) {
+        if (pagoEsDeFactura(p, f)) {
           pagosConfirmadosPorFactura[f.id] = (pagosConfirmadosPorFactura[f.id] || 0) + p.monto;
         }
       });
@@ -3535,7 +3571,7 @@ function App() {
     const pagosMap = {};
     pagos.filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado').forEach(p => {
       facturas.forEach(f => {
-        if (p.descripcion && p.descripcion.includes(f.numero) && parseInt(p.referencia_id) === f.proveedor_id) {
+        if (pagoEsDeFactura(p, f)) {
           pagosMap[f.id] = (pagosMap[f.id] || 0) + p.monto;
         }
       });
@@ -3557,7 +3593,7 @@ function App() {
     const pagosMap = {};
     pagos.filter(p => p.tipo === 'factura' && p.estado_pago === 'pendiente').forEach(p => {
       facturas.forEach(f => {
-        if (p.descripcion && p.descripcion.includes(f.numero) && parseInt(p.referencia_id) === f.proveedor_id) {
+        if (pagoEsDeFactura(p, f)) {
           pagosMap[f.id] = (pagosMap[f.id] || 0) + p.monto;
         }
       });
@@ -6508,7 +6544,7 @@ function App() {
                     // Pagos confirmados al proveedor (matching por proveedor + número)
                     const pagosProveedor = pagos
                       .filter(p => p.tipo === 'factura' && p.estado_pago === 'confirmado' && p.descripcion)
-                      .filter(p => facturasProveedor.some(f => p.descripcion.includes(f.numero) && parseInt(p.referencia_id) === f.proveedor_id))
+                      .filter(p => facturasProveedor.some(f => pagoEsDeFactura(p, f)))
                       .reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
 
                     // NC del proveedor aplicadas a facturas pendientes
