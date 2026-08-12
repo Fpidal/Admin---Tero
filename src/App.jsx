@@ -2385,6 +2385,10 @@ function App() {
     while (true) {
       let query = supabase.from(tabla).select(select);
       if (orderBy) query = query.order(orderBy, { ascending });
+      // Desempate obligatorio por id: sin un criterio único, Postgres no garantiza
+      // un orden estable entre páginas y las filas empatadas (misma fecha) se
+      // duplican o se pierden en la frontera de cada .range()
+      query = query.order('id', { ascending: true });
       query = query.range(from, from + PAGE_SIZE - 1);
       const { data, error } = await query;
       if (error) return { data: null, error };
